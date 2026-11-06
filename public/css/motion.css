@@ -1,0 +1,328 @@
+/* Motion layer. One easing family, a few durations, and a rule: movement explains something
+   (arrival, hierarchy, feedback) or it does not ship. Everything here is off under Reduce motion.
+   v14.24 smoothness pass: presses are quick and releases are soft; nothing snaps (every state change is a
+   transition); hover light is one fading layer instead of a background swap; entrances finish before the
+   cleanup timer; dialogs animate out as well as in; glows are depth, not halos. */
+/* ---- 0. Typed colours (v14.25): theme and accent changes glide ---- */
+/* Registering the palette as <color> lets the browser interpolate it, so switching theme or accent fades every surface, border and ink together instead of cutting. Where @property is unsupported nothing changes (it cuts, as before). */
+@property --bg { syntax: '<color>'; inherits: true; initial-value: #07090d; }
+@property --bg2 { syntax: '<color>'; inherits: true; initial-value: #0a0d12; }
+@property --c { syntax: '<color>'; inherits: true; initial-value: #11151d; }
+@property --c2 { syntax: '<color>'; inherits: true; initial-value: #181d28; }
+@property --c3 { syntax: '<color>'; inherits: true; initial-value: #222836; }
+@property --ln { syntax: '<color>'; inherits: true; initial-value: rgba(255, 255, 255, .075); }
+@property --ln2 { syntax: '<color>'; inherits: true; initial-value: rgba(255, 255, 255, .15); }
+@property --card-hi { syntax: '<color>'; inherits: true; initial-value: rgba(255, 255, 255, .04); }
+@property --tx { syntax: '<color>'; inherits: true; initial-value: #f1f4f9; }
+@property --mu { syntax: '<color>'; inherits: true; initial-value: #aab3c4; }
+@property --mu2 { syntax: '<color>'; inherits: true; initial-value: #8c96aa; }
+@property --ac { syntax: '<color>'; inherits: true; initial-value: #7aa8ff; }
+@property --ach { syntax: '<color>'; inherits: true; initial-value: #08101f; }
+@property --ok { syntax: '<color>'; inherits: true; initial-value: #46d18b; }
+@property --bad { syntax: '<color>'; inherits: true; initial-value: #ff7b86; }
+@property --gd { syntax: '<color>'; inherits: true; initial-value: #f2c14e; }
+@property --seg-on { syntax: '<color>'; inherits: true; initial-value: #232938; }
+@property --grid { syntax: '<color>'; inherits: true; initial-value: rgba(255, 255, 255, .05); }
+:root { transition: --bg .55s var(--ease-io), --bg2 .55s var(--ease-io), --c .55s var(--ease-io), --c2 .55s var(--ease-io), --c3 .55s var(--ease-io), --ln .55s var(--ease-io), --ln2 .55s var(--ease-io), --card-hi .55s var(--ease-io), --tx .55s var(--ease-io), --mu .55s var(--ease-io), --mu2 .55s var(--ease-io), --ac .55s var(--ease-io), --ach .55s var(--ease-io), --ok .55s var(--ease-io), --bad .55s var(--ease-io), --gd .55s var(--ease-io), --seg-on .55s var(--ease-io), --grid .55s var(--ease-io); }
+
+:root {
+  --ease: cubic-bezier(.22, 1, .36, 1);          /* long, soft landing: the default for anything that arrives or settles */
+  --ease-io: cubic-bezier(.4, 0, .2, 1);         /* colour and path changes */
+  --soft: cubic-bezier(.3, 1.12, .5, 1);         /* a hair of overshoot, for things that should feel physical */
+  --spring: cubic-bezier(.34, 1.3, .64, 1);      /* icons and flourishes only */
+  --d1: .14s; --d2: .22s; --d3: .36s; --d4: .8s;
+}
+
+/* ---- 1. Arrival: the screen's blocks rise in a short cascade; grid items settle after their parent ---- */
+@keyframes settle { from { opacity: 0; transform: translateY(10px) scale(.99); } }   /* no explicit end: the element's own transform (hover lift, press) is never pinned */
+@keyframes settle-s { from { opacity: 0; transform: translateY(5px); } }
+@keyframes fade { from { opacity: 0; } }
+@keyframes fadeout { to { opacity: 0; } }
+@keyframes drop { from { opacity: 0; transform: translateY(-4px); } }
+#main.enter > :nth-child(2) { animation-delay: .04s; } #main.enter > :nth-child(3) { animation-delay: .08s; } #main.enter > :nth-child(4) { animation-delay: .12s; }
+#main.enter > :nth-child(5) { animation-delay: .16s; } #main.enter > :nth-child(6) { animation-delay: .2s; } #main.enter > :nth-child(n+7) { animation-delay: .24s; }
+/* A bare grid has nothing to paint, so only its items move. Fading the grid AND its items made every item fade in twice (stepped, late). */
+#main.enter > :is(.modes, .skills, .g, .g3, .c2, .cols, .ms), #main.enter :is(.home-main, .home-side) > :is(.modes, .skills, .g, .g3, .c2, .cols, .ms) { animation: none !important; }
+#main.enter :is(.modes, .skills, .g, .g3, .c2, .cols, .ms) > * { animation: settle .55s var(--ease) both; animation-delay: calc(.08s + var(--n, 0) * .05s); }
+#main.enter :is(.modes, .skills, .g, .g3, .c2, .cols, .ms) > :nth-child(1) { --n: 0; } #main.enter :is(.modes, .skills, .g, .g3, .c2, .cols, .ms) > :nth-child(2) { --n: 1; }
+#main.enter :is(.modes, .skills, .g, .g3, .c2, .cols, .ms) > :nth-child(3) { --n: 2; } #main.enter :is(.modes, .skills, .g, .g3, .c2, .cols, .ms) > :nth-child(4) { --n: 3; }
+#main.enter :is(.modes, .skills, .g, .g3, .c2, .cols, .ms) > :nth-child(5) { --n: 4; } #main.enter :is(.modes, .skills, .g, .g3, .c2, .cols, .ms) > :nth-child(6) { --n: 5; }
+#main.enter :is(.modes, .skills, .g, .g3, .c2, .cols, .ms) > :nth-child(7) { --n: 6; } #main.enter :is(.modes, .skills, .g, .g3, .c2, .cols, .ms) > :nth-child(n+8) { --n: 7; }
+#main.enter .tbl tr, #main.enter .log > *, #main.enter .hrs > * { animation: fade .5s var(--ease) both; animation-delay: .18s; }
+
+/* ---- 2. Charts draw themselves (on arrival, when a dialog opens, when a fold opens) ---- */
+/* Every stagger is capped, so the last bar or cell always lands before the entrance window closes (before, long series were cut off mid-air and snapped in). */
+@keyframes draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes grow { from { transform: scaleY(0); } }
+@keyframes growx { from { transform: scaleX(0); } }
+@keyframes bloom { from { opacity: 0; transform: scale(.72); } }
+@keyframes sweep { from { stroke-dasharray: 0 189; } }
+@keyframes cell { from { opacity: 0; transform: scale(.4); } }
+:is(#main.enter, dialog[open], .fold[open], .seen) .sp .ln, :is(#main.enter, dialog[open], .seen) .sp .rl { stroke-dasharray: 1; animation: draw .8s var(--ease-io) both; }
+:is(#main.enter, dialog[open], .fold[open], .seen) .sp .ar { animation: fade .8s var(--ease) .35s both; }
+:is(#main.enter, dialog[open], .fold[open], .seen) .sp .pt { animation: bloom .35s var(--soft) .65s both; transform-box: fill-box; transform-origin: center; }
+:is(#main.enter, dialog[open], .seen) .sp .bb { animation: grow .6s var(--ease) both; animation-delay: calc(.1s + min(var(--i, 0) * 28ms, .4s)); transform-box: fill-box; transform-origin: bottom; }
+:is(#main.enter, dialog[open], .seen) .rd .rp { animation: bloom .7s var(--ease) .15s both; transform-origin: 110px 112px; }
+:is(#main.enter, dialog[open], .seen) .rf { animation: sweep .9s var(--ease-io) .2s both; }
+:is(#main.enter, .fold[open], .seen) .hm b { animation: cell .35s var(--ease) both; animation-delay: min(calc(var(--wc, 0) * 14ms), .45s); }
+:is(#main.enter, dialog[open], .seen) .bar > i { transform-origin: left; animation: growx .8s var(--ease) .2s both; }
+
+/* ---- 3. Interactive chart parts ease instead of snapping ---- */
+.ix .cur { animation: fade .12s linear; } .ctip { transition: left .09s linear, top .09s linear; } .ctip.on { animation: drop .16s var(--ease); }
+.ixh b { transition: transform var(--d1) var(--ease), background-color var(--d2) var(--ease); } @media (hover: hover) { .ixh b[data-d]:hover { transform: scale(1.18); } }
+
+/* ---- 4. Touch and pointer feedback ---- */
+/* Press is fast, release is soft: the only way a control feels like it has weight. Every property that changes on hover/press is in the list, so nothing snaps. */
+.btn { transition: background-color var(--d2) var(--ease), border-color var(--d2) var(--ease), color var(--d2) var(--ease), box-shadow var(--d3) var(--ease), filter var(--d2) var(--ease), transform .32s var(--ease); }
+.mode, .sk { transition: transform .34s var(--ease), border-color var(--d2) var(--ease), box-shadow var(--d3) var(--ease); }
+.mode .mi { transition: transform var(--d3) var(--spring); }
+@media (hover: hover) {
+  .btn:not(:disabled):hover { transform: translateY(-1px); }
+  .btn.primary:not(:disabled):hover { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .32), 0 1px 2px rgba(0, 0, 0, .3), 0 10px 20px -10px color-mix(in srgb, var(--ac) 44%, transparent); }
+  .mode:hover, .sk:hover { transform: translateY(-2px); }
+  .mode:hover { border-color: color-mix(in srgb, var(--mc) 40%, var(--ln2)); box-shadow: var(--edge), 0 14px 28px -16px rgba(0, 0, 0, .55); }
+  .sk:hover { border-color: color-mix(in srgb, var(--sc) 38%, var(--ln2)); box-shadow: var(--edge), 0 14px 28px -16px rgba(0, 0, 0, .55); }
+  .mode:hover .mi { transform: scale(1.08) rotate(-3deg); }
+  .nv:hover .nvi .ic { transform: translateY(-1px) scale(1.08); }
+}
+.btn:not(:disabled):active, .mode:active, .sk:active { transform: scale(.975); transition-duration: .1s; }
+.nvi { transition: background-color var(--d2) var(--ease), color var(--d2) var(--ease), box-shadow var(--d3) var(--ease), transform var(--d2) var(--ease); }
+.nvi .ic { transition: transform var(--d2) var(--spring); }
+.chip, .seg button, .tabs2 button, .opt { transition: background-color var(--d2) var(--ease), border-color var(--d2) var(--ease), color var(--d2) var(--ease), box-shadow var(--d3) var(--ease), transform .3s var(--ease); }
+.tabs2 button { transition: color var(--d2) var(--ease), border-color var(--d3) var(--ease), transform .3s var(--ease); }
+.lnk { transition: color var(--d2) var(--ease); }
+.sw { transition: background-color .28s var(--ease), border-color .28s var(--ease); }
+.sw::after { transition: transform .36s var(--soft), width .2s var(--ease); }
+.sw:active::after { width: 25px; } .sw[aria-checked=true]:active::after { transform: translateX(13px); }   /* the knob stretches under the thumb, like a real switch */
+.syncdot.busy i { animation: breathe 1.4s ease-in-out infinite; } @keyframes breathe { 50% { transform: scale(.6); opacity: .55; } }
+.bar > i { transition: width .45s var(--ease), background-color var(--d3) var(--ease); }   /* progress glides to its new value */
+
+/* ---- 5. Surfaces: theme changes crossfade, folds and dialogs open and close softly ---- */
+/* (theme changes are interpolated at the root now: see section 0) */
+.fold[open] > :not(summary), .allans[open] > :not(summary) { animation: drop .3s var(--ease) both; }
+.fold > summary::after, .allans > summary::after { transition: transform var(--d3) var(--ease); }
+/* Folds also glide open and shut where the browser supports animating to auto height (others open instantly, as before). */
+@supports (interpolate-size: allow-keywords) and selector(::details-content) {
+  .fold, .allans { interpolate-size: allow-keywords; }
+  .fold::details-content, .allans::details-content { height: 0; overflow: clip; transition: height .38s var(--ease), content-visibility .38s allow-discrete; }
+  .fold[open]::details-content, .allans[open]::details-content { height: auto; }
+}
+dialog.dlg[open]::backdrop { animation: fade .28s var(--ease); }
+dialog.dlg[open] .body > *, dialog.dlg[open] .acts { animation: settle-s .38s var(--ease) both; animation-delay: .06s; }
+dialog.dlg[open] .body > :nth-child(2) { animation-delay: .1s; } dialog.dlg[open] .body > :nth-child(n+3) { animation-delay: .14s; }
+/* Leaving: the dialog used to vanish in one frame after a soft entrance. motion.js adds .out, waits for this, then really closes it. */
+@keyframes dlgout { to { opacity: 0; transform: translateY(6px) scale(.985); } }
+@keyframes sheetout { to { transform: translateY(100%); } }
+dialog.dlg.out { animation: dlgout .18s var(--ease-io) both; pointer-events: none; }
+dialog.dlg.out::backdrop { animation: fadeout .2s var(--ease-io) both; }
+dialog.dlg.out .body > *, dialog.dlg.out .acts { animation: none; }
+
+/* ---- 6. Play: the answer gets a ring that pulses out and fades, the question slides in ---- */
+@keyframes qin { from { opacity: .2; transform: translateY(6px) scale(.985); } }   /* starts visible: in a timed drill the next question must be readable at once */
+@keyframes ring { from { box-shadow: 0 0 0 0 color-mix(in srgb, var(--rc) 45%, transparent), var(--sh1); } }
+.in { animation: qin .2s var(--ease) both; }
+.okf { --rc: var(--ok); animation: ring .6s var(--ease-io); } .badf { --rc: var(--bad); animation: ring .6s var(--ease-io); }
+.qt i { transition: width .1s linear, background-color .4s var(--ease-io); }
+.bst i { animation-timing-function: cubic-bezier(.25, .6, .35, 1); }
+
+/* ---- 7. Phones ---- */
+/* Blocks below the fold wait, then settle in as they scroll into view (all screen sizes) */
+.rv:not(.seen) { animation: none !important; opacity: 0; transform: translateY(16px); }
+.rv.seen { animation: settle .6s var(--ease) both !important; }
+@keyframes slidef { from { opacity: 0; transform: translateX(14px); } } @keyframes slideb { from { opacity: 0; transform: translateX(-14px); } }
+.grab { display: none; }
+@media (max-width: 900px) {
+  /* screens slide in from the side of the tab you moved towards */
+  #main.enter[data-dir=f] > *, #main.enter[data-dir=f] .home-main > *, #main.enter[data-dir=f] .home-side > * { animation-name: slidef; }
+  #main.enter[data-dir=b] > *, #main.enter[data-dir=b] .home-main > *, #main.enter[data-dir=b] .home-side > * { animation-name: slideb; }
+  /* blocks below the fold wait, then settle in as they scroll into view */
+  /* tab bar: the active icon lifts, a press squeezes the pill */
+  #tabs .nvi { transition: background-color var(--d2) var(--ease), color var(--d2) var(--ease), transform var(--d2) var(--soft); }
+  #tabs .nv:active .nvi { transform: scale(.92); } #tabs .nv[aria-current=page] .ic { transform: translateY(-1px) scale(1.1); }
+}
+@media (max-width: 560px) {
+  dialog.dlg[open] { animation: sheet .42s cubic-bezier(.16, 1, .3, 1); }
+  dialog.dlg::backdrop { opacity: var(--dim, 1); }
+  dialog.dlg.out { animation: sheetout .26s cubic-bezier(.4, 0, 1, 1) both; }
+  .grab { display: block; position: absolute; inset: 0 0 auto; height: 44px; z-index: 3; touch-action: none; cursor: grab; }
+}
+@media (hover: none) {
+  .btn:not(:disabled):active, .mode:active, .sk:active, .opt:active { transform: scale(.97); }
+  .chip:active, .seg button:active { transform: scale(.94); } .pad button:active { transform: scale(.93); }
+}
+@media print { .rv { opacity: 1 !important; transform: none !important; animation: none !important; } }
+
+/* ---- 8. Finish: depth, light and typographic stability ---- */
+.stat .v, .lvl b, .sk .lv, .num, .hero .goal, .tbl td, .fr b { font-variant-numeric: tabular-nums lining-nums; }   /* digits keep their width, so counting up never jitters */
+@keyframes drift { to { transform: translate3d(0, -14px, 0) scaleX(1.06); opacity: .88; } }
+/* The page glow breathes very slowly on desktop. On phones it stays still: a moving layer under the blurred tab bar forced it to re-blur every frame, which is what made scrolling feel heavy. */
+@media (min-width: 901px) and (hover: hover) { body::before { transform-origin: 50% 0; animation: drift 28s ease-in-out infinite alternate; will-change: transform, opacity; } }
+body.playing::before { animation-play-state: paused; }   /* nothing moves behind a question */
+/* The start button is calm: no pulsing halo. Depth comes from its own shadow (style.css), life from the sheen on hover and tap. */
+.btn.primary { position: relative; overflow: hidden; overflow: clip; isolation: isolate; }   /* clip (not hidden) keeps the ripple inside without making a scroll container, so a flex item keeps its automatic minimum width */
+.btn.primary::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: 0; background: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, .22) 50%, transparent 62%); transform: translateX(-130%); }
+@keyframes sheen { 0% { opacity: 1; transform: translateX(-130%); } 100% { opacity: 1; transform: translateX(130%); } }
+@media (hover: hover) { .btn.primary:not(:disabled):hover::after { animation: sheen .9s var(--ease) both; } }
+.brand .logo { transition: transform var(--d3) var(--spring); }
+@media (hover: hover) { .brand:hover .logo { transform: rotate(-4deg) scale(1.06); } }
+.nv[aria-current=page] .nvi { box-shadow: 0 0 0 1px color-mix(in srgb, var(--ac) 24%, transparent); }
+#toast { transition: opacity .25s var(--ease), transform .45s var(--soft); }
+dialog.dlg { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06), 0 40px 100px -24px rgba(0, 0, 0, .75); }
+dialog.dlg::backdrop { -webkit-backdrop-filter: blur(8px) saturate(1.1); backdrop-filter: blur(8px) saturate(1.1); }
+@supports (-webkit-background-clip: text) or (background-clip: text) {
+  .hd h1 { background: linear-gradient(180deg, var(--tx) 55%, color-mix(in srgb, var(--tx) 74%, var(--ac))); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+}
+#shell { animation: fade .5s var(--ease) both; }   /* first paint eases in once */
+
+/* ---- 9. Touch parity: everything the cursor does on desktop, a finger does on a phone ---- */
+/* One light layer serves both: the cursor fades it in on hover, a finger fades it in while held. It is a ::after, so it fades; the old hover swapped the card's background, which cannot animate and snapped. */
+.mode { --gc: var(--mc); } .sk { --gc: var(--sc); }
+.mode, .sk { position: relative; isolation: isolate; }
+.mode::after, .sk::after { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity .6s var(--ease);
+  background: radial-gradient(200px circle at var(--mx, 50%) var(--my, 30%), color-mix(in srgb, var(--gc) 17%, transparent), transparent 70%); }
+@media (hover: hover) { .mode:hover::after, .sk:hover::after { opacity: 1; transition-duration: .25s; } }
+.mode.lit::after, .sk.lit::after { opacity: 1; transition-duration: .14s; }   /* lights where the finger lands and follows it, then fades on release */
+.mode.lit { border-color: color-mix(in srgb, var(--mc) 40%, var(--ln2)); box-shadow: var(--edge), 0 14px 28px -16px rgba(0, 0, 0, .55); }
+.sk.lit { border-color: color-mix(in srgb, var(--sc) 38%, var(--ln2)); box-shadow: var(--edge), 0 14px 28px -16px rgba(0, 0, 0, .55); }
+.mode.lit .mi { transform: scale(1.08) rotate(-3deg); }
+.btn.primary.shine::after { animation: sheen .8s var(--ease) both; }   /* a tap sweeps the light across, like a hover does */
+.brand:active .logo { transform: rotate(-4deg) scale(1.06); }
+
+/* ---- 10. Premium pass ---- */
+/* Phones: one pill glides between tabs (position measured in motion.js), instead of each tab lighting up on its own */
+#tabs > * { position: relative; z-index: 1; }
+#tabs::before { content: ""; position: absolute; left: 0; top: 0; width: var(--pw, 0px); height: var(--ph, 0px); transform: translate(var(--px, 0px), var(--py, 0px)); border-radius: 14px; pointer-events: none; z-index: 0;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ac) 24%, transparent), color-mix(in srgb, var(--ac) 13%, transparent));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12), 0 0 0 1px color-mix(in srgb, var(--ac) 26%, transparent); }
+#tabs.np::before { opacity: 0; }
+#tabs.rdy::before { transition: transform .55s var(--soft), width .35s var(--ease), height .35s var(--ease), opacity .25s var(--ease); }
+#tabs .nv[aria-current=page] .nvi { background: none; box-shadow: none; }
+/* Desktop and tablet: the active rail item gets an accent bar on the edge */
+@media (min-width: 761px) {
+  #rail .nv { position: relative; }
+  #rail .nv::before { content: ""; position: absolute; left: -10px; top: 50%; width: 3px; height: 26px; margin-top: -13px; border-radius: 0 3px 3px 0; background: var(--ac); transform: scaleY(0); opacity: 0; transition: transform .45s var(--soft), opacity .25s var(--ease); }
+  #rail .nv[aria-current=page]::before { transform: scaleY(1); opacity: 1; }
+}
+/* Touch ripple: a soft wave from the fingertip on buttons, options and tabs */
+/* overflow: clip clips the ripple like hidden does, but does not create a scroll container, so these controls keep their automatic minimum width inside no-wrap flex rows. Browsers without clip fall back to hidden. */
+:where(.btn, .opt, .seg button, .tabs2 button) { position: relative; overflow: hidden; overflow: clip; }
+.rip { position: absolute; left: var(--x); top: var(--y); width: var(--s); height: var(--s); margin: calc(var(--s) / -2) 0 0 calc(var(--s) / -2); border-radius: 50%; pointer-events: none; text-decoration: none; opacity: 0;
+  background: radial-gradient(closest-side, currentColor, transparent); animation: rip .7s var(--ease) forwards; }
+@keyframes rip { from { transform: scale(.05); opacity: .16; } to { transform: scale(1); opacity: 0; } }
+/* Play: the streak flame flickers while the streak is alive (transform only; the soft glow is static, so nothing repaints every frame) */
+@keyframes flick { to { transform: scale(1.1) translateY(-1px); } }
+#cc .ic { transform-box: fill-box; transform-origin: 50% 85%; animation: flick 1.1s ease-in-out infinite alternate; filter: drop-shadow(0 0 2px color-mix(in srgb, #ffb454 45%, transparent)); }
+/* Results: a new best gets one gold sweep and a twinkling star; a level-up pops in */
+@keyframes goldsweep { from { background-position: 160% 0; } to { background-position: -60% 0; } }
+.rhero.best::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(105deg, transparent 40%, color-mix(in srgb, var(--gd) 22%, transparent) 50%, transparent 60%) 160% 0 / 250% 100% no-repeat; animation: goldsweep 1.6s var(--ease-io) .5s 1 both; }
+@keyframes twinkle { 0% { transform: scale(.3) rotate(-60deg); opacity: 0; } 60% { transform: scale(1.25) rotate(8deg); opacity: 1; } 100% { transform: none; } }
+.rhero.best .rtag .ic { animation: twinkle .9s var(--soft) .3s both; }
+@keyframes lvpop { from { opacity: 0; transform: translateY(6px) scale(.7); } }
+.lvup { animation: lvpop .6s var(--soft) .55s both; }
+
+/* Fix: sliding in from the right pushed content past the edge, so phones briefly let the page pan sideways. Clip it (clip, not hidden, so sticky headers keep working). */
+html, body { overflow-x: clip; }
+#main { overflow-x: clip; }
+@supports not (overflow: clip) { html, body { overflow-x: hidden; } }
+
+/* ---- 11. Motion everywhere (v14.24b): one language, small movements, always eased ---- */
+/* Screen change: the old screen fades away while the new one rises in (View Transitions; browsers without it simply cut as before). */
+@supports (view-transition-name: x) {
+  ::view-transition-group(root) { animation-duration: .2s; animation-timing-function: var(--ease-io); }
+  ::view-transition-old(root) { animation: fadeout .16s var(--ease-io) both; }
+  ::view-transition-new(root) { animation: none; }
+}
+/* More arrivals: settings rows, form fields, chips, notices, steps, chat, tables, dialog options, keypad, results */
+#main.enter :is(.set, .field, .notice, .step, .wk, .lvl, .tod) { animation: settle-s .5s var(--ease) both; animation-delay: .14s; }
+#main.enter .chips > * { animation: settle-s .45s var(--ease) both; animation-delay: calc(.1s + min(var(--k, 0) * 24ms, .3s)); }
+#main.enter .chips > :nth-child(1) { --k: 0; } #main.enter .chips > :nth-child(2) { --k: 1; } #main.enter .chips > :nth-child(3) { --k: 2; } #main.enter .chips > :nth-child(4) { --k: 3; }
+#main.enter .chips > :nth-child(5) { --k: 4; } #main.enter .chips > :nth-child(6) { --k: 5; } #main.enter .chips > :nth-child(7) { --k: 6; } #main.enter .chips > :nth-child(n+8) { --k: 8; }
+.chat-msg:last-child { animation: settle .45s var(--ease) both; }
+dialog.dlg[open] form > div > .opt { animation: settle-s .38s var(--ease) both; animation-delay: calc(.1s + var(--k, 0) * 40ms); }
+dialog.dlg[open] form > div > .opt:nth-child(2) { --k: 1; } dialog.dlg[open] form > div > .opt:nth-child(3) { --k: 2; } dialog.dlg[open] form > div > .opt:nth-child(n+4) { --k: 3; }
+#main.enter .rhero > * { animation: settle .6s var(--ease) both; animation-delay: calc(.06s + var(--k, 0) * .07s); }
+#main.enter .rhero > :nth-child(2) { --k: 1; } #main.enter .rhero > :nth-child(3) { --k: 2; } #main.enter .rhero > :nth-child(4) { --k: 3; } #main.enter .rhero > :nth-child(n+5) { --k: 4; }
+.pad button { animation: settle-s .4s var(--ease) both; animation-delay: calc(var(--k, 0) * 30ms); }
+.pad button:nth-child(3n+2) { --k: 1; } .pad button:nth-child(3n) { --k: 2; } .pad button:nth-child(n+4) { animation-delay: calc(.06s + var(--k, 0) * 30ms); } .pad button:nth-child(n+7) { animation-delay: calc(.12s + var(--k, 0) * 30ms); } .pad button:nth-child(n+10) { animation-delay: calc(.18s + var(--k, 0) * 30ms); }
+/* Countdown digits pop; the hint line eases in */
+@keyframes cdpop { from { opacity: 0; transform: scale(1.5); } 30% { opacity: 1; } }
+.cd > * { animation: cdpop .6s var(--ease) both; }
+.hint { animation: fade .5s var(--ease) .2s both; }
+/* Hover and focus: every interactive thing answers the cursor the same way */
+.btn .ic { transition: transform var(--d3) var(--ease); }
+@media (hover: hover) {
+  .btn:not(:disabled):hover .ic { transform: scale(1.1); }
+  .tbl tbody tr, .log > *, .hrs > * { transition: background-color var(--d2) var(--ease); }
+  .tbl tbody tr:hover { background: color-mix(in srgb, var(--tx) 4%, transparent); }
+  .card[data-act], .card[role=button] { transition: transform .34s var(--ease), border-color var(--d2) var(--ease), box-shadow var(--d3) var(--ease); cursor: pointer; }
+  .card[data-act]:hover, .card[role=button]:hover { transform: translateY(-2px); border-color: var(--ln2); box-shadow: var(--edge), 0 14px 28px -16px rgba(0, 0, 0, .5); }
+  .pill, .chip { transition: background-color var(--d2) var(--ease), border-color var(--d2) var(--ease), color var(--d2) var(--ease), transform .3s var(--ease); }
+}
+a { background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px no-repeat; transition: background-size var(--d3) var(--ease), color var(--d2) var(--ease); }
+@media (hover: hover) { a:not(.btn):not(.brand):not(.nv):hover { background-size: 100% 1px; } }
+.inp, .inp:focus { transition: border-color var(--d2) var(--ease), box-shadow var(--d3) var(--ease), background-color var(--d2) var(--ease); }
+.fold > summary, .allans > summary { transition: color var(--d2) var(--ease); }
+
+/* ---- 12. Nothing is left without motion (v14.24c) ---- */
+/* Safety net at zero specificity: any control without its own transition still eases, presses, and grows its focus ring in. Specific rules above always win. */
+:where(button, [role=button], [role=tab], summary, select, label, input, textarea, a) { transition: background-color var(--d2) var(--ease), border-color var(--d2) var(--ease), color var(--d2) var(--ease), box-shadow var(--d3) var(--ease), opacity var(--d2) var(--ease), outline-offset var(--d2) var(--ease), transform .3s var(--ease); }
+:where(button, [role=button], [role=tab]):not(:disabled, .pad button):active { transform: scale(.96); transition-duration: .1s; }
+:focus-visible { outline-offset: 3px; }
+@media (hover: hover) {
+  :where(button, [role=button]):not(:disabled):hover { opacity: .94; }
+  .btn:not(:disabled):hover, .chip:hover, .seg button:hover, .opt:hover, .mode:hover, .sk:hover, .nv:hover, .pad button:hover, .tabs2 button:hover { opacity: 1; }
+  .swatch:hover { transform: scale(1.14); } .step:hover { background: color-mix(in srgb, var(--tx) 4%, transparent); }
+  #toast button:hover { opacity: .75; } .tabs2 button:hover { color: var(--tx); }
+}
+.swatch:active { transform: scale(.9); }
+.step { transition: background-color var(--d2) var(--ease), transform .3s var(--ease); } .step i { transition: background-color var(--d3) var(--ease), border-color var(--d3) var(--ease); }
+.lnk2, .syncdot { transition: background-color var(--d2) var(--ease), color var(--d2) var(--ease), transform .3s var(--ease); }
+.syncdot i { transition: background-color .4s var(--ease), box-shadow .4s var(--ease); }
+.swatch { transition: transform .3s var(--soft), box-shadow var(--d3) var(--ease); }
+.stepper b { transition: transform var(--d1) var(--ease); }
+/* Touch ripple reaches the rest of the tappable text-ish controls too */
+:where(.chip, .step, .lnk2, .syncdot) { position: relative; overflow: hidden; overflow: clip; }
+/* Segmented controls and sub-tabs: one highlight slides to the new choice instead of the old one vanishing and the new one appearing (placed by motion.js) */
+.seg { position: relative; } .seg > button, .tabs2 > button { position: relative; z-index: 1; }
+.ind { position: absolute; left: 0; top: 0; z-index: 0; width: var(--iw, 0px); height: var(--ih, 0px); transform: translate(var(--ix, 0px), var(--iy, 0px)); pointer-events: none; }
+.ind.go { transition: transform .5s var(--soft), width .35s var(--ease); }
+.seg > .ind { background: var(--seg-on); border-radius: 9px; box-shadow: var(--sh1), 0 0 0 1px var(--ln); }
+.tabs2 > .ind { background: var(--ac); border-radius: 2px 2px 0 0; }
+.seg.has-ind > button[aria-pressed=true] { background: none; box-shadow: none; }
+.tabs2.has-ind > button[aria-selected=true] { border-bottom-color: transparent; }
+
+/* ---- 13. Fluid pass (v14.25) ---- */
+/* Play: the screen is built in a short cascade (it used to appear whole), the countdown pops on every number, digits land one by one, the answered question slides away, the feedback line and the pause card ease in and out. */
+.play > div > :not(.pad):not(.kin) { animation: settle-s .5s var(--ease) both; }
+.play > div > :nth-child(2) { animation-delay: .03s; } .play > div > :nth-child(3) { animation-delay: .06s; } .play > div > :nth-child(4) { animation-delay: .09s; }
+.play > div > :nth-child(5) { animation-delay: .12s; } .play > div > :nth-child(n+6) { animation-delay: .16s; }
+.play .side > .card { animation: settle-s .5s var(--ease) both; animation-delay: .18s; } .play .side > .card:nth-child(2) { animation-delay: .23s; } .play .side > .card:nth-child(3) { animation-delay: .28s; }
+@keyframes cdtick { from { opacity: 0; transform: scale(1.5); } 30% { opacity: 1; } }
+.board.cd .q.tk { animation-name: cdtick; }
+@keyframes dgpop { from { opacity: 0; transform: translateY(10px) scale(.7); } }
+.bf .dg { display: inline-block; animation: dgpop .2s var(--soft) both; }
+@keyframes okpop { 45% { transform: scale(1.07); } }
+.bf .ok { display: inline-block; animation: okpop .32s var(--soft); }
+.qx { white-space: nowrap; overflow: hidden; }
+.msg > * { animation: settle-s .28s var(--ease) both; } .msg > :nth-child(2) { animation-delay: .04s; } .msg > :nth-child(n+3) { animation-delay: .08s; }
+.hud .big { transition: color .4s var(--ease-io); } .hud .pts .big, .cmb, .hud .cl .big { display: block; transform-origin: 50% 60%; }
+.paused { animation: fade .24s var(--ease) both; }
+.paused > * { animation: settle-s .42s var(--ease) both; } .paused > :nth-child(2) { animation-delay: .05s; } .paused > :nth-child(3) { animation-delay: .1s; }
+.paused.out { animation: fadeout .2s var(--ease-io) both; pointer-events: none; } .paused.out > * { animation: none; }
+
+/* Depth follows scrolling: bars that content slides under gain a shadow only once it does (body.scrolled is set by motion.js) */
+#tabs, .tabs2 { transition: box-shadow .35s var(--ease), border-color .35s var(--ease); }
+.scrolled .tabs2 { box-shadow: 0 10px 18px -16px rgba(0, 0, 0, .7); }
+@media (max-width: 760px) { .scrolled #tabs { box-shadow: 0 -12px 30px -16px rgba(0, 0, 0, .55); } }
+
+/* Touch: tappable cards and rows squeeze under the finger and release softly; fields lift a hair when you are typing in them */
+.card, .fr, .log > * { transition: transform .38s var(--ease), background-color var(--d2) var(--ease), border-color var(--d2) var(--ease), box-shadow var(--d3) var(--ease); }
+.card.tap, .fr.tap, .log > .tap, summary.tap { transform: scale(.985); transition-duration: .1s; }
+.field { transition: transform .3s var(--ease); } .field:focus-within { transform: translateY(-1px); }
+
+/* In-place repaints (morph.js) keep their elements, so the transitions already declared above (switch knob, bars, chips, swatches, segmented highlight) now run on every state change. */
+
+/* Results: the page itself arrives (results used to appear with no entrance because only navigation turned it on) */
+#main.enter .rnext, #main.enter .rbtns > * { animation: settle .55s var(--ease) both; animation-delay: calc(.3s + var(--k, 0) * .05s); }
+#main.enter .rbtns > :nth-child(2) { --k: 1; } #main.enter .rbtns > :nth-child(3) { --k: 2; } #main.enter .rbtns > :nth-child(4) { --k: 3; } #main.enter .rbtns > :nth-child(n+5) { --k: 4; }

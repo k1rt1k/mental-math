@@ -1,0 +1,89 @@
+import { S } from '../state.js';
+import { IDS, SK, COL, gen, how } from '../engine.js';
+import { TRICKS } from '../tricks.js';
+import { esc } from '../util.js';
+import { weakestSkills } from '../stats.js';
+import { register, A } from '../nav.js';
+import { drill } from './home.js';
+import { dialog, icon } from '../ui.js';
+import { ib } from '../info.js';
+import { showAiSheet } from '../ai.js';
+
+let filter = 'all';
+export const setLearnFilter = (k) => { filter = k; };
+
+function learn() {
+  document.title = 'Learn · Mental Math';
+  // "Suggested" only means something if it is rare: the three best next steps, from the weakest skills first, least practised first.
+  const wkOrder = weakestSkills(3), tries = (t) => { const o = t.pt && S.pat[SK[t.sk].n + ' · ' + t.pt]; return o ? o.n : 0; };
+  const sugg = new Set(TRICKS.filter((t) => wkOrder.includes(t.sk) && t.pt && (() => { const o = S.pat[SK[t.sk].n + ' · ' + t.pt]; return !o || o.n < 8 || o.ok / o.n < 0.85; })()).sort((a, b) => wkOrder.indexOf(a.sk) - wkOrder.indexOf(b.sk) || tries(a) - tries(b)).slice(0, 3).map((t) => t.id));
+  const list = TRICKS.filter((t) => filter == 'all' || t.sk == filter).sort((a, b) => (sugg.has(b.id) ? 1 : 0) - (sugg.has(a.id) ? 1 : 0));   // stable: suggested first, library order otherwise
+  const stat = (t) => {
+    const o = t.pt && S.pat[SK[t.sk].n + ' · ' + t.pt];
+    if (!o || !o.n) return t.pt ? '<span class="mu">Not practised yet</span>' : '';
+    const acc = Math.round((100 * o.ok) / o.n), sp = o.ok ? o.r / o.ok : 0;
+    const mastered = o.n >= 15 && acc >= 90 && sp && sp <= 1;
+    return `${mastered ? '<span class="pill ok2">Mastered ✓</span> ' : ''}<span class="mu">You: ${o.n} tries · <span class="${acc >= 90 ? 'ok' : acc < 75 ? 'bad' : ''}">${acc}%</span> accurate${sp ? ' · ' + sp.toFixed(2) + '× par time' : ''}${sp ? ib('l.par') : ''}</span>`;
+  };
+  document.querySelector('#main').innerHTML = `
+  <div class="hd"><h1>Learn</h1>${S.sessions.length ? `<div class="btns"><button class="btn" data-act="aiNextTrick">${icon('sparkle')} AI: which trick next?</button></div>` : ''}</div>
+  <p class="mu" style="margin:-8px 0 16px;max-width:62ch">Short methods that make the numbers easy. Read one, then practise it: the drill serves only questions where that trick <span style="white-space:nowrap">applies.${ib('l.intro')}</span></p>
+  <div class="chips fscroll" style="margin-bottom:16px" role="group" aria-label="Filter by skill"><button class="chip" aria-pressed="${filter == 'all'}" data-act="learnFilter" data-v="all">All</button>${IDS.filter((k) => TRICKS.some((t) => t.sk == k)).map((k) => `<button class="chip" aria-pressed="${filter == k}" data-act="learnFilter" data-v="${esc(k)}"><span class="dot" style="--sc:${COL[k]}"></span>${esc(SK[k].n)}</button>`).join('')}</div>
+  <div class="tricks">${list.map((t) => `<article class="card trick" style="--sc:${COL[t.sk]}">
+    <div class="kc">${esc(SK[t.sk].n)}${S.sessions.length && sugg.has(t.id) ? ' <span class="pill sg2">Suggested for you</span>' : ''}</div><h3>${esc(t.title)}</h3>
+    <p>${esc(t.rule)}</p>
+    <div class="ex">${t.ex.map((x) => `<div>${esc(x)}</div>`).join('')}</div>
+    <div class="trick-foot">${stat(t)}<span class="btns"><button class="btn sm ghost iconly" data-act="aiTrick" data-v="${esc(t.id)}" aria-label="Ask AI about ${esc(t.title)}" title="Ask AI about this trick">${icon('sparkle')}</button><button class="btn sm" data-act="tryTrick" data-v="${esc(t.id)}">Try one</button><button class="btn sm primary" data-act="practiceTrick" data-v="${esc(t.id)}">Practise this</button></span></div></article>`).join('')}</div>`;
+}
+A.aiNextTrick = () => {
+  const tricks = TRICKS.slice(0, 30).map((t) => { const o = t.pt && S.pat[SK[t.sk].n + ' · ' + t.pt]; return { id: t.id, title: t.title, skill: SK[t.sk].n, tries: o ? o.n : 0, accuracyPct: o && o.n ? Math.round((100 * o.ok) / o.n) : null }; });
+  const skillRatings = Object.fromEntries(IDS.map((k) => [SK[k].n, Math.round(S.sk[k].lv * 100)]));
+  showAiSheet({ title: 'Which trick should you learn next?', action: 'nexttrick', context: { tricks, skillRatings }, extra: (res) => TRICKS.filter((t) => String(res.text || '').includes(t.title)).slice(0, 2).map((t) => ({ label: `Practise: ${t.title}`, run: () => drill(t.sk, t.pt) })) });
+};
+A.learnFilter = (d) => { filter = d.v; learn(); };
+A.aiTrick = (d) => {
+  const t = TRICKS.find((x) => x.id == d.v); if (!t) return;
+  const o = t.pt && S.pat[SK[t.sk].n + ' · ' + t.pt];
+  showAiSheet({ title: t.title, action: 'trick', context: { trick: t.title, skill: SK[t.sk].n, rule: t.rule, cardExamples: t.ex, yourTries: o ? o.n : 0, yourAccuracyPct: o && o.n ? Math.round((100 * o.ok) / o.n) : null }, extra: () => [{ label: 'Practise this trick', run: () => drill(t.sk, t.pt) }] });
+};
+A.practiceTrick = (d) => { const t = TRICKS.find((x) => x.id == d.v); if (t) drill(t.sk, t.pt); };
+
+/** One question where the trick applies. Hard patterns only exist at higher difficulty, so the search widens as it goes. */
+function sample(t) {
+  const base = Math.max(5, Math.round(S.sk[t.sk].lv));
+  let p;
+  for (let i = 0; i < 90; i++) { p = gen(t.sk, i < 30 ? base : i < 60 ? 8 : 11); if (!t.pt || p.pt == t.pt) break; }
+  return p;
+}
+/** A throw-away try-out: nothing is recorded, so it is safe to experiment and look at the method. */
+A.tryTrick = async (d) => {
+  const t = TRICKS.find((x) => x.id == d.v);
+  if (!t) return;
+  let p = sample(t), solved = false;
+  await dialog({
+    title: t.title,
+    body: `<p class="mu">${esc(t.rule)}</p><div class="tryq" id="tq" aria-live="polite"></div>
+      <input class="inp tryin" id="ti" inputmode="numeric" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Your answer">
+      <div class="tryres" id="tr" role="status" aria-live="polite"></div>
+      <div class="btns" style="margin-top:10px"><button type="button" class="btn sm" id="tc">Check<kbd>Enter</kbd></button><button type="button" class="btn sm" id="ts">Show method</button><button type="button" class="btn sm ghost" id="tn">Another</button></div>`,
+    actions: [{ label: 'Done', value: true, primary: true }],
+    onOpen: (dlg) => {
+      const q = dlg.querySelector('#tq'), inp = dlg.querySelector('#ti'), res = dlg.querySelector('#tr');
+      const show = () => { q.textContent = p.q; inp.value = ''; res.innerHTML = ''; solved = false; inp.focus(); };
+      const reveal = () => { res.innerHTML = `<span class="ok">${esc(p.q)} = ${esc(p.a)}</span>${p.tip ? `<div class="tip">${esc(p.tip)}</div>` : ''}<div class="tip">${esc(how(p))}</div>`; };
+      const check = () => {
+        if (solved) { p = sample(t); return show(); }
+        if (!inp.value.trim()) return;
+        if (inp.value.trim() == String(p.a)) { solved = true; res.innerHTML = '<span class="ok">✓ Correct.</span> <span class="mu">Press Enter for another.</span>'; }
+        else { res.innerHTML = '<span class="bad">Not quite.</span> <span class="mu">Try again, or show the method.</span>'; inp.select(); }
+      };
+      dlg.querySelector('#tc').onclick = check;
+      dlg.querySelector('#ts').onclick = () => { reveal(); solved = true; inp.focus(); };
+      dlg.querySelector('#tn').onclick = () => { p = sample(t); show(); };
+      inp.addEventListener('keydown', (e) => { if (e.key == 'Enter') { e.preventDefault(); check(); } });
+      show();
+    },
+  });
+};
+register('learn', learn);
+export { learn };

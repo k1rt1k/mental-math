@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#0c1017">
+<meta name="description" content="Adaptive mental maths trainer: ratings, spaced review, daily challenge, survival mode and cloud sync.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Mental Math">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="application-name" content="Mental Math">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="format-detection" content="telephone=no">
+<title>Mental Math Trainer</title>
+<link rel="preload" href="fonts/inter.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/fraunces.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/jbmono.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/style.css?v=14.46">
+<link rel="stylesheet" href="css/motion.css?v=14.46">
+<link rel="stylesheet" href="css/extras.css?v=14.46">
+<script src="js/boot.js"></script>
+</head>
+<body>
+<a class="sr-skip" href="#main">Skip to content</a>
+<div id="shell">
+  <nav id="rail" aria-label="Main"></nav>
+  <main id="main" tabindex="-1"><noscript><p style="padding:24px">Mental Math Trainer needs JavaScript.</p></noscript></main>
+</div>
+<nav id="tabs" aria-label="Main"></nav>
+<div id="toast" role="status" aria-live="polite"></div>
+<input type="file" id="imp" accept=".json,application/json" hidden>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

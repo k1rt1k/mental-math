@@ -1,0 +1,169 @@
+/* v14.32 visuals. Kept out of style.css, which is at its line budget (test/v110). Loaded after style.css and motion.css. */
+
+
+/* "i" buttons: tap for a short explainer sheet (js/info.js). ib() is a button, ibs() a span for use inside another button or a summary. */
+.stat { position: relative; }
+.ib { position: relative; display: inline-grid; place-items: center; vertical-align: middle; flex: none; width: 22px; height: 22px; margin-left: 8px; padding: 0; border-radius: 50%; cursor: pointer;
+  border: 1px solid color-mix(in srgb, var(--ac) 38%, var(--ln2)); background: color-mix(in srgb, var(--ac) 11%, transparent); color: var(--ac-ink);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07); transition: background .15s, color .15s, border-color .15s, box-shadow .15s, transform .15s; }
+.ib .ibi.ibi { width: 14px !important; height: 14px !important; max-width: none; position: static !important; transform: none !important; margin: 0 !important; display: block; fill: currentColor; pointer-events: none; }   /* !important: ring/hero rules that size "svg" must never resize this glyph */
+.ib::after { content: ""; position: absolute; inset: -11px; }   /* a 44px touch target around a 22px dot */
+@media (hover: hover) { .ib:hover { background: color-mix(in srgb, var(--ac) 20%, transparent); border-color: var(--ac); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ac) 14%, transparent); } }
+.ib:active { transform: scale(.9); background: color-mix(in srgb, var(--ac) 26%, transparent); }
+.ib:focus-visible { outline: 2px solid var(--ac); outline-offset: 2px; }
+.stat .ib { position: absolute; top: 8px; right: 8px; margin: 0; }
+.g3 > .stat { align-self: stretch; }   /* cards in a row share one height */
+.g3:has(> .stat) { grid-auto-rows: 1fr; }   /* and so do the rows */
+h2 .ib, h3 .ib { margin-left: 10px; margin-top: -2px; }
+.fold > summary h2 .ib { margin-left: 8px; }
+.eyebrow .ib { margin-left: 6px; width: 19px; height: 19px; } .eyebrow .ib .ibi, .mode b .ib .ibi { width: 12px; height: 12px; }
+.mode b .ib { margin-left: 2px; width: 19px; height: 19px; }
+.set .t .ib { margin-left: 8px; }
+.field > .mu .ib, .mu .ib { margin-left: 6px; }
+.hd .ib { margin-left: 10px; }
+
+
+/* The info sheet: a bottom sheet on phones (see style.css), a compact centred card elsewhere */
+dialog.dlg.info { width: min(420px, calc(100vw - 32px)); }
+dialog.dlg.info form { gap: 12px; }
+dialog.dlg.info h3 { font-size: 17px; }
+dialog.dlg.info .body p { font-size: 14.5px; line-height: 1.6; }
+dialog.dlg.info .acts .btn { min-width: 96px; }
+@media (max-width: 560px) { dialog.dlg.info { width: 100%; } }
+
+/* Home: streak ring that fills toward the next milestone (3, 7, 14, 30, 60, 100, 200, 365 days) */
+@property --pp { syntax: '<number>'; inherits: false; initial-value: 0; }
+.sring { position: relative; display: inline-grid; place-items: center; flex: none; width: 24px; height: 24px; }
+.sring::before { content: ""; position: absolute; inset: 0; border-radius: 50%; --pp: var(--p, 0);
+  background: conic-gradient(var(--gd) calc(var(--pp) * 360deg), color-mix(in srgb, var(--gd) 24%, transparent) 0);
+  -webkit-mask: radial-gradient(farthest-side, #0000 calc(100% - 2.5px), #000 0); mask: radial-gradient(farthest-side, #0000 calc(100% - 2.5px), #000 0);
+  animation: ringgrow .9s var(--ease, cubic-bezier(.22, 1, .36, 1)) both; }
+@keyframes ringgrow { from { --pp: 0; } }
+
+/* Play: a stronger answer flash and a pulsing countdown number */
+@keyframes ring2 { from { box-shadow: 0 0 0 0 color-mix(in srgb, var(--rc) 65%, transparent), var(--sh1); background-color: color-mix(in srgb, var(--rc) 13%, var(--c)); } 45% { box-shadow: 0 0 0 14px color-mix(in srgb, var(--rc) 0%, transparent), var(--sh1); } }
+.okf, .badf { animation: ring2 .7s var(--ease-io, ease-out); }
+@keyframes cdpulse { 0% { text-shadow: 0 0 0 transparent; } 35% { text-shadow: 0 0 34px color-mix(in srgb, var(--ac) 75%, transparent); } 100% { text-shadow: 0 0 0 transparent; } }
+.board.cd .q.tk { color: var(--tx); animation: cdtick .6s var(--ease, ease-out) both, cdpulse .65s ease-out; }
+
+/* Progress charts fade in on first paint instead of popping */
+@keyframes chin { from { opacity: 0; transform: translateY(6px); } }
+.chw { animation: chin .5s var(--ease, ease-out) both; }
+
+/* Light theme: stronger separation between page, cards and borders (card on page was grey on grey) */
+[data-theme=light] { --bg: #ebe9e2; --bg2: #f6f5f1; --c2: #e8e6df; --c3: #dcdad2; --ln: rgba(21, 25, 37, .14); --ln2: rgba(21, 25, 37, .24);
+  --sh1: 0 1px 2px rgba(20, 30, 60, .1), 0 10px 24px -14px rgba(20, 30, 60, .3); }
+
+@media (prefers-reduced-motion: reduce) { .sring::before, .okf, .badf, .chw, .board.cd .q.tk { animation: none; } }
+
+/* Streak: a small green dot on the ring while a rest day is banked */
+.sring.rest::after { content: ""; position: absolute; right: -2px; top: -2px; width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 2px var(--c2); }
+
+/* Notebook: a real Drill button on every missed question */
+.nbact { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
+.nbact .btn.primary { min-height: 38px; min-width: 0; max-width: 70%; padding: 6px 14px; font-size: 13px; }
+.nbact .btn.primary span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nbact .btn.ghost { min-height: 38px; padding: 4px 10px; font-size: 12px; }
+
+/* Accessibility: colour-blind-safe right/wrong pair and larger answer digits (Settings > Appearance) */
+[data-cb="1"] { --ok: #5fb4ff; --bad: #ffa24a; }
+[data-theme=light][data-cb="1"] { --ok: #0b61b8; --bad: #b4500a; }
+[data-big="1"] .play .bf { height: 78px; font-size: clamp(42px, 10vw, 64px); }
+
+/* Play: optional pace readout beside the combo chip */
+.pcv { font: 650 13px/1 var(--mono); letter-spacing: -.01em; white-space: nowrap; }
+
+/* Coach > Your performance: four tiles share the whole card (they used the 6-column Results grid and left a third of the row empty) */
+.rstats.coach-performance { grid-template-columns: repeat(4, minmax(0, 1fr)); max-width: none; margin: 12px 0 0; gap: 10px; }
+.rstats.coach-performance .rs { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 14px 14px 12px; }
+.rstats.coach-performance .rs b { font-size: clamp(22px, 2.4vw, 28px); }
+.rstats.coach-performance .rs span { font-size: 12.5px; line-height: 1.2; }
+@media (max-width: 560px) { .coach-page .rstats.coach-performance { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } .coach-page .rstats.coach-performance .rs { padding: 12px 14px 10px; } .coach-page .rstats.coach-performance .rs b { font-size: 24px; } }
+
+/* One hero card: the session length and Customize live inside it (no separate "Your session" card, no second Start) */
+.hsess { grid-column: 1 / span 2;   /* span 2, not 1 / -1: on phones the second column is implicit and -1 would stop short of it */
+  display: grid; gap: 10px; position: relative; z-index: 1; }
+.hsrow { display: flex; align-items: center; justify-content: space-between; gap: 10px 16px; flex-wrap: wrap; }
+.hsess .lens { margin-top: 0; }
+.hbest { font-size: var(--t-sm); }
+.hsfoot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }   /* best-score line and Customize share one row */
+.hsfoot .btn { flex: none; }
+.hsess .cust { margin-top: 4px; padding-top: 12px; }
+.hero .btn.primary kbd { margin-left: 10px; opacity: .8; }
+@media (pointer: coarse) { .hero .btn kbd { display: none; } }   /* a keyboard hint on a touchscreen is noise */
+@media (max-width: 560px) {   /* phones: the lengths become one swipeable row instead of three rows of chips */
+  .hsrow { display: grid; gap: 8px; }
+  .hsess .lens { display: flex; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-inline: calc(var(--hp) * -1); padding-inline: var(--hp); }
+  .hsess .lens::-webkit-scrollbar { display: none; }
+  .hsess .lens .chip { flex: none; padding-inline: 14px; }
+}
+
+/* Skill tiles: the fold clips its content, which cut off the last row's drop shadow. Pad the clip box and pull the layout back. */
+.skfold .skills { padding: 4px 14px 28px; margin: 10px -14px -28px; }
+
+/* Play: quiet placeholders instead of bare dashes, and a name for the thin bar at the foot of the card */
+.side .ph { color: var(--mu2); font-size: var(--t-sm); }
+.board .qtl { position: absolute; left: 18px; bottom: 14px; font-size: 10.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--mu2); pointer-events: none; }
+@media (max-width: 700px) { .board .qtl { display: none; } }   /* the board is too short on phones for a caption beside the answer line */
+
+/* Learn: the AI shortcut is an icon, so "Practise this" is the only loud button on a trick card */
+.trick-foot .btns .btn.iconly { flex: 0 0 auto; padding-inline: 10px; min-width: 40px; }
+
+/* Notebook: the destructive "Clear all" lives at the foot of the list, away from the Review button */
+.nbfoot { display: flex; justify-content: center; margin: 22px 0 6px; }
+
+/* Times-table map: squares are buttons (tap for the fact's numbers and a one-fact drill) */
+button.fc { border: 0; padding: 0; font-family: inherit; font-weight: 500; cursor: pointer; transition: transform .12s, box-shadow .12s; }
+button.fc:active { transform: scale(.88); }
+button.fc:focus-visible { outline: 2px solid var(--ac); outline-offset: 1px; position: relative; z-index: 1; }
+@media (hover: hover) { button.fc:hover { box-shadow: 0 0 0 2px var(--ac); position: relative; z-index: 1; } }
+
+/* Home (phones): a Start button that follows you once the hero's own has scrolled away */
+.startbar { position: fixed; left: 0; right: 0; bottom: calc(var(--tabh, 64px) + 10px); z-index: 20; display: none; justify-content: center; padding: 0 16px; pointer-events: none; transform: translateY(24px); opacity: 0; transition: transform .28s var(--ease, ease-out), opacity .2s; }
+.startbar.on .btn { pointer-events: auto; min-height: 50px; padding-inline: 28px; border-radius: 16px; font-size: 15.5px; box-shadow: 0 10px 28px -8px color-mix(in srgb, var(--ac) 55%, #000), 0 2px 6px rgba(0, 0, 0, .25); }
+.startbar.on { transform: none; opacity: 1; }
+@media (max-width: 760px) { body:has(#main[data-scr=home]) .startbar { display: flex; } }
+body.playing .startbar { display: none !important; }
+@media (prefers-reduced-motion: reduce) { .startbar { transition: none; } }
+
+/* Results: a streak milestone gets its own warm line and a short flame glow */
+.lvup.streakup { color: var(--gd); }
+.lvup.streakup svg { filter: drop-shadow(0 0 6px color-mix(in srgb, var(--gd) 70%, transparent)); animation: flamepop .7s var(--ease, ease-out) both; }
+@keyframes flamepop { 0% { transform: scale(.4); } 60% { transform: scale(1.25); } 100% { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .lvup.streakup svg { animation: none; } }
+
+/* Notebook (phones): the search box and "Due now only" share one row */
+@media (max-width: 560px) { .nbtools { flex-wrap: nowrap; } .nbtools .inp { flex: 1 1 120px; min-width: 0; max-width: none; } .nbtools .chip { flex: none; } }
+
+/* Coach: performance and slips sit side by side on wide screens (equal height), the analysis spans the full width below. Phones stack. */
+@media (min-width: 901px) { .coach-top { display: grid; grid-template-columns: 1fr 1fr; gap: 0 24px; padding-top: 20px; } .coach-top > div > .card:last-child { height: calc(100% - 16px); } }
+@media (max-width: 900px) { .coach-top { padding-top: 12px; } }
+
+/* Home: saved setups, review-queue card, short phone greeting, offline pill */
+.chips.pres { margin-top: 10px; }
+.chips.pres .chip svg { width: 13px; height: 13px; margin-right: 4px; }
+.rq { display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
+.rq > div { flex: 1; min-width: 0; } .rq b { display: block; } .rq .mu { font-size: var(--t-sm); }
+.rqi { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: color-mix(in srgb, var(--ok) 16%, transparent); color: var(--ok); flex: none; }
+.offp { display: none; align-items: center; gap: 6px; font-size: var(--t-sm); font-weight: 550; color: var(--mu); padding: 4px 10px; border-radius: 999px; background: var(--c2); }
+.offp svg { width: 14px; height: 14px; }
+html[data-offline] .offp { display: inline-flex; }
+@media (max-width: 480px) { .home-hd h1 .gw { display: none; } .home-hd h1 { text-transform: capitalize; } }
+
+/* Results: how far the new best beat the old one */
+.vsbest { margin-top: 6px; font-size: 14px; font-weight: 650; color: var(--gd); }
+@keyframes pillpop { from { opacity: 0; transform: translateY(6px) scale(.9); } }
+.movers .pill { animation: pillpop .45s var(--ease, ease-out) both; } .movers .pill:nth-child(2) { animation-delay: .08s; } .movers .pill:nth-child(3) { animation-delay: .16s; } .movers .pill:nth-child(n+4) { animation-delay: .24s; }
+@media (prefers-reduced-motion: reduce) { .movers .pill { animation: none; } }
+
+/* Progress (phones): the odd last stat tile spans the row, so it reads as one compact line (label left, number right) instead of a tall mostly-empty card.
+   The tiles above still share a height per row; rows no longer all stretch to the tallest. */
+@media (max-width: 560px) {
+  .g3:has(> .stat:last-child:nth-child(odd)) { grid-auto-rows: auto; }
+  .g3 > .stat:last-child:nth-child(odd) { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "l v" "s v"; align-items: center; column-gap: 12px; }
+  .g3 > .stat:last-child:nth-child(odd) .l { grid-area: l; } .g3 > .stat:last-child:nth-child(odd) .s { grid-area: s; } .g3 > .stat:last-child:nth-child(odd) .v { grid-area: v; margin: 0; font-size: 30px; }
+}
+
+/* Touch: the small buttons in table rows (Drill, Ask AI) were 28px tall; give fingers 36px without changing the desktop look */
+@media (pointer: coarse) { .tbl .btn.sm { min-height: 36px; min-width: 40px; } }
+@media (max-width: 480px) { .offp .offw { display: none; } .offp { padding: 4px 8px; } }   /* phones: just "Offline", so the header keeps its row */
