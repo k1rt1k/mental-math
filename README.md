@@ -11,12 +11,12 @@ npm run version:check        # changes nothing; fails and names any file that di
 npm test                     # includes the same check
 ```
 
-`tools/version.mjs` lists what it stamps (`util.js`, the service-worker cache name, the `?v=` links in `index.html`, `ai.mjs`, and the backend-contract examples below). If one of those files changes shape, the tool stops with a message rather than guessing. Then add an entry to `CHANGELOG.md`.
+`tools/version.mjs` lists what it stamps (`util.js`, the service-worker cache name, the `?v=` links in `index.html`, `ai.mjs`, and the backend-contract examples below). If one of those files changes shape, the tool stops with a message rather than guessing. Then add an entry to `CHANGELOG.md`. The service worker serves the app cache-first from a cache named for the release, so a deploy only reaches installed copies if the release number changed; they then show *Update available, tap to reload*.
 
 ## Current backend contract
 This section describes the deployed backend as it is today; the release history is in [CHANGELOG.md](CHANGELOG.md).
 - Fixed Netlify Blobs initialization: the documented API is `getStore(storeName)`. Strong consistency remains requested on `getWithMetadata` reads.
-- Added a deployment fingerprint to `GET /api/ai`: `buildVersion: "14.56"` and response header `x-mental-math-ai-version: 14.56`.
+- Added a deployment fingerprint to `GET /api/ai`: `buildVersion: "14.58"` and response header `x-mental-math-ai-version: 14.58`.
 - Exposes the active model allow-list and exact application safety policy in the diagnostic response.
 - Keeps Gemini 3.5 Flash-Lite primary and Gemini 3.1 Flash-Lite as the only backup.
 - Keeps the shared 300-upstream-attempt Pacific-day budget and independent 12 RPM rolling windows per model.
@@ -50,7 +50,7 @@ The JSON must include:
 
 ```json
 {
-  "buildVersion": "14.56",
+  "buildVersion": "14.58",
   "defaultModel": "gemini-3.5-flash-lite",
   "models": ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite"],
   "budgetPolicy": {
@@ -60,17 +60,17 @@ The JSON must include:
 }
 ```
 
-The `budgetPolicy` object also includes the model list. If `buildVersion` is absent or not `14.56`, the new function bundle is not the one currently serving the site; redeploy the full project root to the correct linked Netlify site.
+The `budgetPolicy` object also includes the model list. If `buildVersion` is absent or not `14.58`, the new function bundle is not the one currently serving the site; redeploy the full project root to the correct linked Netlify site.
 
 ## Modes worth knowing about
 - **Flash** (Home): a chain of flashing numbers with a running total. Visual only, so screen readers are not told the numbers. The answer uses the number pad; Pause and Esc stop a run; each setting keeps its own best (on this device). A run is saved as a session of kind `flash`: it keeps the streak going, counts toward the daily goal at 3 or more rounds right, has no skill ratings and stays out of the pace charts.
 - **Your week** (Progress, Overview): the last seven days against the seven before, with copy and image sharing. Computed on the device.
 
 ## Daily leaderboard (opt-in)
-Settings, Cloud sync, *Daily leaderboard*. A learner who joins picks a display name; from then on each finished Daily reports its points and answers to `/api/board`, and the Daily results screen and Settings show the day's board for everyone who joined. Learners who have not joined are never listed and never see the board. Only the display name, the day's best points and answers (right / asked) are stored, in the `mental-math-board` blob store, apart from anyone's progress. *Leave* deletes the name and every stored score; a learner whose key is turned off disappears from the board at once. Up to 25 names, two weeks of days kept. Joining needs a sync key; the board is shared by every learner of this deployment (Netlify variables and keys made in the app alike).
+Settings, Cloud sync, *Daily leaderboard*. A learner who joins picks a display name; from then on each finished Daily reports its points and answers to `/api/board`, and the Daily results screen and Settings show the day's board for everyone who joined. A score that could not be sent is queued on the device and retried (see the changelog for 14.57). Learners who have not joined are never listed and never see the board. Only the display name, the day's best points and answers (right / asked) are stored, in the `mental-math-board` blob store, apart from anyone's progress. *Leave* deletes the name and every stored score; a learner whose key is turned off disappears from the board at once. Up to 25 names, two weeks of days kept. Joining needs a sync key; the board is shared by every learner of this deployment (Netlify variables and keys made in the app alike).
 
 ## Honest limitations
-- The leaderboard trusts the browser: scores are range-checked (day within a day of the server's date, points and counts plausible) but not verified, so it suits a family or class, not a contest. A Daily finished while offline is not sent later.
+- The leaderboard trusts the browser: scores are range-checked (day within a day of the server's date, points and counts plausible) but not verified, so it suits a family or class, not a contest. A Daily finished while offline is kept on the device and sent when the app next starts or the connection returns, as long as that is within two days (the server will not take an older day).
 - Automated tests use a mocked Blobs store and mocked Gemini responses; they cannot prove the user's live Netlify project, API key, Google model availability, or current provider capacity.
 - Google applies its own per-project model RPM/TPM/RPD quotas and may return 429 or temporary 503 responses. The app's limits are conservative safeguards, not a guarantee that Google will never throttle or overload.
 - The app never falls back to paid model tiers. If both allowed models fail, it displays an explicitly labelled local response.

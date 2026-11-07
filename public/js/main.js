@@ -18,6 +18,7 @@ import './views/flash.js';
 import { settings, wireImport, keysDialog, placement, helpDialog } from './views/settings.js';
 import { resultsKey } from './views/results.js';
 import { setBadge, refreshSoon } from './notify.js';
+import { flushBoardQueue, boardQueued } from './board.js';
 import './morph.js';
 import './motion.js';
 
@@ -94,7 +95,8 @@ addEventListener('keydown', (e) => {
 
 /* ---------- offline status: the pill beside the sync chip shows only while the device is offline ---------- */
 const netState = () => { document.documentElement.toggleAttribute('data-offline', navigator.onLine === false); };
-addEventListener('online', netState); addEventListener('offline', netState); netState();
+const sendQueued = () => { if (boardQueued()) flushBoardQueue().then((n) => { if (n) toast(n == 1 ? 'Sent your Daily score to the board' : 'Sent ' + n + ' Daily scores to the board'); }); };   // a Daily finished offline goes out when the connection is back
+addEventListener('online', () => { netState(); sendQueued(); }); addEventListener('offline', netState); netState(); setTimeout(sendQueued, 2500);
 
 /* ---------- sync wiring ---------- */
 configure({ guard: isPlaying, onChange: () => { applyTheme(); drawNav(); rerender(); } });
@@ -107,19 +109,38 @@ onStatus(() => {
 addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); A._ip = e; if (view.scr == 'settings') settings(); });
 addEventListener('appinstalled', () => { A._ip = null; toast('Installed. Open it from your home screen.'); if (view.scr == 'settings') settings(); });
 if ('serviceWorker' in navigator && /^https?:/.test(location.protocol)) {
-  const had = !!navigator.serviceWorker.controller;
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  const sw = navigator.serviceWorker;
+  let waiting = null, reloading = false, shown = 0;
+  // A new release is installed and waiting. Ask once the person is not mid-session; tapping swaps it in and reloads.
+  const offer = () => {
+    if (!waiting || !sw.controller) return;                     // nothing waiting, or this is the first install (nothing to update)
+    if (isPlaying() || dialogOpen()) return void setTimeout(offer, 15000);
+    shown = Date.now();
+    toast('Update available, tap to reload', { label: 'Reload', ms: 60000, onClick: () => {
+      reloading = true;
+      try { waiting.postMessage({ type: 'skipWaiting' }); } catch (e) { location.reload(); }
+      setTimeout(() => location.reload(), 3000);                // if the swap never reports, reload anyway
+    } });
+  };
+  const watch = (reg) => {
+    if (reg.waiting) { waiting = reg.waiting; offer(); }
+    reg.addEventListener('updatefound', () => {
+      const w = reg.installing;
+      if (w) w.addEventListener('statechange', () => { if (w.state == 'installed') { waiting = reg.waiting || w; offer(); } });
+    });
+    // Look for a new release when the app comes back to the front, and hourly while it stays open; remind if one is still waiting.
+    const check = () => { reg.update().catch(() => {}); if (waiting && Date.now() - shown > 10 * 60000) offer(); };
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState == 'visible') check(); });
+    setInterval(check, 60 * 60000);
+  };
+  sw.register('sw.js').then(watch).catch(() => {});
   // A tapped notification while the app is already open arrives here; a re-subscription request too.
-  navigator.serviceWorker.addEventListener('message', (e) => {
+  sw.addEventListener('message', (e) => {
     const m = e.data || {};
     if (m.type == 'go') launch(m.go);
     if (m.type == 'resub') refreshSoon();
   });
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (!had) return;     // first install, nothing to refresh
-    const ask = () => toast('A new version is ready', { label: 'Reload', onClick: () => location.reload() });
-    isPlaying() ? setTimeout(ask, 60000) : ask();
-  });
+  sw.addEventListener('controllerchange', () => { if (reloading) location.reload(); });   // only ever reload because the person asked
 }
 try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) { /* ignore */ }
 onSave((ev) => { if (ev == 'error') toast('Storage is full or blocked. Download a backup from Settings.', { ms: 6000 }); });

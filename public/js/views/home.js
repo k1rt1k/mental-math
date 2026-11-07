@@ -1,6 +1,7 @@
 import { S, save, avgLv, cfgNow } from '../state.js';
 import { IDS, SK, COL, rank, ZDEF, zNorm, zLabel } from '../engine.js';
 import { esc, ymd, fmtLen, VERSION, dayAgo, dueIn } from '../util.js';
+import { restChip } from '../rest.js';
 import { streak, restInfo, days, plan, todayCount, trickOfDay, weakestSkills, MS, week, zDef, zMD, recommend, lvAgo, records } from '../stats.js';
 import { radar, ring } from '../charts.js';
 import { icon, promptDlg, dialog, toast } from '../ui.js';
@@ -65,7 +66,7 @@ function home() {
   const t = trickOfDay();
   $app().innerHTML = `
   <div class="hd home-hd"><div><h1>${esc(hello).replace(/^Good /, '<span class="gw">Good </span>')}</h1><div class="greet">${dateStr}</div></div>
-    <div class="meta"><span class="pill streak ${warnStreak ? 'warn' : ''}" ${warnStreak ? `title="${esc(rest && rest.state == 'using' ? 'Your rest day is in use: play today to keep the streak' : 'Play a session today to keep it')}"` : ''}><span class="sring ${rest && rest.state == 'ready' ? 'rest' : ''}" style="--p:${esc(stRing.toFixed(3))}" ${st ? `title="${esc(stRingTip + restTip)}"` : ''}>${icon('flame', 'fill')}</span> ${st ? st + '-day streak' + (warnStreak ? '<span class="pt"> · play today</span>' : '') : 'No streak yet'}</span>${syncChip()}<button class="hd-gear" data-go="settings" aria-label="Settings">${icon('gear')}</button></div></div>
+    <div class="meta"><span class="pill streak ${warnStreak ? 'warn' : ''}" ${warnStreak ? `title="${esc(rest && rest.state == 'using' ? 'Your rest day is in use: play today to keep the streak' : 'Play a session today to keep it')}"` : ''}><span class="sring ${rest && rest.state == 'ready' ? 'rest' : ''}" style="--p:${esc(stRing.toFixed(3))}" ${st ? `title="${esc(stRingTip + restTip)}"` : ''}>${icon('flame', 'fill')}</span> ${st ? st + '-day streak' + (warnStreak ? '<span class="pt"> · play today</span>' : '') : 'No streak yet'}</span>${restChip(rest, icon, esc)}${syncChip()}<button class="hd-gear" data-go="settings" aria-label="Settings">${icon('gear')}</button></div></div>
   ${notices.join('')}
   <div class="home${has ? '' : ' solo'}">
    <div class="home-main">

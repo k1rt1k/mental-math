@@ -12,6 +12,7 @@ import { showAiSheet } from '../ai.js';
 import { askSkillAi } from '../skillAi.js';
 import { ZDEF, zNorm } from '../engine.js';
 import { ib, ibs } from '../info.js';
+import { restChip } from '../rest.js';
 import { weekCard } from '../weekly.js';
 const statB = (k) => ib('p.' + k);
 
@@ -53,7 +54,7 @@ function progress() {
   const panel = {
     overview: `
   <div class="g g3">
-    <div class="card stat"><div class="l">Streak</div>${statB('streak')}<div class="v">${streak()}<span class="s"> days</span></div><div class="s">longest ${c.ls}${(() => { const r = restInfo(); return r ? ' · ' + esc(r.state == 'ready' ? 'rest day ready' : r.state == 'using' ? 'rest day in use' : r.left + (r.left == 1 ? ' day' : ' days') + ' to a rest day') : ''; })()}</div></div>
+    <div class="card stat"><div class="l">Streak</div>${statB('streak')}<div class="v">${streak()}<span class="s"> days</span></div><div class="s">longest ${c.ls}${restInfo() ? ' ' + restChip(restInfo(), icon, esc) : ''}</div></div>
     <div class="card stat"><div class="l">Rating</div>${statB('rating')}<div class="v">${Math.round(avgLv() * 100)}</div><div class="s">${esc(rank(Math.round(avgLv() * 100)))}</div></div>
     <div class="card stat"><div class="l">Sessions</div><div class="v">${S.sessions.length}</div><div class="s">${c.n.toLocaleString()} ${c.n == 1 ? 'answer' : 'answers'}</div></div>
     <div class="card stat"><div class="l">7-day retention</div>${statB('retention')}<div class="v">${ready ? Math.round(rd.retentionRate * 100) + '%' : '–'}</div><div class="s">${retSub}</div>${ms.mastered ? `<div class="s">Mastery: ${Math.round(ms.rate * 100)}% never slipped</div>` : ''}</div>

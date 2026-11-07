@@ -256,3 +256,25 @@ h2.sg { margin: 28px 0 12px; scroll-margin-top: 16px; }
 .hd-gear .ic { width: 22px; height: 22px; } .hd-gear:hover { background: var(--c2); color: var(--tx); }
 @media (max-width: 760px) { .hd-gear { display: inline-grid; } }
 .wk7l { margin: 12px 0 0; padding-left: 18px; color: var(--mu); } .wk7l li + li { margin-top: 4px; }
+
+/* ---------- Rest day, made visible (14.57) ---------- */
+.pill.rest { gap: 7px; }
+.pill.rest .ic { width: 13px; height: 13px; }
+.pill.rest.ready { background: color-mix(in srgb, var(--ok) 14%, var(--c)); color: var(--ok); }
+.pill.rest.using { background: color-mix(in srgb, var(--gd) 16%, var(--c)); color: var(--gd); }
+.rpips { display: inline-flex; gap: 3px; align-items: center; }
+.rpips i { width: 6px; height: 6px; border-radius: 50%; background: var(--ln2); }
+.rpips i.on { background: var(--ok); }
+.stat .s .pill.rest { margin-left: 4px; padding: 1px 8px; font-size: 11px; vertical-align: 1px; }
+
+/* ---------- Leaderboard: moving up (14.57) ---------- */
+.bmove { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; padding: 9px 12px; border-radius: 12px; font-weight: 650; background: color-mix(in srgb, var(--ok) 13%, var(--c)); color: var(--ok); animation: bmin .5s var(--ease, ease-out) both; }
+.bmi { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; font-size: 11px; background: color-mix(in srgb, var(--ok) 22%, transparent); animation: bmhop .9s var(--ease, ease-out) .3s both; }
+#main .tbl tr.you.climb { position: relative; animation: bclimb .8s cubic-bezier(.2, .8, .2, 1) .35s both; }
+#main .tbl tr.you.climb td { animation: bglow 1.8s ease-out .35s both; }
+@keyframes bmin { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@keyframes bmhop { 0% { transform: translateY(0); } 35% { transform: translateY(-5px); } 70% { transform: translateY(1px); } 100% { transform: none; } }
+@keyframes bclimb { from { transform: translateY(calc(var(--n, 1) * 100%)); } to { transform: none; } }
+@keyframes bglow { from { background: color-mix(in srgb, var(--ok) 38%, transparent); } to { background: color-mix(in srgb, var(--ac) 12%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .bmove, .bmi, #main .tbl tr.you.climb, #main .tbl tr.you.climb td { animation: none; } }
+[data-motion=reduce] .bmove, [data-motion=reduce] .bmi, [data-motion=reduce] #main .tbl tr.you.climb, [data-motion=reduce] #main .tbl tr.you.climb td { animation: none; }
