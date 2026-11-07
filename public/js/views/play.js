@@ -38,13 +38,13 @@ const padHtml = () => '<div class="pad" role="group" aria-label="Number pad">' +
   + `<div class="padact"><button type="button" class="btn" data-act="key" data-v="h" aria-label="Show the method (half points)">${icon('bulb')} Hint</button><button type="button" class="btn" data-act="key" data-v="Enter" aria-label="Skip question">Skip</button></div>`;
 const PAD = () => padHtml();
 
-/** opt: see Session. cfg: optional config override for this run only; it is never saved, so a drill can't leave hidden state behind. */
-export function start(opt, cfg) {
+/** opt: see Session. cfg: optional config override for this run only; it is never saved, so a drill can't leave hidden state behind. path: the guided stage this run belongs to, if any. */
+export function start(opt, cfg, path) {
   if (sess) return;
-  lastRun = { opt, cfg };
+  lastRun = { opt, cfg, path };
   const msg = applyRust();
   if (msg) toast(msg, { ms: 4500 });
-  sess = new Session(opt, { cfg });
+  sess = new Session(opt, { cfg, path });
   rolling = false;
   locked = false; counting = true;
   mark('play');
@@ -287,7 +287,7 @@ function restart() {
   if (!sess) return;
   clearInterval(tickId); clearInterval(cdId); wake(false);
   const r = lastRun; sess = null; counting = false;
-  start(r && r.opt, r && r.cfg);
+  start(r && r.opt, r && r.cfg, r && r.path);
 }
 
 addEventListener('blur', () => { if (!S.noBlur) pause(); });

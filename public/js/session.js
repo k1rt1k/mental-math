@@ -1,13 +1,14 @@
 // A practice session: question selection, answer handling, adaptive ratings, spaced review, results.
 // DOM-free so it can be tested in Node. The views in js/views/play.js drive it.
-import { S, save, persist, cfgNow, master, recordLapse, recordRecall, bump, reviewPlan } from './state.js';
+import { S, save, persist, cfgNow, master, recordLapse, recordRecall, bump, reviewPlan, forget } from './state.js';
 import { IDS, SK, T, factOf, errKind, timeCap, worth, speedMult, gen, how, qk, perfScore, nextRating, weakness, INTERVALS, MASTER_BOX, genZeta, zNorm, zKey } from './engine.js';
 import { clamp, ymd, seeded } from './util.js';
 import { ctx, MS, weakFacts } from './stats.js';
+import { recordPathRun } from './paths.js';
 
 export const mkOf = (c) =>
   c.only == 'zeta' ? 'zeta' + zKey(c.zeta) + c.dur :
-  (c.only == 'all' ? (c.dur == 120 ? 'train' : 't' + c.dur) : c.only == 'mix' ? 'mix' + (c.mix || []).slice().sort().join('') + c.dur : c.only + c.dur) + (c.off ? 'o' + c.off : '') + (c.patt ? '~' + c.patt : '') + (c.wf ? 'wf' : '');
+  (c.only == 'all' ? (c.dur == 120 ? 'train' : 't' + c.dur) : c.only == 'mix' ? 'mix' + (c.mix || []).slice().sort().join('') + c.dur : c.only + c.dur) + (c.off ? 'o' + c.off : '') + (c.pats && c.pats.length ? '~' + c.pats.slice().sort().join('|') : c.patt ? '~' + c.patt : '') + (c.wf ? 'wf' : '');
 
 export const LIVES = 3;
 /** Sprint: questions per race, and the seconds added for each slip / skip, so rushing never pays. */
@@ -44,6 +45,7 @@ export class Session {
     this.now = deps.now || (() => performance.now());
     this.wall = deps.wall || Date.now;   // wall-clock time for saved history (tests can supply a fixed clock)
     this.rand = deps.rand || Math.random;
+    this.path = deps.path && deps.path.sk && SK[deps.path.sk] && deps.path.stage ? { sk: deps.path.sk, stage: Math.max(1, Math.round(+deps.path.stage)) } : null;
     const cf = deps.cfg ? Object.assign(cfgNow(), deps.cfg) : cfgNow(), rv = opt === 'review', dy = opt === 'daily', sv = opt === 'survival', sp = opt === 'sprint';
     const mx = (cf.mix || []).filter((k) => IDS.includes(k));
     const on = rv ? 'review' : dy ? 'daily' : sv || sp ? 'all' : cf.only == 'mix' ? (mx.length == 1 ? mx[0] : mx.length ? 'mix' : 'all') : cf.only;
@@ -53,6 +55,8 @@ export class Session {
     this.mk = rv ? 'review' : dy ? 'daily' + this.day : sv ? 'survival' : sp ? 'sprint' : mkOf(cf);
     this.only = on;
     this.patt = rv || sv || sp || on == 'all' || on == 'mix' || on == 'daily' ? null : cf.patt || null;
+    this.pats = this.patt || rv || sv || sp || on == 'all' || on == 'mix' || on == 'daily' || !Array.isArray(cf.pats) ? null : cf.pats.filter((p) => typeof p == 'string' && p).slice(0, 12);
+    if (this.pats && !this.pats.length) this.pats = null;
     this.pool = mx;
     this.un = sp || (!rv && !dy && !sv && !cf.dur);               // untimed practice
     this.dur = rv ? 300 : dy ? 60 : this.un || sv ? 0 : cf.dur;
@@ -62,7 +66,7 @@ export class Session {
     this.frozen = dy || sv || sp || on == 'zeta' || !!this.off || this.wf;                  // ratings don't move
     this.lives = sv ? LIVES : 0;
     this.rng = dy ? seeded(+this.day.replace(/-/g, '')) : null;
-    Object.assign(this, { errs: [], skips: 0, n: 0, ok: 0, pts: 0, tsum: 0, by: {}, g: [], retry: [], recent: [], last: [], miss: [], lu: [], tl: [], log: [], feed: [], done: {}, combo: 0, bc: 0, fast: 99, ft: 0, slips: 0, el: 0, buf: '', wrong: 0, cur: null, paused: 0, over: false });
+    Object.assign(this, { errs: [], skips: 0, n: 0, ok: 0, pts: 0, tsum: 0, rs: 0, by: {}, g: [], retry: [], recent: [], last: [], miss: [], lu: [], tl: [], log: [], feed: [], done: {}, combo: 0, bc: 0, fast: 99, ft: 0, slips: 0, el: 0, buf: '', wrong: 0, cur: null, paused: 0, over: false });
     this.lv0 = IDS.map((k) => S.sk[k].lv);
     const b = S.best[this.mk] || {};
     this.ghost = b.g || null;
@@ -149,8 +153,9 @@ export class Session {
     }
     const wt = (c) => { const o = S.pat[SK[c.sk].n + ' · ' + c.pt]; return o && o.n >= 6 ? (1 - o.ok / o.n) * 3 + Math.max(0, (o.ok ? o.r / o.ok : 2) - 1) : 0.3; };
     let p = gen(k, d, R);
-    if (!this.patt && this.kind != 'survival' && (k == 'mul' || k == 'div') && R() < 0.12) p = this.factQ() || p;   // a weak table fact now and then
-    if (this.patt) for (let i = 0; i < 60 && p.pt != this.patt; i++) p = gen(k, i > 25 ? Math.max(d, 8) : d, R);   // some tricks only appear at high difficulty
+    if (!this.patt && !this.pats && this.kind != 'survival' && (k == 'mul' || k == 'div') && R() < 0.12) p = this.factQ() || p;   // a weak table fact now and then
+    const target = this.patt || (this.pats ? this.pats[this.n % this.pats.length] : '');   // shortcut stages rotate through every trick pattern
+    if (target) for (let i = 0; i < 60 && p.pt != target; i++) p = gen(k, i > 25 ? Math.max(d, 8) : d, R);   // some tricks only appear at high difficulty
     else for (let i = 0; i < 3; i++) { const c = gen(k, d, R); if (wt(c) > wt(p) && R() < 0.7) p = c; }   // lean toward patterns you struggle with
     p.bonus = bonus;
     return p;
@@ -217,7 +222,7 @@ export class Session {
     const b = (this.by[p.sk] = this.by[p.sk] || [0, 0, 0]);
     b[0]++; this.n++;
     if (ok) {
-      b[1]++; b[2] += tm; this.ok++;
+      b[1]++; b[2] += tm; this.ok++; this.rs += r;
       if (!p.tries) this.ft++;
       this.tsum += tm;
       this.pts += Math.round(worth(p.sk, p.d) * speedMult(r) * (p.hinted ? 0.5 : 1) * (p.tries ? 0.7 : 1)) * (p.bonus ? 2 : 1);
@@ -257,7 +262,7 @@ export class Session {
     // Delayed-recall analytics: only a clean first attempt is a fair memory test. Review prompts count
     // (`rt`), because spaced retrieval is the point; a same-session retry (`retry`), a slip (`tries`)
     // or a hinted answer does not.
-    if (!p.retry && !p.tries && !p.hinted) recordRecall(p.q, ok, now);
+    if (!p.retry && !p.tries && !p.hinted) recordRecall(p.q, ok, now, true, p.sk);
     this.feed.unshift([p.q, ok, tm, r]); this.feed.length = Math.min(this.feed.length, 8);
     this.log.push({ q: p.q, a: p.a, ok, tm: +tm.toFixed(2), sk: p.sk, pt: p.pt, rt: !!p.rt, hinted: !!p.hinted, tries: p.tries || 0, ty: p.lastWrong || '' });
     S.hist.push(qk(p.q)); if (S.hist.length > MAX_HIST) S.hist.shift();
@@ -297,8 +302,9 @@ export class Session {
     Object.keys(S.best).filter((k) => /^daily\d/.test(k)).sort().slice(0, -7).forEach((k) => delete S.best[k]);
     const c = ctx(), unlocked = MS.filter((m) => m[2](c) && !S.ms.includes(m[0]));
     unlocked.forEach((m) => S.ms.push(m[0]));
+    const path = e.path ? recordPathRun(e.path.sk, e.path.stage, { n: e.n, ok: e.ok, ft: e.ft, spd: e.ok ? e.rs / e.ok : 9, dur: rec.dur }, Date.now()) : null;
     save();
     const dl = IDS.map((k, i) => [k, Math.round((S.sk[k].lv - e.lv0[i]) * 100)]).filter((x) => Math.abs(x[1]) >= 3);
-    return { rec, tag, newBest, unlocked, dl, full, sprint: spScore, bestBy };
+    return { rec, tag, newBest, unlocked, dl, full, sprint: spScore, bestBy, path };
   }
 }

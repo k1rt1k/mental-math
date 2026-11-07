@@ -15,8 +15,8 @@ test('AI status endpoint exposes a deployment fingerprint and exact live safety 
   const response = await aiHandler(new Request('https://mentalmath.test/api/ai', { method: 'GET' }));
   const data = await response.json();
   assert.equal(response.status, 200);
-  assert.equal(data.buildVersion, '14.46');
-  assert.equal(response.headers.get('x-mental-math-ai-version'), '14.46');
+  assert.equal(data.buildVersion, '14.47');
+  assert.equal(response.headers.get('x-mental-math-ai-version'), '14.47');
   assert.equal(data.defaultModel, 'gemini-3.5-flash-lite');
   assert.deepEqual(data.models, ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite']);
   assert.deepEqual(data.budgetPolicy, {

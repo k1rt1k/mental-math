@@ -1,4 +1,14 @@
-# Mental Math Trainer 14.46 — 7-day retention analytics
+# Mental Math Trainer 14.47 – guided learning paths
+
+## v14.47
+- **Guided paths for every skill.** Learn now opens with a five-stage journey for each of the ten skills: Foundation → Intermediate → Mental shortcuts → Independent practice → Mastery assessment. Each stage teaches the method in plain language, then offers a worked example before the timed drill.
+- **Show, don't tell.** The worked example is interactive: solve the question or reveal the method, and the stage records that the demonstration was seen. A stage completes only when both the example and the assessment are ticked, so a lucky run does not skip the teaching.
+- **Assessment goals, not just minutes.** Every stage has an explicit bar — answers, first-try accuracy and pace against par. The Mastery stage adds a delayed-retention gate for that skill: at least five clean question pairs answered again after seven days, with 60% retained. Previous best runs and passes are kept, so a bad run never erases progress.
+- **Pattern rotation.** Shortcut stages rotate through every trick pattern that has a generator link (for example ×11, ×25, ×99/×101 and near-100 for multiplication), instead of drilling one pattern forever. The rotation is per-run and is never saved or replayed on Start.
+- **Sync-safe path progress.** `S.paths` stores one row per skill and stage with the best run, demo and pass timestamps. Migration rejects unknown skills/stages and strips the per-run pattern list; merge keeps the best run and treats demo/pass as monotonic.
+- **Calibration simulation.** `tools/sim.mjs` drives the real Session with beginner, intermediate, advanced and uneven synthetic learners. `npm run calibrate` reports difficulty jumps, cold streaks, rough sessions, pattern concentration, skill exposure and the gap between final ratings and latent ability. The suite fails if difficulty jumps more than two levels in a session, a pattern takes over, a skill is never served, or ratings stop tracking ability.
+- **Results link back.** A finished path stage shows a pass/retry banner on the results screen with an Open path button, and Play again repeats the same stage.
+- Version 14.47, cache `mm-v14-47`. Tests: `test/v1447-paths.test.mjs`, `test/v1447-calibration.test.mjs`, plus the existing retention, mastery, sync and deployment suites.
 
 ## v14.46
 - **7-day retention.** Progress now answers the question the other charts cannot: how much maths do you still remember after a week? It compares your accuracy the first time a question appears with your accuracy when the same question comes back at least seven days later. The big number is delayed recall; the line under it is your initial accuracy and the number of question pairs behind it.
@@ -240,7 +250,7 @@ Driven by the 14.14 live self-test report. Every reply was read, not just checke
 ## Current backend contract
 This section describes the deployed backend as it is today; the release notes below are historical.
 - Fixed Netlify Blobs initialization: the documented API is `getStore(storeName)`. Strong consistency remains requested on `getWithMetadata` reads.
-- Added a deployment fingerprint to `GET /api/ai`: `buildVersion: "14.46"` and response header `x-mental-math-ai-version: 14.46`.
+- Added a deployment fingerprint to `GET /api/ai`: `buildVersion: "14.47"` and response header `x-mental-math-ai-version: 14.47`.
 - Exposes the active model allow-list and exact application safety policy in the diagnostic response.
 - Keeps Gemini 3.5 Flash-Lite primary and Gemini 3.1 Flash-Lite as the only backup.
 - Keeps the shared 300-upstream-attempt Pacific-day budget and independent 12 RPM rolling windows per model.
@@ -274,7 +284,7 @@ The JSON must include:
 
 ```json
 {
-  "buildVersion": "14.46",
+  "buildVersion": "14.47",
   "defaultModel": "gemini-3.5-flash-lite",
   "models": ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite"],
   "budgetPolicy": {
@@ -284,7 +294,7 @@ The JSON must include:
 }
 ```
 
-The `budgetPolicy` object also includes the model list. If `buildVersion` is absent or not `14.46`, the new function bundle is not the one currently serving the site; redeploy the full project root to the correct linked Netlify site.
+The `budgetPolicy` object also includes the model list. If `buildVersion` is absent or not `14.47`, the new function bundle is not the one currently serving the site; redeploy the full project root to the correct linked Netlify site.
 
 ## Honest limitations
 - Automated tests use a mocked Blobs store and mocked Gemini responses; they cannot prove the user's live Netlify project, API key, Google model availability, or current provider capacity.

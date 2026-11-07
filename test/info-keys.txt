@@ -25,6 +25,7 @@ r.ghost
 r.missed
 l.intro
 l.par
+l.path
 n.intro
 c.perf
 c.analysis

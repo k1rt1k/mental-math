@@ -43,6 +43,8 @@ export const CAL = 2;
  */
 export const RECALL_GAP = 7 * 864e5;
 export const RECALL_MAX = 500;
+/** Guided paths have five stages; keeping the count here lets migration reject stray keys. */
+export const PATH_STAGES = 5;
 const num = (x, d) => (Number.isFinite(+x) && x !== null && x !== '' ? +x : d);
 
 
@@ -141,7 +143,7 @@ function mergeCtr(a, b, calA, calB) {
 export const fresh = () => {
   const sk = {};
   IDS.forEach((k) => (sk[k] = { lv: SK[k].s, acc: 0.9, spd: 1, n: 0 }));
-  return { v: 1, cal: CAL, sk, sessions: [], weak: {}, mastered: {}, recall: {}, best: {}, ms: [], lastExport: 0, pat: {}, facts: {}, errs: {}, rustFor: 0, hist: [], daily: {}, gone: {}, ctr: emptyCtr() };
+  return { v: 1, cal: CAL, sk, sessions: [], weak: {}, mastered: {}, recall: {}, paths: {}, best: {}, ms: [], lastExport: 0, pat: {}, facts: {}, errs: {}, rustFor: 0, hist: [], daily: {}, gone: {}, ctr: emptyCtr() };
 };
 
 /** Make any loaded/imported/synced object safe to use. Never throws. Adds new skills with starting ratings. */
@@ -193,16 +195,34 @@ export function migrate(o) {
     if (!q || !t0) return;
     let t1 = Math.max(0, fin(r.t1));
     if (t1 && t1 - t0 < RECALL_GAP) t1 = 0;   // a delayed row must really be at least seven days later
-    const row = { q, t0, ok0: r.ok0 ? 1 : 0, t1, ok1: t1 && r.ok1 ? 1 : 0 };
+    const row = { q, t0, ok0: +r.ok0 ? 1 : 0, t1, ok1: t1 && +r.ok1 ? 1 : 0, sk: SK[r.sk] ? r.sk : '' };
     const key = qk(q), prev = out.recall[key];
     out.recall[key] = prev ? mergeRecallEntry(prev, row) : row;
+  });
+  // Guided-path progress: one row per skill and stage, keeping the best run and the demo/pass stamps.
+  out.paths = {};
+  Object.entries(s.paths && typeof s.paths == 'object' && !Array.isArray(s.paths) ? s.paths : {}).forEach(([sk, rows]) => {
+    if (!SK[sk] || !rows || typeof rows != 'object' || Array.isArray(rows)) return;
+    out.paths[sk] = {};
+    Object.entries(rows).forEach(([id, r]) => {
+      const idn = Math.round(fin(id));
+      if (!(idn >= 1 && idn <= PATH_STAGES) || !r || typeof r != 'object') return;
+      const n = Math.max(0, Math.round(fin(r.n)));
+      const ok = clamp(Math.round(fin(r.ok)), 0, n), ft = clamp(Math.round(fin(r.ft)), 0, ok);
+      out.paths[sk][idn] = {
+        seen: +r.seen ? 1 : 0, demo: +r.demo ? 1 : 0, at: Math.max(0, fin(r.at)),
+        n, ok, ft, spd: clamp(fin(r.spd, 9), 0.01, 99), pass: Math.max(0, fin(r.pass)),
+      };
+    });
   });
   if (out.cfg && typeof out.cfg == 'object') {
     const c = { ...out.cfg };
     if (!ONLY.includes(c.only)) c.only = 'all';
     if (c.dur != null) c.dur = c.dur === 0 ? 0 : clamp(Math.round(fin(c.dur, 120)), 10, 3600);
     if (c.mix && !Array.isArray(c.mix)) delete c.mix;
+    if (c.pats && (!Array.isArray(c.pats) || !c.pats.length || c.pats.some((p) => typeof p != 'string'))) delete c.pats;
     delete c.patt;                         // pattern drills are per-run now; older versions saved one by accident and replayed it forever
+    delete c.pats;                         // shortcut-stage patterns are per-run too; never replay a guided drill on Start
     out.cfg = c;
   } else delete out.cfg;
   out.cal = Number.isFinite(+s.cal) && s.cal !== null && s.cal !== '' ? +s.cal : Array.isArray(s.sessions) && s.sessions.length ? 0 : CAL;   // existing data without it predates the scoring fix
@@ -303,15 +323,16 @@ export function recordLapse(q, now = Date.now()) {
  * Returns 'baseline' for the first clean answer, 'delayed' for the first clean answer at least
  * seven days later, or '' when the answer changes nothing.
  */
-export function recordRecall(q, ok, now = Date.now(), clean = true) {
+export function recordRecall(q, ok, now = Date.now(), clean = true, sk = '') {
   if (!clean || !q || !Number.isFinite(now) || now <= 0) return '';
-  const key = qk(String(q)), rows = (S.recall = S.recall || {});
+  const key = qk(String(q)), rows = (S.recall = S.recall || {}), skill = SK[sk] ? sk : '';
   const r = rows[key];
   if (!r) {
-    rows[key] = { q: String(q), t0: now, ok0: ok ? 1 : 0, t1: 0, ok1: 0 };
+    rows[key] = { q: String(q), t0: now, ok0: ok ? 1 : 0, t1: 0, ok1: 0, ...(skill ? { sk: skill } : {}) };
     trimRecall();
     return 'baseline';
   }
+  if (skill && !r.sk) r.sk = skill;   // an old row can still gain its skill from a later clean answer
   if (!r.t1 && now - r.t0 >= RECALL_GAP) {
     r.t1 = now;
     r.ok1 = ok ? 1 : 0;
@@ -383,7 +404,26 @@ function mergeRecallEntry(x, y) {
   const done = [x, y].filter((r) => r && r.t1 > 0 && r.t1 - r.t0 >= RECALL_GAP)
     .sort((a, b) => (a.t0 - b.t0) || (a.t1 - b.t1) || (b.ok0 - a.ok0) || (b.ok1 - a.ok1));
   const pick = done[0] || ([x, y].sort((a, b) => (a.t0 - b.t0) || (b.ok0 - a.ok0) || String(a.q).localeCompare(String(b.q)))[0]);
-  return { ...pick };
+  const sk = pick.sk || x.sk || y.sk || '';
+  return { ...pick, ...(sk ? { sk } : {}) };
+}
+/**
+ * One guided-path row. A passing run wins over a failing one; otherwise the better first-try run
+ * wins. The demo/pass stamps are monotonic, so a merge never removes progress.
+ */
+function mergePathEntry(x, y) {
+  if (!x) return y;
+  if (!y) return x;
+  const score = (r) => [r.pass ? 1 : 0, r.n ? r.ft / r.n : 0, r.ft || 0, r.n || 0, -(r.spd || 9)];
+  const a = score(x), b = score(y), better = a.some((v, i) => v !== b[i]) ? a.findIndex((v, i) => v !== b[i]) : -1;
+  const best = better < 0 || a[better] > b[better] ? x : y;
+  return {
+    ...best,
+    seen: Math.max(x.seen || 0, y.seen || 0),
+    demo: Math.max(x.demo || 0, y.demo || 0),
+    pass: Math.max(x.pass || 0, y.pass || 0),
+    at: Math.max(x.at || 0, y.at || 0),
+  };
 }
 export function mergeStates(a, b) {
   a = migrate(a); b = migrate(b);
@@ -405,6 +445,16 @@ export function mergeStates(a, b) {
   m.recall = { ...od.recall };
   Object.entries(nw.recall).forEach(([k, r]) => { const o = m.recall[k]; m.recall[k] = o ? mergeRecallEntry(o, r) : r; });
   trimRecall(m);
+  // Guided-path progress is a union: every stage keeps its best run, its demo and its pass.
+  m.paths = {};
+  new Set([...Object.keys(a.paths), ...Object.keys(b.paths)]).forEach((sk) => {
+    if (!SK[sk]) return;
+    m.paths[sk] = {};
+    new Set([...Object.keys(a.paths[sk] || {}), ...Object.keys(b.paths[sk] || {})]).forEach((id) => {
+      const row = mergePathEntry(a.paths[sk] && a.paths[sk][id], b.paths[sk] && b.paths[sk][id]);
+      if (row) m.paths[sk][id] = row;
+    });
+  });
   Object.keys(m.weak).forEach((k) => {
     const w = m.weak[k], mk = qk(w.q || k);
     const retired = Math.max(m.gone[k] || 0, (m.mastered[mk] && m.mastered[mk].masteredAt) || 0);

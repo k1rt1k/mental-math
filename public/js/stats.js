@@ -212,8 +212,9 @@ export const RETENTION_MIN = 5;
  * days later, how many were right at each point? Only questions with both observations count, so
  * `initialRate` and `retentionRate` describe exactly the same questions.
  */
-export function retentionStats() {
-  const rows = Object.values(S.recall || {}).filter((r) => r && r.t0 > 0);
+export function retentionStats(skill = '') {
+  const all = Object.values(S.recall || {}).filter((r) => r && r.t0 > 0);
+  const rows = skill ? all.filter((r) => r.sk === skill) : all;
   const done = rows.filter((r) => r.t1 > 0 && r.t1 - r.t0 >= RECALL_GAP);
   const initial = done.reduce((n, r) => n + (r.ok0 ? 1 : 0), 0);
   const retained = done.reduce((n, r) => n + (r.ok1 ? 1 : 0), 0);

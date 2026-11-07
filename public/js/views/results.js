@@ -53,6 +53,21 @@ export function showResults(e, out) {
     ${out.dl.length && !e.frozen ? `<div class="movers" aria-label="Rating changes">${out.dl.map(([k, v]) => `<span class="pill ${v > 0 ? 'ok' : 'bad'}"><span class="dot" style="--sc:${COL[k]}"></span>${esc(SK[k].n)} ${v > 0 ? '▲' : '▼'}${Math.abs(v)}</span>`).join('')}</div>` : ''}
     <div class="rstats">${stat(e.ok, 'correct')}${stat(pct(e.ok, e.n) + '%', 'accuracy')}${stat(rec.tm ? rec.tm + 's' : '–', 'average')}${stat(e.bc, 'best streak')}${stat(e.fast < 99 ? e.fast.toFixed(1) + 's' : '–', 'fastest')}${stat(pct(e.ft, e.n) + '%', 'first try')}</div>
   </div>
+  ${(() => {
+    const p = out.path;
+    if (!p) return '';
+    const ret = p.retention;
+    const why = p.pathComplete
+      ? 'All five stages are complete. Keep the mastery check fresh with a monthly timed test.'
+      : p.complete
+        ? 'Stage complete. The next stage is ready in Learn.'
+        : p.pass && ret && !ret.met
+          ? `Assessment passed. The delayed-retention check needs ${ret.min} paired questions at ${Math.round(ret.rate * 100)}%+ after seven days — ${ret.cohort} so far.`
+          : p.pass
+            ? 'Assessment passed. Finish this stage in Learn.'
+            : 'This run did not reach the stage goal. Your best run is kept, and playing again is the fastest way up.';
+    return `<div class="card nextup rpath"><div><div class="eyebrow">${p.pathComplete ? 'Guided path complete' : 'Guided path'}</div><b>${esc(p.skill)} · ${esc(p.name)} ${p.pass ? 'passed' : 'not passed yet'}</b><div class="mu">${esc(why)}</div></div><button class="btn" data-act="openPath" data-v="${esc(p.sk)}">Open path</button></div>`;
+  })()}
   <div class="btns rbtns">
     <button class="btn primary" data-act="again">${icon('redo')} ${e.kind == 'daily' ? 'Back to home' : 'Play again'}<kbd>Enter</kbd></button>
     ${misses.length || hasWeak ? `<button class="btn" data-act="review">${icon('book')} ${misses.length ? 'Practise ' + misses.length + ' missed' : 'Review missed'}<kbd>R</kbd></button>` : ''}
@@ -89,7 +104,7 @@ function padHint() {
 
 A.aiDebrief = () => { if (lastCtx) showAiSheet({ title: 'AI session debrief', action: 'debrief', context: lastCtx, extra: () => [...(Object.keys(S.weak).length ? [{ label: 'Practise missed questions', run: () => start('review') }] : []), { label: 'Drill my weakest skill', run: () => drill(weakestSkills(1)[0]) }] }); };
 const ready = () => Date.now() - (last ? last.at : 0) > 700;   // ignore the key press that ended the session
-A.again = () => { if (last && last.kind == 'daily') go('home'); else lastRun ? start(lastRun.opt, lastRun.cfg) : start(); };   // repeat the run exactly, drills included
+A.again = () => { if (last && last.kind == 'daily') go('home'); else lastRun ? start(lastRun.opt, lastRun.cfg, lastRun.path) : start(); };   // repeat the run exactly, drills included
 A.shareImg = async () => { if (!lastCard) return; const r = await shareCard(lastCard); if (r == 'saved') toast('Image saved'); };
 A.copyRes = async () => { if (!last) return; if (navigator.share && matchMedia('(pointer:coarse)').matches) { try { await navigator.share({ text: last.line }); return; } catch (e) { if (e && e.name == 'AbortError') return; } } copy(last.line); };
 export function resultsKey(k) {
