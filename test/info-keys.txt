@@ -36,6 +36,8 @@ c.plan
 s.ai
 s.pad
 s.pace
+s.ent
+s.noGrace
 s.noBlur
 s.goal
 s.ratings

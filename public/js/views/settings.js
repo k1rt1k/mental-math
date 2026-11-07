@@ -1,8 +1,8 @@
-import { S, save, replaceState, mergeStates, fresh, avgLv, migrate, devicePrefs } from '../state.js';
+import { S, save, replaceState, mergeStates, asCurrent, stampWipe, fresh, avgLv, migrate, devicePrefs } from '../state.js';
 import { IDS, SK } from '../engine.js';
 import { esc, ymd, clamp, ago } from '../util.js';
 import { A, register, go, view } from '../nav.js';
-import { dialog, confirmDlg, promptDlg, choiceDlg, toast, download, icon } from '../ui.js';
+import { dialog, confirmDlg, typedConfirmDlg, promptDlg, choiceDlg, toast, download, icon } from '../ui.js';
 import { ib } from '../info.js';
 import { applyTheme, ACC, FONTS, padOn, isTouch } from '../theme.js';
 import { syncKey, setSyncKey, pull, syncNow, statusText, status, fetchBackup } from '../sync.js';
@@ -11,7 +11,7 @@ import { state as remState, enable as remEnable, disable as remDisable, test as 
 const seg = (act, cur, opts) => `<div class="seg" role="group">${opts.map(([v, l]) => `<button aria-pressed="${cur == v}" data-act="${esc(act)}" data-v="${esc(v)}">${l}</button>`).join('')}</div>`;
 const row = (t, d, key, on) => `<div class="set"><div><div class="t"><span id="l-${esc(key)}">${t}</span>${ib('s.' + key)}</div><div class="d">${d}</div></div><button class="sw" role="switch" aria-checked="${on}" aria-labelledby="l-${esc(key)}" data-act="tog" data-v="${esc(key)}"></button></div>`;
 // "noX" keys are stored inverted so existing data keeps its meaning.
-const INV = new Set(['noBlur', 'noCd', 'noHap']);
+const INV = new Set(['noBlur', 'noCd', 'noHap', 'noGrace']);
 const get = (k) => (INV.has(k) ? !S[k] : !!S[k]);
 
 let rs = null;   // reminder state, resolved asynchronously: unsupported | ios-install | denied | off | on
@@ -63,6 +63,8 @@ function settings() {
     <section class="card"><h3>Practice</h3>
       <div class="field"><div class="mu">Keypad${ib('s.pad')}</div><div>${seg('pad', pad, [['auto', 'Auto'], ['on', 'Always'], ['off', 'Never']])}<div class="mu" style="margin-top:6px">Auto shows it on touch screens only.</div></div></div>
       <div class="field"><div class="mu">Keypad layout</div><div>${seg('padFlip', S.padFlip ? 'calc' : 'phone', [['phone', '1 2 3 on top'], ['calc', '7 8 9 on top']])}</div></div>
+      ${row('Enter to submit', 'Answers are only judged when you press Enter or Submit. Slower, but a slip on the last digit can be fixed, and the answer length is not revealed.', 'ent', get('ent'))}
+      ${row('Forgive near-miss typos', 'A last digit one key away from the right one gets a moment to fix before it counts as a slip. Once per question.', 'noGrace', get('noGrace'))}
       ${row('Pace readout', 'Show seconds on the current question against your target time.', 'pace', get('pace'))}
       ${row('3-2-1 countdown', 'A short countdown before each session.', 'noCd', get('noCd'))}
       ${row('Sound', 'Soft tones for right and wrong answers.', 'mute', !S.mute)}
@@ -157,7 +159,7 @@ A.restoreCloud = async () => {
     if (!r) return toast('No cloud safety copy yet');
     const n = r.state.sessions.length, when = new Date(r.at).toLocaleString();
     if (await confirmDlg('Recover from safety copy?', `Copy from <b>${esc(when)}</b> has <b>${n} sessions</b>. Anything missing here will be merged back; nothing is deleted.`, { ok: 'Recover' })) {
-      replaceState(mergeStates(S, r.state)); save(); again(); toast('Recovered. Now ' + S.sessions.length + ' sessions');
+      replaceState(mergeStates(S, asCurrent(r.state))); save(); again(); toast('Recovered. Now ' + S.sessions.length + ' sessions');
     }
   } catch (e) { toast('Could not reach the server'); }
 };
@@ -180,12 +182,20 @@ export function wireImport() {
     r.onload = async () => {
       let o;
       try { o = JSON.parse(r.result); if (!o || !o.sk || !Array.isArray(o.sessions)) throw 0; } catch (x) { toast('That is not a valid backup file'); e.target.value = ''; return; }
-      const how = await choiceDlg('Import backup', `<p>Backup has <b>${o.sessions.length}</b> sessions. This device has <b>${S.sessions.length}</b>.</p>`, [
+      const synced = !!syncKey();
+      let how = await choiceDlg('Import backup', `<p>Backup has <b>${o.sessions.length}</b> sessions. This device has <b>${S.sessions.length}</b>.</p>${synced ? '<p>Sync is on, so replacing also replaces the cloud copy and your other devices.</p>' : ''}`, [
         { value: 'merge', title: 'Merge (recommended)', desc: 'Keep everything from both; nothing is lost' },
-        { value: 'replace', title: 'Replace this device', desc: 'Use the backup as is' },
+        { value: 'replace', title: synced ? 'Replace everywhere' : 'Replace this device', desc: synced ? 'This device, the cloud copy and your other devices' : 'Use the backup as is', danger: synced },
       ]);
-      if (how == 'merge') { replaceState(mergeStates(S, o)); save(); toast('Merged. Now ' + S.sessions.length + ' sessions'); }
-      else if (how == 'replace') { replaceState(migrate(o)); save(); toast('Imported ' + S.sessions.length + ' sessions'); }
+      if (how == 'replace' && synced && !(await typedConfirmDlg('Replace everywhere?', `<p>The cloud copy (<b>${S.sessions.length}</b> sessions here) will be replaced by this backup (<b>${o.sessions.length}</b> sessions). A safety copy of the cloud data is kept on the server.</p>`, 'REPLACE', { ok: 'Replace everywhere' }))) how = undefined;
+      if (how == 'merge') { replaceState(mergeStates(S, asCurrent(o))); save(); toast('Merged. Now ' + S.sessions.length + ' sessions'); }
+      else if (how == 'replace') {
+        const prev = S.wipe;
+        replaceState(migrate(o));
+        if (synced) stampWipe(prev); else if (prev) S.wipe = prev; else delete S.wipe;   // the file's own marker never decides anything
+        save(); toast('Imported ' + S.sessions.length + ' sessions');
+        if (synced) syncNow().then((ok) => ok || toast('Replaced here. The cloud copy follows when you are back online.', { ms: 5000 }));
+      }
       e.target.value = ''; applyTheme(); go(view.scr == 'settings' ? 'settings' : 'home');
     };
     r.readAsText(f);
@@ -234,15 +244,34 @@ A.remDay = (d) => {
 };
 A.remTest = async () => { toast('Sending…'); try { toast((await remTest()) ? 'Test sent. It should arrive in a few seconds.' : 'Could not send a test. Is the server set up?', { ms: 4000 }); } catch (e) { toast('Could not send a test'); } };
 A.reset = async () => {
-  const c = await choiceDlg('Reset everything?', '<p>This erases all sessions, ratings and notes <b>on this device</b>. If sync is on, the cloud copy is not deleted and will come back on next sync.</p>', [
+  const synced = !!syncKey();
+  const c = await choiceDlg('Reset everything?', synced
+    ? '<p>Sync is on, so a reset on this device alone would just come back from the cloud. Choose how far it goes.</p><p>Erasing everywhere removes all sessions, ratings and notes here and in the cloud copy, and your other devices are reset the next time they sync. The server keeps one safety copy.</p>'
+    : '<p>This erases all sessions, ratings and notes <b>on this device</b>.</p>',
+  synced ? [
+    { value: 'backup', title: 'Download a backup, then erase everywhere', desc: 'Safest', danger: true },
+    { value: 'cloud', title: 'Erase everywhere', desc: 'This device, the cloud copy and your other devices', danger: true },
+    { value: 'local', title: 'Reset this device only', desc: 'Turns sync off here, so the cloud copy stays as it is' },
+  ] : [
     { value: 'backup', title: 'Download a backup, then reset', desc: 'Safest' },
     { value: 'reset', title: 'Reset now', desc: 'No backup', danger: true },
   ]);
   if (!c) return;
+  const everywhere = synced && c != 'local';
+  if (everywhere && !(await typedConfirmDlg('Erase everywhere?', `<p>This erases <b>${S.sessions.length}</b> sessions on this device <b>and in the cloud</b>. It can only be undone from the safety copy.</p>`, 'ERASE', { ok: 'Erase everywhere' }))) return;
   if (c == 'backup') exportBackup();
   const snap = JSON.parse(JSON.stringify(S)), keep = devicePrefs();   // sound, pad, reminders and every other device setting survive; only progress is erased
-  replaceState(Object.assign(fresh(), keep)); S.onb = 1; save(); applyTheme(); go('home');
-  toast('Everything reset', { label: 'Undo', onClick: () => { replaceState(snap); save(); applyTheme(); go('home'); toast('Restored'); } });
+  replaceState(Object.assign(fresh(), keep)); S.onb = 1;
+  if (everywhere) stampWipe(snap.wipe); else if (snap.wipe) S.wipe = snap.wipe;
+  if (synced && c == 'local') setSyncKey('');
+  save(); applyTheme(); go('home');
+  toast(everywhere ? 'Erased on this device. Erasing the cloud copy…' : 'Everything reset', { label: 'Undo', onClick: () => {
+    replaceState(snap);
+    if (everywhere) stampWipe(S.wipe);   // undoing an erase is itself newer than the erase, so the restored data wins back the cloud copy
+    save(); applyTheme(); go('home'); toast('Restored');
+    if (everywhere) syncNow();
+  } });
+  if (everywhere) syncNow().then((ok) => ok ? toast('Erased everywhere') : toast('Erased here. The cloud copy follows when you are back online.', { ms: 6000 }));
 };
 
 export function keysDialog() {

@@ -1,4 +1,13 @@
-# Mental Math Trainer 14.48 – settings that follow you
+# Mental Math Trainer 14.49 – a reset that sticks, answers that forgive
+
+## v14.49
+- **Reset and Replace now work while sync is on.** Both used to be undone by the next sync, because the merge simply re-added everything from the cloud. A Reset or an Import → Replace now stamps `S.wipe` (the time of the newest erase). The server accepts a save with a newer `wipe` as the one kind of save allowed to drop sessions, and refuses (409) a device that has not heard about the erase, which then merges and adopts the erased state instead of pushing its old data back. `mergeStates` follows the same rule: when the two sides disagree about `wipe`, the newer one wins outright, and only settings still merge. Backups and safety copies are merged back as a union (`asCurrent`), so Recover and Import → Merge are unaffected.
+- **Explicit choices, typed confirmation.** With sync on, Reset offers *Erase everywhere* (type `ERASE`), *Download a backup, then erase everywhere*, and *Reset this device only* (which turns sync off on this device so the cloud copy stays). Import → Replace becomes *Replace everywhere* (type `REPLACE`). Undo after an erase is itself newer than the erase, so it restores the cloud copy too. If the device is offline, the erase completes on the next sync.
+- **The server always keeps what an erase destroys.** An erase writes `backup-pre-erase` and refreshes `backup` even if a daily copy is fresh, but never overwrites them with an already-empty state. A wipe time more than a day in the future is rejected so it cannot lock the other devices out.
+- **Typo forgiveness.** When the answer is the right length and wrong only in its last digit, and that digit is a keypad neighbour of the right one (phone or numpad layout, diagonals included), nothing is counted for 1.5 s: the digits turn amber, and Backspace or typing the right digit fixes it with no slip and no lost life. If the window runs out it becomes the slip it was. Once per question; the clock keeps running. Settings → Practice → *Forgive near-miss typos* (on by default, synced).
+- **Enter to submit.** Settings → Practice → *Enter to submit* (off by default, synced) judges nothing until Enter or the new Submit button, so any digit can be corrected and the answer's length is not revealed. In this mode Enter never skips; Space and the Skip button do (the on-screen Skip now sends its own `Skip` key).
+- Version 14.49, cache `mm-v14-49`. Tests: `test/v1449-reset-and-typos.test.mjs`; `test/v55.test.mjs` now turns the grace off because it deliberately types near-miss slips.
+
 
 ## v14.48
 - **Settings sync across browsers and devices.** Theme, accent, question font, text size, high contrast, colour-blind colours, larger answer text, reduce motion, focus layout, keypad (on/off and layout), pace readout, countdown, sound, vibration, auto-pause, daily goal, the current session setup and Saved setups now travel with your sync key. A new browser or phone looks and behaves like your others as soon as sync is set up; nothing is re-entered per device.
@@ -259,7 +268,7 @@ Driven by the 14.14 live self-test report. Every reply was read, not just checke
 ## Current backend contract
 This section describes the deployed backend as it is today; the release notes below are historical.
 - Fixed Netlify Blobs initialization: the documented API is `getStore(storeName)`. Strong consistency remains requested on `getWithMetadata` reads.
-- Added a deployment fingerprint to `GET /api/ai`: `buildVersion: "14.48"` and response header `x-mental-math-ai-version: 14.48`.
+- Added a deployment fingerprint to `GET /api/ai`: `buildVersion: "14.49"` and response header `x-mental-math-ai-version: 14.49`.
 - Exposes the active model allow-list and exact application safety policy in the diagnostic response.
 - Keeps Gemini 3.5 Flash-Lite primary and Gemini 3.1 Flash-Lite as the only backup.
 - Keeps the shared 300-upstream-attempt Pacific-day budget and independent 12 RPM rolling windows per model.
@@ -293,7 +302,7 @@ The JSON must include:
 
 ```json
 {
-  "buildVersion": "14.48",
+  "buildVersion": "14.49",
   "defaultModel": "gemini-3.5-flash-lite",
   "models": ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite"],
   "budgetPolicy": {
@@ -303,7 +312,7 @@ The JSON must include:
 }
 ```
 
-The `budgetPolicy` object also includes the model list. If `buildVersion` is absent or not `14.48`, the new function bundle is not the one currently serving the site; redeploy the full project root to the correct linked Netlify site.
+The `budgetPolicy` object also includes the model list. If `buildVersion` is absent or not `14.49`, the new function bundle is not the one currently serving the site; redeploy the full project root to the correct linked Netlify site.
 
 ## Honest limitations
 - Automated tests use a mocked Blobs store and mocked Gemini responses; they cannot prove the user's live Netlify project, API key, Google model availability, or current provider capacity.

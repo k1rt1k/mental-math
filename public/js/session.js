@@ -10,6 +10,15 @@ export const mkOf = (c) =>
   c.only == 'zeta' ? 'zeta' + zKey(c.zeta) + c.dur :
   (c.only == 'all' ? (c.dur == 120 ? 'train' : 't' + c.dur) : c.only == 'mix' ? 'mix' + (c.mix || []).slice().sort().join('') + c.dur : c.only + c.dur) + (c.off ? 'o' + c.off : '') + (c.pats && c.pats.length ? '~' + c.pats.slice().sort().join('|') : c.patt ? '~' + c.patt : '') + (c.wf ? 'wf' : '');
 
+/** Keypad neighbours, diagonals included. Both layouts count, so a numpad and a phone pad are each forgiven. */
+const PADS = [[[1, 2, 3], [4, 5, 6], [7, 8, 9], [-1, 0, -1]], [[7, 8, 9], [4, 5, 6], [1, 2, 3], [-1, 0, -1]]];
+export const adjacentDigits = (a, b) => a !== b && PADS.some((g) => {
+  const at = (d) => { for (let r = 0; r < 4; r++) { const c = g[r].indexOf(+d); if (c >= 0) return [r, c]; } return null; };
+  const p = at(a), q = at(b);
+  return p && q && Math.abs(p[0] - q[0]) <= 1 && Math.abs(p[1] - q[1]) <= 1;
+});
+/** A full-length answer that is wrong only in its last digit, and that digit sits next to the right one on the keypad. */
+export const nearMiss = (ans, buf) => ans.length == buf.length && ans.slice(0, -1) == buf.slice(0, -1) && /^\d$/.test(ans.slice(-1)) && adjacentDigits(ans.slice(-1), buf.slice(-1));
 export const LIVES = 3;
 /** Sprint: questions per race, and the seconds added for each slip / skip, so rushing never pays. */
 export const SPRINT = 20, SLIP_S = 3, SKIP_S = 5;
@@ -183,26 +192,44 @@ export class Session {
   next() {
     const nq = this.nextQ();
     if (!nq) return false;
-    this.cur = nq; this.qs = this.now(); this.buf = ''; this.wrong = 0;
+    this.cur = nq; this.qs = this.now(); this.buf = ''; this.wrong = 0; this.grace = 0;
     return true;
   }
 
   /* ---- input ---- */
-  /** Type one digit. Returns 'more' | 'ok' | 'bad'. */
+  /** Type one digit. Returns 'more' | 'ok' | 'bad' | 'near'. 'near' is a grace period, not a slip yet: see `commit`. */
   type(dg) {
     if (this.wrong) { this.wrong = 0; this.buf = ''; }
-    this.buf += dg;
+    if (this.grace) { this.grace = 0; this.buf = this.buf.slice(0, -1); }   // typing during the grace window replaces the last digit
     const ans = String(this.cur.a);
+    if (S.ent) {                                    // Enter-to-submit: never judge, or reveal the length, while typing
+      if (this.buf.length < Math.max(ans.length + 2, 6)) this.buf += dg;
+      return 'more';
+    }
+    this.buf += dg;
     if (this.buf == ans) return 'ok';
     if (this.buf.length >= ans.length) {
-      this.slips++; this.cur.tries = (this.cur.tries || 0) + 1; this.combo = 0; this.wrong = 1;
-      const ek = errKind(ans, this.buf); this.cur.lastWrong = this.buf; this.errs.push(ek); bump('errs', ek);
-      if (this.lives) { this.lives--; if (this.lives <= 0) this.over = true; }
-      return 'bad';
+      if (!S.noGrace && !this.cur.graced && nearMiss(ans, this.buf)) { this.grace = 1; this.cur.graced = 1; return 'near'; }
+      return this.slip();
     }
     return 'more';
   }
-  back() { if (this.wrong) { this.wrong = 0; this.buf = ''; } else this.buf = this.buf.slice(0, -1); }
+  /** Enter-to-submit: judge what is typed. Returns 'ok' | 'bad' | 'none' (nothing typed). */
+  submit() {
+    if (!this.buf || this.wrong) return 'none';
+    this.grace = 0;
+    return this.buf == String(this.cur.a) ? 'ok' : this.slip();
+  }
+  /** The grace window ran out without a fix: the near-miss now counts as the slip it was. */
+  commit() { if (!this.grace) return 'more'; this.grace = 0; return this.slip(); }
+  slip() {
+    const ans = String(this.cur.a);
+    this.slips++; this.cur.tries = (this.cur.tries || 0) + 1; this.combo = 0; this.wrong = 1;
+    const ek = errKind(ans, this.buf); this.cur.lastWrong = this.buf; this.errs.push(ek); bump('errs', ek);
+    if (this.lives) { this.lives--; if (this.lives <= 0) this.over = true; }
+    return 'bad';
+  }
+  back() { this.grace = 0; if (this.wrong) { this.wrong = 0; this.buf = ''; } else this.buf = this.buf.slice(0, -1); }
   hint() { this.cur.hinted = 1; return { tip: this.cur.tip, how: how(this.cur) }; }
 
   /** Record an answer (ok=false means skipped). Returns details for the UI. */

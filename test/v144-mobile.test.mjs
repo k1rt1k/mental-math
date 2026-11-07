@@ -27,6 +27,6 @@ test('Coach has a dedicated mobile tab grid and contained chat layout', () => {
 });
 
 test('mobile viewport can use the new stylesheet and service-worker cache', () => {
-  assert.match(html, /css\/style\.css\?v=14\.48/);
-  assert.match(sw, /mm-v14-48/);
+  assert.match(html, /css\/style\.css\?v=14\.49/);
+  assert.match(sw, /mm-v14-49/);
 });

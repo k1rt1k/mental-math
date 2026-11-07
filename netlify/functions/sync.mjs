@@ -6,6 +6,8 @@ const KEEP_DAILY = 7;
 const CAS_ATTEMPTS = 3;
 const J = (o, status = 200) => Response.json(o, { status, headers: { "cache-control": "no-store" } });
 const T = (msg, status) => new Response(msg, { status, headers: { "cache-control": "no-store" } });
+/** Time of the newest Reset/Replace that produced this state. A save carrying a newer one is allowed to drop sessions. */
+const wipeOf = (x) => (x && Number.isFinite(+x.wipe) && +x.wipe > 0 ? +x.wipe : 0);
 const validRow = (x) => x && Number.isFinite(+x.t) && x.dur > 0 && x.n >= 0;
 
 /** Read the current state and its ETag. The ETag is what makes the write below a compare-and-swap. */
@@ -35,11 +37,14 @@ async function writeState(store, body, old, etag) {
 }
 
 /** One daily safety copy of the state from before the successful write. Best effort: never fail a save. */
-async function saveBackup(store, old) {
+async function saveBackup(store, old, erasing = false) {
   if (!old) return;
   try {
     const bk = await store.get("backup", { type: "json" });
-    if (!bk || Date.now() - (bk.at || 0) > 864e5) {
+    // An erase always keeps what it is about to destroy (unless there was nothing to lose), however fresh the daily copy is.
+    const hadData = Array.isArray(old.sessions) && old.sessions.length > 0;
+    if (erasing && hadData) await store.setJSON("backup-pre-erase", { at: Date.now(), state: old });
+    if (!bk || (erasing && hadData) || Date.now() - (bk.at || 0) > 864e5) {
       const snap = { at: Date.now(), state: old };
       await store.setJSON("backup", snap);
       await store.setJSON("backup-" + new Date().toISOString().slice(0, 10), snap);
@@ -75,6 +80,8 @@ export default async (req) => {
     try { body = JSON.parse(text); } catch { body = null; }
     if (!body || typeof body !== "object" || !body.sk || typeof body.sk !== "object" || !Array.isArray(body.sessions)) return T("bad data", 400);
     if (body.sessions.length > 50000) return T("too many sessions", 413);
+    const bw = wipeOf(body);
+    if (bw > Date.now() + 864e5) return T("bad data", 400);   // a wipe time from the far future would lock every other device out
 
     // Compare-and-swap: read the ETag, validate against that exact version, then write only if it is unchanged.
     // A racing device that got there first makes the ETag stale, so we retry against its state and either accept
@@ -85,12 +92,16 @@ export default async (req) => {
       // Refuse a save that would drop any session the server already has (the client must merge first).
       // Compare by timestamp, not count: two devices with the same number of different sessions used to slip through.
       // Rows the client itself would discard as malformed are ignored, or a bad row would block syncing forever.
-      if (old && Array.isArray(old.sessions)) {
+      // A Reset or Replace carries a newer `wipe` and is the one save allowed to drop sessions. The opposite, a device that
+      // has not heard about the erase yet, is refused so it merges the new state instead of bringing the old data back.
+      const ow = wipeOf(old), erasing = bw > ow;
+      if (bw < ow) return T("stale", 409);
+      if (!erasing && old && Array.isArray(old.sessions)) {
         const have = new Set(body.sessions.map((x) => x && +x.t));
         if (old.sessions.some((x) => validRow(x) && !have.has(+x.t))) return T("would lose sessions", 409);
       }
       if (await writeState(store, body, old, etag)) {
-        await saveBackup(store, old);
+        await saveBackup(store, old, erasing);
         return J({ ok: true });
       }
     }

@@ -152,7 +152,7 @@ export const fresh = () => {
  * theme set on the laptop and keypad set on the phone both survive. Goal, the saved session setup and the saved
  * setups sync the same way.
  */
-export const PREF_KEYS = ['pad', 'theme', 'acc', 'font', 'zen', 'mute', 'noBlur', 'noCd', 'noHap', 'ts', 'hc', 'cb', 'bigA', 'pace', 'padFlip', 'rm'];
+export const PREF_KEYS = ['pad', 'theme', 'acc', 'font', 'zen', 'mute', 'noBlur', 'noCd', 'noHap', 'ts', 'hc', 'cb', 'bigA', 'pace', 'padFlip', 'rm', 'ent', 'noGrace'];
 export const SYNCED_PREFS = [...PREF_KEYS, 'goal', 'cfg', 'presets'];
 /** Genuinely tied to one browser: the push subscription behind reminders, which panels are open, and snoozed banners. */
 export const DEVICE_LOCAL = ['rem', 'skOpen', 'bkSnooze', 'padHint'];
@@ -301,6 +301,8 @@ export function migrate(o) {
   // Per-setting change times (see SYNCED_PREFS): only known settings, only real timestamps.
   out.pt = {};
   if (isObj(s.pt)) SYNCED_PREFS.forEach((k) => { const t = fin(s.pt[k]); if (t > 0) out.pt[k] = t; });
+  out.wipe = Math.max(0, fin(s.wipe));   // time of the newest Reset/Replace; see mergeStates
+  if (!out.wipe) delete out.wipe;
   out.goal = clamp(Math.round(fin(s.goal, 2)), 1, 5);   // the Settings stepper is 1..5, and plan arithmetic assumes a number
   out.cal = Number.isFinite(+s.cal) && s.cal !== null && s.cal !== '' ? +s.cal : Array.isArray(s.sessions) && s.sessions.length ? 0 : CAL;   // existing data without it predates the scoring fix
   out.ms = Array.isArray(s.ms) ? s.ms : [];
@@ -502,8 +504,38 @@ function mergePathEntry(x, y) {
     at: Math.max(x.at || 0, y.at || 0),
   };
 }
+/** A backup or safety copy being merged back in belongs to the current epoch, so it is a union rather than something an erase discards. */
+export const asCurrent = (o) => ({ ...o, wipe: S.wipe });
+/** Mark the live state as the newest Reset/Replace. `prev` is the marker it replaces, so the time only ever moves forward. */
+export const stampWipe = (prev = 0) => { S.wipe = Math.max(Date.now(), (prev || 0) + 1, (S.wipe || 0) + 1); };
+/**
+ * Settings: the newest change to each one wins. With no change time on either side (data from before settings
+ * synced), this device keeps its own value and an unset device adopts a set one, so nothing changes by surprise.
+ * Device-bound settings always come from `a`, the device doing the merge.
+ */
+function mergePrefs(m, a, b) {
+  m.pt = {};
+  SYNCED_PREFS.forEach((k) => {
+    const ta = a.pt[k] || 0, tb = b.pt[k] || 0;
+    const w = ta !== tb ? (ta > tb ? a : b) : (a[k] !== undefined || b[k] === undefined ? a : b);
+    if (w[k] === undefined) delete m[k]; else m[k] = w[k];
+    if (Math.max(ta, tb)) m.pt[k] = Math.max(ta, tb);
+  });
+  DEVICE_LOCAL.forEach((k) => { if (a[k] === undefined) delete m[k]; else m[k] = a[k]; });
+  return m;
+}
+/**
+ * `wipe` is the time of the newest Reset or Replace on any device. Progress from before it must never merge back in,
+ * or a reset would undo itself on the next sync. So when the two sides disagree about it, the side with the newer wipe
+ * wins outright; only settings are still merged.
+ */
 export function mergeStates(a, b) {
   a = migrate(a); b = migrate(b);
+  const wa = a.wipe || 0, wb = b.wipe || 0;
+  if (wa !== wb) {
+    const w = wa > wb ? a : b;
+    return mergePrefs({ ...w, wipe: Math.max(wa, wb) }, a, b);
+  }
   const aNew = (a.u || 0) >= (b.u || 0), nw = aNew ? a : b, od = aNew ? b : a;
   const m = { ...od, ...nw };
   const seen = new Set();
@@ -549,16 +581,7 @@ export function mergeStates(a, b) {
   m.lastExport = Math.max(a.lastExport || 0, b.lastExport || 0);
   m.u = Math.max(a.u || 0, b.u || 0);
   m.cal = Math.max(a.cal || 0, b.cal || 0);
+  if (wa) m.wipe = wa;   // both sides share the same wipe time here
   m.onb = a.onb || b.onb;
-  // Settings: the newest change to each one wins. With no change time on either side (data from before settings
-  // synced), this device keeps its own value and an unset device adopts a set one, so nothing changes by surprise.
-  m.pt = {};
-  SYNCED_PREFS.forEach((k) => {
-    const ta = a.pt[k] || 0, tb = b.pt[k] || 0;
-    const w = ta !== tb ? (ta > tb ? a : b) : (a[k] !== undefined || b[k] === undefined ? a : b);
-    if (w[k] === undefined) delete m[k]; else m[k] = w[k];
-    if (Math.max(ta, tb)) m.pt[k] = Math.max(ta, tb);
-  });
-  DEVICE_LOCAL.forEach((k) => { if (a[k] === undefined) delete m[k]; else m[k] = a[k]; });
-  return m;
+  return mergePrefs(m, a, b);
 }

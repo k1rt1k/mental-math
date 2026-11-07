@@ -303,6 +303,7 @@ a { background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px no-re
 @keyframes dgpop { from { opacity: 0; transform: translateY(10px) scale(.7); } }
 .bf .dg { display: inline-block; animation: dgpop .2s var(--soft) both; }
 @keyframes okpop { 45% { transform: scale(1.07); } }
+.bf .near { color: var(--gd); }
 .bf .ok { display: inline-block; animation: okpop .32s var(--soft); }
 .qx { white-space: nowrap; overflow: hidden; }
 .msg > * { animation: settle-s .28s var(--ease) both; } .msg > :nth-child(2) { animation-delay: .04s; } .msg > :nth-child(n+3) { animation-delay: .08s; }

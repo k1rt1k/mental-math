@@ -80,6 +80,21 @@ export function dialog({ title, body = '', actions = [{ label: 'OK', value: true
     onOpen && onOpen(d);
   });
 }
+/** Destructive confirmation: the red button stays disabled until `word` is typed exactly. Resolves true or false. */
+export const typedConfirmDlg = (title, msg, word, { ok = 'Erase' } = {}) =>
+  dialog({
+    title,
+    body: `<div>${msg}</div><label style="display:block;margin-top:12px">Type <b>${esc(word)}</b> to confirm<input class="inp" name="w" autocomplete="off" autocapitalize="characters" spellcheck="false" style="margin-top:8px" aria-label="Type ${esc(word)} to confirm"></label>`,
+    actions: [{ label: 'Cancel', value: false }, { label: ok, value: true, danger: true }],
+    onOpen: (d) => {
+      const inp = d.querySelector('input[name="w"]'), go = d.querySelector('button.danger');
+      const match = () => inp.value.trim().toUpperCase() === word.toUpperCase();
+      go.disabled = true;
+      inp.addEventListener('input', () => { go.disabled = !match(); });
+      inp.focus();
+    },
+    collect: (d, v) => v === true && d.querySelector('input[name="w"]').value.trim().toUpperCase() === word.toUpperCase(),   // Enter in the field can bypass the disabled button; the word is re-checked here
+  }).then((v) => v === true);
 export const confirmDlg = (title, msg, { ok = 'Confirm', danger = false } = {}) =>
   dialog({ title, body: `<p>${msg}</p>`, actions: [{ label: 'Cancel', value: false }, { label: ok, value: true, primary: !danger, danger }] }).then((v) => v === true);
 

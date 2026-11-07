@@ -35,7 +35,7 @@ function sound(ok) {
 
 const padKeys = () => (S.padFlip ? [7, 8, 9, 4, 5, 6, 1, 2, 3, '', 0, '⌫'] : [1, 2, 3, 4, 5, 6, 7, 8, 9, '', 0, '⌫']);
 const padHtml = () => '<div class="pad" role="group" aria-label="Number pad">' + padKeys().map((k) => k === '' ? '<span aria-hidden="true"></span>' : `<button type="button" class="${k === '⌫' ? 'fn' : ''}" data-act="key" data-v="${esc(k === '⌫' ? 'Backspace' : k)}" aria-label="${esc(k === '⌫' ? 'Backspace' : k)}">${k === '⌫' ? icon('back') : k}</button>`).join('') + '</div>'
-  + `<div class="padact"><button type="button" class="btn" data-act="key" data-v="h" aria-label="Show the method (half points)">${icon('bulb')} Hint</button><button type="button" class="btn" data-act="key" data-v="Enter" aria-label="Skip question">Skip</button></div>`;
+  + `<div class="padact"><button type="button" class="btn" data-act="key" data-v="h" aria-label="Show the method (half points)">${icon('bulb')} Hint</button>${S.ent ? '<button type="button" class="btn primary" data-act="key" data-v="Enter" aria-label="Submit answer">Submit</button>' : ''}<button type="button" class="btn" data-act="key" data-v="Skip" aria-label="Skip question">Skip</button></div>`;
 const PAD = () => padHtml();
 
 /** opt: see Session. cfg: optional config override for this run only; it is never saved, so a drill can't leave hidden state behind. path: the guided stage this run belongs to, if any. */
@@ -62,7 +62,7 @@ export function start(opt, cfg, path) {
     <div class="board cd" id="qc"><div class="tag"><span class="pill" id="sk">Get ready</span><span class="tagr"><span id="pr" class="mu"></span><span id="bn" class="gd"></span><span id="cc" class="cmbchip" hidden></span>${S.pace ? '<span id="pcv" class="pcv num" aria-hidden="true"></span>' : ''}</span></div>
       <div class="q" id="q" aria-live="polite">3</div><div class="bf" id="bf" aria-label="Your answer"></div><span class="qtl" aria-hidden="true">Pace vs par</span><div class="qt" title="Your time on this question against its par time"><i id="qt"></i></div></div>
     <div class="msg" id="ms" role="status" aria-live="polite"></div>
-    ${PAD()}${!padOn() && isTouch() ? '<input id="kin" class="kin" inputmode="numeric" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Your answer" value=" ">' : ''}<div class="mu hint"><button type="button" class="lnk2" data-act="key" data-v="Enter"><kbd>Enter</kbd> skip</button> · <button type="button" class="lnk2" data-act="key" data-v="h"><kbd>H</kbd> show method</button> · <button type="button" class="lnk2" data-act="pause"><kbd>Esc</kbd> pause</button> · answers submit as you type</div>
+    ${PAD()}${!padOn() && isTouch() ? '<input id="kin" class="kin" inputmode="numeric" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Your answer" value=" ">' : ''}<div class="mu hint">${S.ent ? '<button type="button" class="lnk2" data-act="key" data-v="Enter"><kbd>Enter</kbd> submit</button> · <button type="button" class="lnk2" data-act="key" data-v="Skip"><kbd>Space</kbd> skip</button>' : '<button type="button" class="lnk2" data-act="key" data-v="Enter"><kbd>Enter</kbd> skip</button>'} · <button type="button" class="lnk2" data-act="key" data-v="h"><kbd>H</kbd> show method</button> · <button type="button" class="lnk2" data-act="pause"><kbd>Esc</kbd> pause</button> · ${S.ent ? 'nothing is judged until you submit' : 'answers submit as you type'}</div>
    </div>
    <aside class="side" aria-label="Live stats">
     <div class="card"><div class="mu">Correct in a row</div><div class="cmb num" id="cmb">0</div><div class="mu" id="bcm">best 0</div></div>
@@ -168,28 +168,55 @@ function feedback(r) {
   side(true);
 }
 
+/** A correct answer: score it and move on. */
+function solved() {
+  $('#bf').innerHTML = `<span class="ok">${esc(sess.buf)}</span>`;
+  feedback(sess.answer(true));
+  if (sess.n % 10 == 0) sess.checkpoint();
+  if (sess.kind == 'sprint' && sess.n >= sess.target) { locked = true; return setTimeout(() => sess && end(), 250); }
+  nextQ();
+}
+/** A wrong answer that has already been counted as a slip. */
+function slipped() {
+  const bf = $('#bf'); bf.innerHTML = `<span class="bad">${esc(sess.buf)}</span>`;
+  sound(false); flash(false); side(false);
+  if (sess.kind == 'survival') { $('#t').innerHTML = hearts(); lifeLost(); }
+  bf.classList.remove('shake'); void bf.offsetWidth; bf.classList.add('shake');
+  if (sess.over) { locked = true; setTimeout(() => sess && end(), 800); return; }
+  const cur = sess.cur;
+  setTimeout(() => { if (sess && sess.cur === cur && sess.wrong) { sess.wrong = 0; sess.buf = ''; renderBuf(); } }, 450);
+}
+const GRACE_MS = 1500;
+/** Right length, last digit one key off: nothing is counted yet. Backspace or another digit fixes it; otherwise it becomes a slip. */
+function near() {
+  $('#bf').innerHTML = `<span class="near">${esc(sess.buf)}</span><span class="cur"></span>`;
+  $('#ms').innerHTML = '<span class="mu">Close. Fix the last digit.</span>';
+  const cur = sess.cur, t0 = Date.now();
+  const settle = () => {
+    if (!sess || sess.cur !== cur || !sess.grace) return;
+    if (sess.paused || Date.now() - t0 < GRACE_MS) return setTimeout(settle, sess.paused ? 300 : GRACE_MS - (Date.now() - t0));   // the clock is stopped while paused, so is the grace
+    if (sess.commit() == 'bad') slipped();
+  };
+  setTimeout(settle, GRACE_MS);
+}
 function press(dg) {
   if (locked) return;
   const res = sess.type(dg);
-  if (res == 'ok') {
-    $('#bf').innerHTML = `<span class="ok">${esc(sess.buf)}</span>`;
-    feedback(sess.answer(true));
-    if (sess.n % 10 == 0) sess.checkpoint();
-    if (sess.kind == 'sprint' && sess.n >= sess.target) { locked = true; return setTimeout(() => sess && end(), 250); }
-    nextQ();
-  } else if (res == 'bad') {
-    const bf = $('#bf'); bf.innerHTML = `<span class="bad">${esc(sess.buf)}</span>`;
-    sound(false); flash(false); side(false);
-    if (sess.kind == 'survival') { $('#t').innerHTML = hearts(); lifeLost(); }
-    bf.classList.remove('shake'); void bf.offsetWidth; bf.classList.add('shake');
-    if (sess.over) { locked = true; setTimeout(() => sess && end(), 800); return; }
-    const cur = sess.cur;
-    setTimeout(() => { if (sess && sess.cur === cur && sess.wrong) { sess.wrong = 0; sess.buf = ''; renderBuf(); } }, 450);
-  } else renderBuf();
+  if (res == 'ok') solved();
+  else if (res == 'bad') slipped();
+  else if (res == 'near') near();
+  else renderBuf();
+}
+/** Enter-to-submit mode: judge what has been typed. */
+function submit() {
+  if (locked) return;
+  const res = sess.submit();
+  if (res == 'ok') solved(); else if (res == 'bad') slipped();
 }
 
 function skip() {
   if (locked) return;
+  sess.grace = 0;
   const r = sess.answer(false);
   feedback(r);
   if (sess.n % 10 == 0) sess.checkpoint();
@@ -300,7 +327,8 @@ export function playKey(k) {
   if (sess.paused) { if (k == 'Enter' || k == ' ') resume(); else if (k == 'Escape') resume(); return true; }
   if (/^\d$/.test(k)) { try { !S.noHap && navigator.vibrate && matchMedia('(pointer:coarse)').matches && navigator.vibrate(5); } catch (e) { /* none */ } press(k); }
   else if (k == 'Backspace') { sess.back(); renderBuf(); }
-  else if (k == 'Enter' || k == ' ') skip();
+  else if (k == 'Enter' && S.ent) submit();   // Enter-to-submit: Enter never skips; Space and the Skip button do
+  else if (k == 'Enter' || k == ' ' || k == 'Skip') skip();
   else if (k == 'Escape') pause();
   else if (k == 'h' || k == 'H') { const h = sess.hint(); $('#ms').innerHTML = `${h.tip ? `<div class="tip">${esc(h.tip)}</div>` : ''}<div class="tip">${esc(h.how)}</div><div class="tip">Hint used: half points, no rating change</div>`; }
   return true;

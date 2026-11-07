@@ -13,9 +13,9 @@ const sw = readFileSync(join(pub, 'sw.js'), 'utf8');
 const util = readFileSync(join(pub, 'js/util.js'), 'utf8');
 const html = readFileSync(join(pub, 'index.html'), 'utf8');
 
-test('version and service-worker cache are 14.48 and bump together', () => {
-  assert.match(util, /VERSION = '14.48'/);
-  assert.match(sw, /const C = 'mm-v14-48'/);
+test('version and service-worker cache are 14.49 and bump together', () => {
+  assert.match(util, /VERSION = '14.49'/);
+  assert.match(sw, /const C = 'mm-v14-49'/);
 });
 
 test('mode and skill grids adapt instead of forcing five columns', () => {
@@ -73,6 +73,6 @@ test('bundled fonts ship with their SIL OFL notices', () => {
 });
 
 test('the stylesheet is cache-busted from the page', () => {
-  assert.match(html, /href="css\/style\.css\?v=14.48"/);
+  assert.match(html, /href="css\/style\.css\?v=14.49"/);
   assert.match(html, /fonts\/jbmono\.woff2/);
 });

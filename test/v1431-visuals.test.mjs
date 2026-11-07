@@ -9,9 +9,9 @@ test('Home streak pill carries a milestone ring', () => {
 });
 
 test('extras.css is linked, precached and versioned with the service worker', () => {
-  assert.match(rd('index.html'), /css\/extras\.css\?v=14\.48/);
+  assert.match(rd('index.html'), /css\/extras\.css\?v=14\.49/);
   assert.match(rd('sw.js'), /'css\/extras\.css'/);
-  assert.match(rd('sw.js'), /mm-v14-48/);
+  assert.match(rd('sw.js'), /mm-v14-49/);
 });
 
 test('motion additions respect reduced motion', () => {
