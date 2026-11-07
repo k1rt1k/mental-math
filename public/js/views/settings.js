@@ -46,7 +46,7 @@ function settings() {
   if (rs === null) loadRem();
   if (bd === null && syncKey()) loadBoardState();
   const goal = S.goal || 2, pad = S.pad == null ? 'auto' : S.pad ? 'on' : 'off', th = S.theme || 'auto';
-  const grp = (id, title, sub, inner) => `<section class="sgrp" data-grp="${esc(id)}" aria-labelledby="g-${esc(id)}"><h2 class="sg" id="g-${esc(id)}">${title}<span class="sub">${sub}</span></h2>${inner}</section>`;
+  const grp = (id, title, sub, inner) => `<section class="sgrp" data-grp="${esc(id)}" aria-labelledby="g-${esc(id)}"><h2 class="sg" id="g-${esc(id)}">${title}</h2>${inner}</section>`;
   const cols = (l, r) => `<div class="g g2" style="align-items:start"><div class="g">${l}</div><div class="g">${r}</div></div>`;
   document.querySelector('#main').innerHTML = `
   <div class="hd"><h1>Settings</h1></div>
@@ -259,7 +259,23 @@ A.aiStatus = async () => {
   await dialog({ title: 'AI status', body, actions: [{ label: 'Done', value: true, primary: true }] });
 };
 A.syncNow = async () => { toast('Syncing…'); const ok = await syncNow(); toast(ok ? 'Up to date' : statusText()); again(); };
-A.sync = () => { if (!syncKey()) { go('settings'); setTimeout(() => A.syncKey(), 50); } else A.syncNow(); };
+/** The cloud on Home. Wide screens show the status beside it, so a tap just syncs. Phones have no room for the words, so a tap opens a small sheet with them. */
+const SYNC_HINT = {
+  ok: 'Your progress is saved to your cloud account and shared with your other devices.',
+  busy: 'Syncing now. This only takes a moment.',
+  offline: 'No connection right now. Everything still works here, and it syncs when you are back online.',
+  key: 'The cloud did not accept this device’s sync key. Check it in Settings.',
+  locked: 'Too many wrong keys. Wait a little, then try again.',
+};
+A.sync = async (_d, el) => {
+  if (!syncKey()) { go('settings'); setTimeout(() => A.syncKey(), 50); return; }
+  const label = el && el.querySelector && el.querySelector('#sy');
+  if (!label || getComputedStyle(label).display != 'none') return A.syncNow();   // the status is already readable beside the cloud
+  const k = status.kind, bad = k == 'key' || k == 'locked';
+  const body = `<div class="syn ${esc(k)}"><span class="syn-ic">${icon('cloud')}<i></i></span><div><b>${esc(statusText())}</b><p class="mu">${esc(SYNC_HINT[k] || '')}</p></div></div>`;
+  const r = await dialog({ title: 'Cloud sync', body, actions: bad ? [{ label: 'Close', value: false }, { label: 'Sync settings', value: 'settings', primary: true }] : [{ label: 'Sync settings', value: 'settings' }, { label: 'Sync now', value: 'now', primary: true }], onOpen: (dl) => dl.classList.add('synsheet') });
+  if (r == 'now') A.syncNow(); else if (r == 'settings') go('settings');
+};
 A.restoreCloud = async () => {
   try {
     const r = await fetchBackup();

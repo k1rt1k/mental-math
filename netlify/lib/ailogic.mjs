@@ -573,6 +573,27 @@ export function evalArithmetic(src) {
   return bad || i !== s.length || !Number.isSafeInteger(v) ? null : v;
 }
 
+/** Canonical form of "a op b = c" so a quoted learner answer can be matched however the model spaces or spells it. */
+function normStatement(x) {
+  return String(x || '').replace(/\s+/g, '').replace(/[−–]/g, '-').replace(/[×*]/g, '*').replace(/÷/g, '/').replace(/(?<=\d)x(?=[\d(])/g, '*').replace(/[.,;:]+$/, '');
+}
+
+/** The text of the sentence (same line only) before and after a matched run, for wording checks. */
+function sentenceAround(src, index, len) {
+  const ls = src.lastIndexOf('\n', index - 1) + 1;
+  let le = src.indexOf('\n', index + len); if (le < 0) le = src.length;
+  const pre = src.slice(ls, index), post = src.slice(index + len, le);
+  const cut = pre.search(/[.!?](?=\s+\S)(?!.*[.!?]\s+\S)/s);   // start after the last sentence end before the run
+  const end = post.search(/[.!?]\s+\S/);
+  return [cut >= 0 ? pre.slice(cut + 1) : pre, end >= 0 ? post.slice(0, end) : post];
+}
+
+/** Wrong answers the learner typed, as "question = typed" strings, from the (cleaned) summary the browser sent. */
+export function quotedLearnerAnswers(summary) {
+  const list = summary && Array.isArray(summary.missList) ? summary.missList : [];
+  return list.filter((m) => m && m.q != null && m.ty !== '' && m.ty != null).map((m) => `${m.q} = ${m.ty}`);
+}
+
 /**
  * Re-check equations in model output with real arithmetic. LLMs slip on mental maths, and a wrong worked
  * example in a maths trainer is worse than none. Handles single statements ("47 × 6 = 272") and whole chains
@@ -580,9 +601,13 @@ export function evalArithmetic(src) {
  * integer expressions are checked (no decimals, remainders, powers, thousands separators or inexact division),
  * so a flag always means the model really wrote something false.
  */
-export function checkArithmetic(text) {
+export function checkArithmetic(text, opts = {}) {
   const src = String(text || '');
   const flags = [];
+  // Wrong answers the LEARNER gave ("1575 ÷ 25 = 66"). When the coach quotes one, that is accurate reporting, not an AI slip.
+  const quoted = new Set((Array.isArray(opts && opts.quoted) ? opts.quoted : []).map(normStatement).filter(Boolean));
+  // Wording that marks an equation as something the learner wrote ("you answered 1575 ÷ 25 = 66 instead of 63").
+  const QUOTE_CUE = /\b(?:you|they|learner)\s+(?:answered|typed|entered|submitted|guessed|said|wrote|put|gave|got|picked|chose)\b|\b(?:answered|typed|entered|submitted|guessed)\b|\b(?:instead\s+of|rather\s+than)\b/i;
   const OP = /[\d)][ \t]*[+\-−×÷*/x][ \t]*[\d(]/;
   const runs = /[\d(][\d \t+\-−×÷*/x().=]*/g;   // one line only: a bullet on the next line is a new statement
   let m;
@@ -591,13 +616,19 @@ export function checkArithmetic(text) {
     if (!run.includes('=')) continue;
     const before = src.slice(0, m.index), after = src.slice(m.index + run.length);
     if (/[.,^√²³]$/.test(before) || /(?:\bmod|\bremainder|\brem|\br)\s*$/i.test(before)) continue;   // 1,234 · 2^3 · 17 mod 9 · r 3
+    // The run started mid-expression: a power or other unsupported symbol cut it off from its left side
+    // (7³ = 7² × 7 = 49 × 7 = 343 → the run would otherwise start at the second 7). Its first side is only half an
+    // expression, so judging it gives false alarms; the later steps of the chain are whole and still get checked.
+    const cutOff = /\S[ \t]*[+\-−–×÷*/][ \t]*$/.test(before);
     if (/^[%²³^!]|^[.,]\d|^\s*(?:r\b|rem|remainder|mod\b)/i.test(after)) continue;                      // 1,234 · 5² · 3 r 2
     const sides = run.split('=').map((x) => x.replace(/^\s*\d+\.\s+(?=[\d(])/, '').replace(/[\s.(]+$/, '').replace(/^[\s)]+/, '').trim());
-    for (let i = 0; i + 1 < sides.length; i++) {
+    for (let i = cutOff ? 1 : 0; i + 1 < sides.length; i++) {
       const l = sides[i], r = sides[i + 1];
       if (!l || !r || (!OP.test(l) && !OP.test(r))) continue;
       const lv = evalArithmetic(l), rv = evalArithmetic(r);
       if (lv === null || rv === null || lv === rv) continue;
+      if (quoted.has(normStatement(`${l} = ${r}`))) continue;
+      if (sentenceAround(src, m.index, run.length).some((part) => QUOTE_CUE.test(part))) continue;
       flags.push({ statement: `${l.replace(/\s+/g, ' ')} = ${r.replace(/\s+/g, ' ')}`, actual: lv, right: rv, plain: !OP.test(r) });
     }
   }
@@ -719,6 +750,7 @@ export async function callGeminiFreeApiWithMeta({
   trackHealth = false,
   action = null,
   system = '',
+  quoted = [],
 }) {
   // Per-action output ceiling and thinking level; direct callers without an action keep the flat defaults.
   const tuning = action && ACTION_TUNING[action] ? ACTION_TUNING[action] : null;
@@ -844,7 +876,7 @@ export async function callGeminiFreeApiWithMeta({
 
       if (trackHealth) modelCooldown.delete(attempt.model);
       const truncated = Boolean(candidate && candidate.finishReason === 'MAX_TOKENS');
-      const { text: checked, flags: arithmeticFlags } = checkArithmetic(truncated && !jsonMode ? `${jsonMode ? text : cleanReply(text)}\n\n_(This reply was cut off. Tap Regenerate or ask for a shorter version.)_` : jsonMode ? text : cleanReply(text));
+      const { text: checked, flags: arithmeticFlags } = checkArithmetic(truncated && !jsonMode ? `${jsonMode ? text : cleanReply(text)}\n\n_(This reply was cut off. Tap Regenerate or ask for a shorter version.)_` : jsonMode ? text : cleanReply(text), { quoted });
       return {
         text: checked,
         truncated,

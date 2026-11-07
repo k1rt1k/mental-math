@@ -50,7 +50,7 @@ function progress() {
   const TABS = [['overview', 'Overview'], ['skills', 'Skills'], ['facts', 'Tables'], ['history', 'History']];
   if (!TABS.some(([v]) => v == tab)) tab = 'overview';
   const hs = hourStats();
-  const hourCard = hs.best ? `<h2>When you play best<span class="sub">time of day, 1+ minute sessions</span>${ib('p.hours')}</h2><div class="card"><div class="hrs">${hs.rows.map((r) => `<div class="hr ${r.l == hs.best.l ? 'top' : ''}"><b>${r.l}</b><span class="num">${r.s ? r.pace + '/min' : '–'}</span><span class="mu">${r.s ? r.acc + '% · ' + r.s + (r.s == 1 ? ' session' : ' sessions') : 'no sessions'}</span></div>`).join('')}</div><div class="mu" style="margin-top:8px">You score highest in the <b class="tx">${hs.best.l.toLowerCase()}</b>. Try your hardest sessions then.</div></div>` : '';
+  const hourCard = hs.best ? `<h2>When you play best${ib('p.hours')}</h2><div class="card"><div class="hrs">${hs.rows.map((r) => `<div class="hr ${r.l == hs.best.l ? 'top' : ''}"><b>${r.l}</b><span class="num">${r.s ? r.pace + '/min' : '–'}</span><span class="mu">${r.s ? r.acc + '% · ' + r.s + (r.s == 1 ? ' session' : ' sessions') : 'no sessions'}</span></div>`).join('')}</div><div class="mu" style="margin-top:8px">You score highest in the <b class="tx">${hs.best.l.toLowerCase()}</b>. Try your hardest sessions then.</div></div>` : '';
   const panel = {
     overview: `
   <div class="g g3">
@@ -62,11 +62,11 @@ function progress() {
     <div class="card stat"><div class="l">Best 2-min train</div><div class="v">${tr.length ? Math.max(...tr.map((s) => s.pts)) : '–'}</div><div class="s">${tr.length ? Math.max(...tr.map((s) => s.ok)) + ' correct best' : 'play a 2-min Train'}</div></div>
   </div>
   <div class="card" style="margin-top:14px">Biggest 7-day gain: <b>${esc(SK[dl7[0][0]].n)}</b> (${dl7[0][1] >= 0 ? '+' : ''}${Math.round(dl7[0][1])}) · Weakest right now: <b>${esc(SK[wk[0]].n)}</b></div>
-  <div class="g c2">
+  <div class="g c2 p4">
     <div><h2>Overall rating</h2><div class="card">${spark(L.map((s) => (IDS.reduce((q, k) => q + ((s.lv && s.lv[k]) || SK[k].s), 0) / IDS.length) * 100), 'var(--ok)', { labels: L.map(sessLabel) })}</div></div>
-    <div><h2>Pace<span class="sub">points per minute</span>${ib('p.pace')}</h2><div class="card">${spark(L.map((s) => (s.pts * 60) / s.dur), 'var(--ac)', { labels: L.map(sessLabel), unit: '/min' })}</div></div>
-    <div><h2>Accuracy<span class="sub">%</span>${ib('p.acc')}</h2><div class="card">${spark(L.map((s) => pct(s.ok, Math.max(1, s.n))), '#ff9f5a', { unit: '%', labels: L.map(sessLabel) })}</div></div>
-    <div><h2>Answers per day<span class="sub">last 14 days</span></h2><div class="card">${(() => { const D = [...Array(14)].map((_, i) => ymd(dayAgo(13 - i))); return bars(D.map((d) => S.sessions.filter((s) => ymd(s.t) == d).reduce((q, s) => q + s.n, 0)), 'var(--ac)', D); })()}</div></div>
+    <div><h2>Pace${ib('p.pace')}</h2><div class="card">${spark(L.map((s) => (s.pts * 60) / s.dur), 'var(--ac)', { labels: L.map(sessLabel), unit: '/min' })}</div></div>
+    <div><h2>Accuracy${ib('p.acc')}</h2><div class="card">${spark(L.map((s) => pct(s.ok, Math.max(1, s.n))), '#ff9f5a', { unit: '%', labels: L.map(sessLabel) })}</div></div>
+    <div><h2>Answers per day</h2><div class="card">${(() => { const D = [...Array(14)].map((_, i) => ymd(dayAgo(13 - i))); return bars(D.map((d) => S.sessions.filter((s) => ymd(s.t) == d).reduce((q, s) => q + s.n, 0)), 'var(--ac)', D); })()}</div></div>
   </div>
   ${weekCard()}
   <h2>This week vs last${ib('p.wvl')}</h2>
@@ -77,11 +77,11 @@ function progress() {
   <div class="card tbl"><table><tr><th>Skill<th>Rating<th><th class="r">Accuracy<th class="r">Speed<th class="r hide-m">7 days<th class="r hide-m">To review<th></tr>
   ${IDS.map((k) => { const s = S.sk[k], d = (s.lv - lvAgo(k, 7)) * 100, wq = Object.values(S.weak).filter((w) => w.sk == k).length; return `<tr><td><span class="dot" style="--sc:${COL[k]}"></span> ${wk.includes(k) ? '<b>' + esc(SK[k].n) + '</b>' : esc(SK[k].n)}<td><b>${Math.round(s.lv * 100)}</b><td style="width:20%"><div class="bar" style="--sc:${COL[k]}"><i style="width:${(s.lv / 12) * 100}%"></i></div><td class="r">${Math.round(s.acc * 100)}%<td class="r">${s.n ? s.spd.toFixed(2) + '×' : '–'} <td class="r hide-m ${d >= 0 ? 'ok' : 'bad'}">${d >= 0 ? '+' : ''}${Math.round(d)}<td class="r hide-m">${wq}<td class="r"><span class="btns" style="justify-content:flex-end"><button class="btn sm" data-act="aiSkill" data-v="${esc(k)}" aria-label="Ask AI about ${esc(SK[k].n)}">${icon('sparkle')}</button><button class="btn sm" data-act="drill" data-v="${esc(k)}">Drill</button></span></tr>`; }).join('')}</table>
   <div class="mu" style="margin-top:6px">Speed 1.00× means on par pace (reading, thinking and typing included); lower is faster. The two weakest skills (bold) get extra practice in All-skills sessions.</div></div>
-  <details class="fold"><summary><h2>Rating per skill<span class="sub">10 charts</span></h2></summary>
+  <details class="fold"><summary><h2>Rating per skill</h2></summary>
   <div class="skills skcharts">${IDS.map((k) => `<div class="card"><b class="kc" style="--sc:${COL[k]}">${esc(SK[k].n)}</b> ${spark(L.map((s) => ((s.lv && s.lv[k] != null ? s.lv[k] : SK[k].s)) * 100), COL[k], { w: 320, h: 80, labels: L.map(sessLabel) })}</div>`).join('')}</div></details>
 `,
     facts: `
-  <h2>Times-table map<span class="sub">every × and ÷ fact you have answered</span>${ib('p.facts')}</h2>
+  <h2>Times-table map${ib('p.facts')}</h2>
   <div class="card">${factGrid()}</div>
   ${errCard()}
   <h2>What actually slows you down${ib('p.slow')}</h2>

@@ -195,7 +195,7 @@ function renderCoachTab(summary, uName) {
 
   <div class="cgrid">
     <section class="cpanel">
-      <div class="cpanel-h"><span class="eyebrow">Skill ratings${ib('c.slips')}</span><span class="mu">weakest first</span></div>
+      <div class="cpanel-h"><span class="eyebrow">Skill ratings${ib('c.slips')}</span></div>
       ${skillBars()}
     </section>
     <section class="cpanel">
@@ -207,7 +207,6 @@ function renderCoachTab(summary, uName) {
   <section class="cpanel ai">
     ${cardHead({
       ic: 'sparkle', title: 'Smart Performance Analysis', info: 'c.analysis',
-      sub: 'A fresh read of your recorded performance: what is working, what is slipping, what to do next.',
       actions: `<button class="btn primary" data-act="runAnalysis" ${isLoading ? 'disabled' : ''}>${busy ? 'Analysing…' : `${icon('sparkle')} ${coachAnalysisText ? 'Refresh' : 'Run analysis'}`}</button>`,
     })}
     <div id="analysis-output" class="cout">
@@ -227,7 +226,6 @@ function renderRecommendTab(summary) {
     <section class="cpanel ai">
       ${cardHead({
         ic: 'target', title: 'Personalized Recommendation', info: 'c.recommend',
-        sub: 'Gemini picks your next focused session from your ratings, accuracy, speed and review queue.',
         actions: `<button class="btn primary" data-act="runRecommend" ${isLoading ? 'disabled' : ''}>${busy ? 'Thinking…' : `${icon('sparkle')} ${recommendationText ? 'New pick' : 'Get recommendation'}`}</button>`,
       })}
       <div class="cout">
@@ -254,7 +252,6 @@ function renderPlanTab(summary) {
   <section class="cpanel ai">
     ${cardHead({
       ic: 'cal', title: 'AI Training Plans', info: 'c.plan',
-      sub: `Daily workouts and a weekly roadmap built around your goal of <b>${summary.goal} ${summary.goal === 1 ? 'session' : 'sessions'}/day</b>.`,
       actions: `<button class="btn primary" data-act="runPlan" ${isLoading ? 'disabled' : ''}>${busy ? 'Building…' : `${icon('sparkle')} ${trainingPlanText ? 'Refresh plan' : 'Generate plan'}`}</button>`,
     })}
     <div class="cout">

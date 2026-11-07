@@ -2,7 +2,7 @@ import { S, save, avgLv, cfgNow } from '../state.js';
 import { IDS, SK, COL, rank, ZDEF, zNorm, zLabel } from '../engine.js';
 import { esc, ymd, fmtLen, VERSION, dayAgo, dueIn } from '../util.js';
 import { restChip } from '../rest.js';
-import { streak, restInfo, days, plan, todayCount, trickOfDay, weakestSkills, MS, week, zDef, zMD, recommend, lvAgo, records } from '../stats.js';
+import { streak, STREAK_MARKS, restInfo, days, plan, todayCount, trickOfDay, weakestSkills, MS, week, zDef, zMD, recommend, lvAgo, records } from '../stats.js';
 import { radar, ring } from '../charts.js';
 import { icon, promptDlg, dialog, toast } from '../ui.js';
 import { ib } from '../info.js';
@@ -15,6 +15,7 @@ import { start } from './play.js';
 import { mkOf } from '../session.js';
 import { exportBackup } from './settings.js';
 import { showAiSheet } from '../ai.js';
+import './streak.js';
 import { askSkillAi } from '../skillAi.js';
 
 const LENS = [30, 60, 120, 300, 600, 0];
@@ -29,7 +30,7 @@ const DIFF = [[-1.5, 'Easier'], [0, 'Auto'], [1.5, 'Harder'], [3, 'Brutal']];
 
 export const syncChip = () => {
   const on = !!syncKey(), lbl = on ? 'Sync status: ' + statusText() : 'Sync is off. Set up sync';
-  return `<button class="syncdot ${on ? status.kind : 'off'}" data-act="sync" title="${esc(lbl)}" aria-label="${esc(lbl)}"><span class="sico">${icon('cloud')}<i></i></span><span id="sy">${esc(on ? statusText() : 'Set up sync')}</span></button><span class="offp" role="status">${icon('cloud')} Offline<span class="offw"> · still works</span></span>`;
+  return `<button class="syncdot ${on ? status.kind : 'off'}" data-act="sync" aria-haspopup="dialog" title="${esc(lbl)}" aria-label="${esc(lbl)}"><span class="sico">${icon('cloud')}<i></i></span><span id="sy">${esc(on ? statusText() : 'Set up sync')}</span></button><span class="offp" role="status">${icon('cloud')} Offline<span class="offw"> · still works</span></span>`;
 };
 
 function home() {
@@ -37,7 +38,7 @@ function home() {
   applyTheme();
   const now = Date.now(), st = streak(), goal = S.goal || 2, td = todayCount();
   const rest = restInfo(), restTip = !rest ? '' : rest.state == 'ready' ? ' · rest day ready: one missed day is forgiven' : rest.state == 'using' ? ' · rest day in use: play today to keep it' : ' · ' + rest.left + (rest.left == 1 ? ' more day' : ' more days') + ' in a row earns a rest day';
-  const MIL = [3, 7, 14, 30, 60, 100, 200, 365], nm = MIL.find((m) => m > st), pm = [...MIL].reverse().find((m) => m <= st) || 0;   // streak ring: progress toward the next milestone
+  const MIL = STREAK_MARKS, nm = MIL.find((m) => m > st), pm = [...MIL].reverse().find((m) => m <= st) || 0;   // streak ring: progress toward the next milestone
   const stRing = nm ? (st - pm) / (nm - pm) : 1, stRingTip = nm ? (nm - st) + (nm - st == 1 ? ' day' : ' days') + ' to the ' + nm + '-day mark' : 'Every milestone reached';
   const r = Math.round(avgLv() * 100), saved = Object.keys(S.weak).length, dueNow = Object.values(S.weak).filter((w) => w.due <= now).length, cf = cfgNow(), bst = S.best[mkOf(cf)];
   const [w1] = weakestSkills(2), has = S.sessions.length > 0, D = days(), dly = S.daily && S.daily[ymd()];
@@ -65,8 +66,8 @@ function home() {
   const heroAct = conf ? 'start' : rec.act, heroCta = conf && !dflt ? 'Start' : rec.cta, heroTitle = conf && !dflt ? fmtLen(cf.dur) + ' · ' + onLabel(cf) + diffL : rec.title;
   const t = trickOfDay();
   $app().innerHTML = `
-  <div class="hd home-hd"><div><h1>${esc(hello).replace(/^Good /, '<span class="gw">Good </span>')}</h1><div class="greet">${dateStr}</div>${restChip(rest, icon, esc) ? `<div class="hrest">${restChip(rest, icon, esc)}</div>` : ''}</div>
-    <div class="meta"><span class="pill streak ${warnStreak ? 'warn' : ''}" ${warnStreak ? `title="${esc(rest && rest.state == 'using' ? 'Your rest day is in use: play today to keep the streak' : 'Play a session today to keep it')}"` : ''}><span class="sring ${rest && rest.state == 'ready' ? 'rest' : ''}" style="--p:${esc(stRing.toFixed(3))}" ${st ? `title="${esc(stRingTip + restTip)}"` : ''}>${icon('flame', 'fill')}</span> ${st ? st + '<span class="sl">-day streak</span><span class="ss" aria-hidden="true">d</span>' + (warnStreak ? '<span class="pt"> · play today</span>' : '') : 'No streak yet'}</span>${syncChip()}<button class="hd-gear" data-go="settings" aria-label="Settings">${icon('gear')}</button></div></div>
+  <div class="hd home-hd"><div><h1>${esc(hello).replace(/^Good /, '<span class="gw">Good </span>')}</h1><div class="greet">${dateStr}</div>${restChip(rest, icon, esc) ? `<div class="hrest"><button type="button" class="chipbtn" data-act="streakCard" aria-haspopup="dialog" aria-label="Streak and rest day details">${restChip(rest, icon, esc)}</button></div>` : ''}</div>
+    <div class="meta"><span class="pill streak ${warnStreak ? 'warn' : ''}" role="button" tabindex="0" data-act="streakCard" aria-haspopup="dialog" ${warnStreak ? `title="${esc(rest && rest.state == 'using' ? 'Your rest day is in use: play today to keep the streak' : 'Play a session today to keep it')}"` : ''}><span class="sring ${rest && rest.state == 'ready' ? 'rest' : ''}" style="--p:${esc(stRing.toFixed(3))}" ${st ? `title="${esc(stRingTip + restTip)}"` : ''}>${icon('flame', 'fill')}</span> ${st ? '<span class="sn">' + st + '<span class="sl">-day streak</span><span class="ss" aria-hidden="true">d</span></span>' + (warnStreak ? '<span class="pt"> · play today</span>' : '') : 'No streak yet'}</span>${syncChip()}<button class="hd-gear" data-go="settings" aria-label="Settings">${icon('gear')}</button></div></div>
   ${notices.join('')}
   <div class="home${has ? '' : ' solo'}">
    <div class="home-main">

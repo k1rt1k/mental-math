@@ -66,10 +66,9 @@ function learn() {
     return `${mastered ? '<span class="pill ok2">Mastered ✓</span> ' : ''}<span class="mu">You: ${o.n} tries · <span class="${acc >= 90 ? 'ok' : acc < 75 ? 'bad' : ''}">${acc}%</span> accurate${sp ? ' · ' + sp.toFixed(2) + '× par time' : ''}${sp ? ib('l.par') : ''}</span>`;
   };
   document.querySelector('#main').innerHTML = `
-  <div class="hd"><h1>Learn</h1>${S.sessions.length ? `<div class="btns"><button class="btn" data-act="aiNextTrick">${icon('sparkle')} AI: which trick next?</button></div>` : ''}</div>
-  <p class="mu" style="margin:-8px 0 16px;max-width:62ch">Follow a guided path from the basics to a timed mastery check, or read a short method and practise it. The drill serves only questions where that trick <span style="white-space:nowrap">applies.${ib('l.intro')}</span></p>
+  <div class="hd"><h1>Learn${ib('l.intro')}</h1>${S.sessions.length ? `<div class="btns"><button class="btn" data-act="aiNextTrick">${icon('sparkle')} AI: which trick next?</button></div>` : ''}</div>
   ${guide()}
-  <h2>Shortcut library<span class="sub">every trick, one card each</span></h2>
+  <h2>Shortcut library</h2>
   <div class="chips fscroll" style="margin-bottom:16px" role="group" aria-label="Filter by skill"><button class="chip" aria-pressed="${filter == 'all'}" data-act="learnFilter" data-v="all">All</button>${IDS.filter((k) => TRICKS.some((t) => t.sk == k)).map((k) => `<button class="chip" aria-pressed="${filter == k}" data-act="learnFilter" data-v="${esc(k)}"><span class="dot" style="--sc:${COL[k]}"></span>${esc(SK[k].n)}</button>`).join('')}</div>
   <div class="tricks">${list.map((t) => `<article class="card trick" style="--sc:${COL[t.sk]}">
     <div class="kc">${esc(SK[t.sk].n)}${S.sessions.length && sugg.has(t.id) ? ' <span class="pill sg2">Suggested for you</span>' : ''}</div><h3>${esc(t.title)}</h3>

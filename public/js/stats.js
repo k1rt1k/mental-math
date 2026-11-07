@@ -51,6 +51,37 @@ export function restInfo() {
   return cur.since >= 7 ? { state: 'ready', left: 0 } : { state: 'earning', left: 7 - cur.since };
 }
 
+/** Streak milestones, in days. Home's ring and the streak sheet both fill toward the next one. */
+export const STREAK_MARKS = [3, 7, 14, 30, 60, 100, 200, 365];
+
+/**
+ * The streak calendar: `weeks` Monday-first weeks ending with the current one, oldest day first.
+ * Each cell: { k: 'YYYY-MM-DD', t, on: practised, rest: the one missed day a rest day forgave, n: answers that day, today, future }.
+ * A rest day is a missed day between two practised days whose streak carried on across it (the same rule runs() applies).
+ */
+export function streakDays(weeks = 5) {
+  const D = days(), R = runs(D), today = dayAgo(0), tk = ymd(today);
+  const lead = (new Date(today).getDay() + 6) % 7, start = dayAgo(lead + (weeks - 1) * 7, today);
+  const answers = {}; S.sessions.forEach((x) => { const k = ymd(x.t); answers[k] = (answers[k] || 0) + (x.n || 0); });
+  const out = [];
+  for (let i = 0; i < weeks * 7; i++) {
+    const t = dayAgo(-i, start), k = ymd(t), on = D.has(k), a = R.get(ymd(dayAgo(1, t))), b = R.get(ymd(dayAgo(-1, t)));
+    out.push({ k, t, on, rest: !on && !!a && !!b && b.since == 1 && b.c == a.c + 1, n: answers[k] || 0, today: k == tk, future: k > tk });
+  }
+  return out;
+}
+
+/** Past streaks, oldest first: [{ end: 'YYYY-MM-DD', len, cur }]. `cur` marks the one you are on now. */
+export function streakRuns() {
+  const R = runs(days()), keys = [...R.keys()].sort(), out = [];
+  keys.forEach((k, i) => { if (i == keys.length - 1 || R.get(keys[i + 1]).c == 1) out.push({ end: k, len: R.get(k).c, cur: false }); });
+  if (out.length && streak() > 0) out[out.length - 1].cur = true;
+  return out;
+}
+
+/** How many rest days have been used over the whole history. */
+export function restUsed() { let n = 0; runs(days()).forEach((r) => { if (r.since == 1 && r.c > 1) n++; }); return n; }
+
 /** Best streak ever, by the same rule as the current one (so it is never shorter than the streak you are on). */
 export function longest() {
   let best = 0;

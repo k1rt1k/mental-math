@@ -2,6 +2,34 @@
 
 Newest first. What is true of the app today is in [README.md](README.md). The release number is the `VERSION` file.
 
+## v14.66
+- **Settings no longer looks like a theme toggle.** The gear was a circle with eight rays, which is a sun. It is now a real cog. It is the same icon in the desktop rail, the Home header and anywhere else the gear appears.
+- **The cloud on Home reads as a button on phones.** It was a bare icon next to the streak pill, with nothing to say it could be tapped. The cloud and the cog are now round buttons with the same look, and the cloud pulses while it is syncing.
+- **Tapping the cloud on a phone opens a small sheet.** The status words (Synced 15:13, Offline, Wrong sync key) have no room beside the icon on a phone, and the old tap only flashed a toast at the bottom of the screen. The sheet shows the status with a one-line explanation, then *Sync now* and *Sync settings*. If the key was rejected it offers *Sync settings* instead. On wide screens, where the status is already beside the cloud, a click still just syncs. With no key yet it still goes straight to key setup.
+- Tests: `test/v1466-header-sync-gear.test.mjs`.
+
+## v14.65
+- **Fixed: the "⚠ Arithmetic check" warning showing up on replies that were correct.** Two causes, both in the checker, not the display:
+  - A chain with powers in it, like `7³ = 7² × 7 = 49 × 7 = 343`, was read from the middle (the power breaks the line into pieces), so the checker compared `7` with `49 × 7` and cried wrong. A chain that starts mid-expression now skips only its cut-off first side; the later steps are still checked, so `… = 49 × 7 = 353` is still caught.
+  - When the coach reported *your* mistake, like "you answered `1575 ÷ 25 = 66` instead of 63", the checker flagged the quoted wrong answer as if the AI had said it. Equations that match one of your typed wrong answers (the app's own miss list) are now trusted, and so are equations in a sentence that plainly reports an answer (answered, typed, entered, instead of, rather than). A cue in an earlier sentence does not excuse a later one.
+- Tests: `test/v1465-arith-false-alarms.test.mjs`.
+
+## v14.64
+- **The streak is now a sheet, not just a number.** Tap the streak pill, the rest-day chip under the greeting, or the flame in the desktop rail. It slides up on phones and pops in on larger screens, and shows: the streak and your longest; the rest-day (freeze) status in words (ready, in use, or how many days until you earn one) with how many you have used; a five-week calendar where every practised day is shaded by how much you answered, the forgiven rest day is marked with a moon, and today is ringed; progress to the next milestone; and your last six streaks as bars. *Share image* makes the streak card.
+- The pill is tappable even with no streak, so a lapsed streak still shows your history.
+- The share card moved into the sheet (the preview dialog from 14.62 is gone). Milestone days (3, 7, 14, 30, 60, 100, 200, 365) now live in one list, `STREAK_MARKS`, used by the Home ring and the sheet.
+- Tests: `test/v1464-streak-sheet.test.mjs`.
+
+## v14.63
+- **Fixed: the Home streak pill read "12  -day streak" on wider screens.** The number and the label were separate flex items, so the pill's gap split them. They are now one item; the phone layout no longer needs its `-6px` margin hack.
+- **More side text removed.** Settings group subtitles, Progress "last 14 days" and "10 charts", Learn "every trick, one card each" and Results "good candidates for a trick".
+- **Home length chips fade at the right edge on phones**, so it is clear the row scrolls.
+- **Progress charts on wide screens.** The four charts used to make three columns plus one alone; they now sit as 2x2.
+
+## v14.62
+- **Less text beside the "i" buttons.** Descriptions that only repeated what the "i" sheet already says are gone: the Notebook and Learn intro lines (the "i" now sits next to the page title; Notebook keeps "N of M due now"), the grey subtitles next to the "i" on Results (Why you missed, Missed), Progress (When you play best, Pace, Accuracy, Times-table map) and Coach (the three card one-liners and "weakest first", which moved into that "i" sheet).
+- **Shareable streak card.** Tap the streak pill on Home to preview a 1080x1350 image (days in a row, longest, sessions, rating; gold "Personal best streak" at 3+ days when it is your longest) and share or save it. Built on the existing result-card drawing code; nothing leaves the device until you tap *Share image*.
+
 ## v14.61
 - **AI Coach redesigned, all four tabs.** A new header with the coach mark and the daily-allowance pill, and a segmented tab bar (icon-over-label, four equal columns on phones) replace the chip rail and 2x2 grid. Tabs are now *Analysis*, *Recommend*, *Plans* and *Tutor*.
 - **AI answers are easy to read.** Analysis, recommendation and plan replies are split at their headings into numbered section cards under a larger lead paragraph, with a quiet source line (Gemini or local fallback, and how long ago) instead of the grey block. Body text is larger with more line height; lists have accent markers; quotes are callouts; display maths sits in a tinted box. The same text styles apply to the AI sheets and chat bubbles. A skeleton shows while a reply is on its way, and the button says what it will do (*Run analysis* / *Refresh*).

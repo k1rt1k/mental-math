@@ -10,6 +10,7 @@ import {
   parseSkillMap,
   parseRecommendation,
   checkArithmetic,
+  quotedLearnerAnswers,
   callGeminiFreeApiWithMeta,
   generateLocalFallback,
   getCache,
@@ -20,7 +21,7 @@ import {
 } from '../lib/ailogic.mjs';
 import { authenticate, lockedText } from '../lib/gate.mjs';
 
-const AI_BUILD_VERSION = '14.61';
+const AI_BUILD_VERSION = '14.66';
 
 const J = (o, status = 200) =>
   Response.json(o, {
@@ -169,6 +170,7 @@ export default async (req) => {
       system,
       jsonMode: action === 'recommend',
       action: String(action).slice(0, 20),
+      quoted: quotedLearnerAnswers(cleanSummary(summary)),
       trackHealth: true,
       reserveQuota: async (attemptModel) => (await import('../lib/ai-quota.mjs')).reserveAiRequest({ model: attemptModel }),
     });
@@ -178,7 +180,7 @@ export default async (req) => {
     if (action === 'recommend') {
       const parsed = parseRecommendation(result.text, parseSkillMap(cleanSummary(summary).skillIds));
       if (parsed) {
-        const checked = checkArithmetic(parsed.text);
+        const checked = checkArithmetic(parsed.text, { quoted: quotedLearnerAnswers(cleanSummary(summary)) });
         finalText = checked.text; structured = parsed.structured;
       } else {
         // The model did not return usable JSON. Never show the raw JSON blob: say so and give the app's own suggestion.
