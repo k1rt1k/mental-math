@@ -1,14 +1,15 @@
 import { getStore } from "@netlify/blobs";
 import webpush from "web-push";
 import { dueKind, message, localParts } from "../lib/pushlogic.mjs";
-import { users, vapid, DEVICES } from "../lib/common.mjs";
+import { vapid, DEVICES } from "../lib/common.mjs";
+import { allLearners } from "../lib/learners.mjs";
 
 // Runs every 10 minutes (Netlify scheduled function). For each person, sends a reminder to every device
 // whose chosen time has arrived and who has not practised yet today. Expired subscriptions are removed.
 export default async () => {
   if (!vapid()) return;
   const now = Date.now();
-  for (const u of [...users(), { store: DEVICES.store }]) {
+  for (const u of [...(await allLearners()), { store: DEVICES.store }]) {
     const store = getStore({ name: u.store, consistency: "strong" });
     const l = await store.list({ prefix: "push-" }).catch(() => ({ blobs: [] }));
     for (const b of l.blobs) {

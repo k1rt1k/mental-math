@@ -18,9 +18,9 @@ import {
   DEFAULT_MODEL,
   FREE_MODELS,
 } from '../lib/ailogic.mjs';
-import { resolveSyncUser } from '../lib/auth.mjs';
+import { authenticate, lockedText } from '../lib/gate.mjs';
 
-const AI_BUILD_VERSION = '14.50';
+const AI_BUILD_VERSION = '14.51';
 
 const J = (o, status = 200) =>
   Response.json(o, {
@@ -65,10 +65,14 @@ export default async (req) => {
   // Gemini access is for the two intended learners, authenticated by the same
   // personal sync password that selects their isolated cloud progress store.
   // The browser never chooses or submits a trusted user/profile identifier.
-  const owner = resolveSyncUser(req.headers.get('x-sync-key'));
-  if (!owner) {
+  const gate = await authenticate(req);
+  if (gate.denied === 'locked') {
+    return Response.json({ error: lockedText(gate.retryAfter), locked: true }, { status: 429, headers: { 'cache-control': 'no-store', 'retry-after': String(gate.retryAfter) } });
+  }
+  if (gate.denied) {
     return J({ error: 'A valid personal sync password is required. Set it in this device’s Settings.', authRequired: true }, 401);
   }
+  const owner = gate.who;
 
   let body;
   try {

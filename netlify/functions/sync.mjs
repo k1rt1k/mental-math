@@ -1,5 +1,5 @@
 import { getStore } from "@netlify/blobs";
-import { resolveSyncUser } from "../lib/auth.mjs";
+import { authenticate, lockedText } from "../lib/gate.mjs";
 
 const MAX_BYTES = 4e6;
 const KEEP_DAILY = 7;
@@ -78,8 +78,10 @@ async function saveBackup(store, old, erasing = false) {
 }
 
 export default async (req) => {
-  const who = resolveSyncUser(req.headers.get("x-sync-key"));
-  if (!who) return T("unauthorized", 401);
+  const g = await authenticate(req);
+  if (g.denied === "locked") return new Response(lockedText(g.retryAfter), { status: 429, headers: { "cache-control": "no-store", "retry-after": String(g.retryAfter) } });
+  if (g.denied) return T("unauthorized", 401);
+  const who = g.who;
 
   const store = getStore({ name: who.store, consistency: "strong" });
 
@@ -96,7 +98,9 @@ export default async (req) => {
     const { old, etag } = await readState(store);
     const have = q.get("etag");
     if (have && etag && have === etag) return J({ unchanged: true, etag });
-    return J({ data: old, etag });
+    // `weak` is only present for a key configured before the minimum-length rule, so the app can ask its owner to replace it.
+    // Full pulls only: the first pull after any page load has no ETag yet, so it always carries the flag.
+    return J({ data: old, etag, ...(who.weak ? { weak: true } : {}) });
   }
 
   if (req.method === "PUT") {

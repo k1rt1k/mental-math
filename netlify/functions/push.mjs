@@ -1,11 +1,9 @@
 import { getStore } from "@netlify/blobs";
 import webpush from "web-push";
-import { timingSafeEqual, createHash } from "node:crypto";
+import { createHash } from "node:crypto";
 import { cleanRec, message } from "../lib/pushlogic.mjs";
-import { users, vapid, DEVICES } from "../lib/common.mjs";
-
-const digest = (s) => createHash("sha256").update(String(s || "")).digest();
-const same = (a, b) => timingSafeEqual(digest(a), digest(b));
+import { vapid, DEVICES } from "../lib/common.mjs";
+import { authenticate, lockedText } from "../lib/gate.mjs";
 
 const J = (o, status = 200) => Response.json(o, { status, headers: { "cache-control": "no-store" } });
 const T = (msg, status) => new Response(msg, { status, headers: { "cache-control": "no-store" } });
@@ -16,11 +14,11 @@ export default async (req) => {
   // Public: the browser needs the public key to subscribe. Safe to share by design.
   if (req.method === "GET") { const v = vapid(); return v ? J({ key: v.pub }) : J({ error: "not configured" }, 501); }
 
-  const sent = req.headers.get("x-sync-key");
-  let who = null;
-  for (const u of users()) if (same(sent, u.key) && !who) who = u;
-  if (!who && sent) return T("unauthorized", 401);          // a wrong key is an error; no key means an anonymous device
-  if (!who) who = { store: DEVICES.store, anon: true };
+  // A wrong key is an error (and counts toward the limit); no key means an anonymous device.
+  const g = await authenticate(req, { optional: true });
+  if (g.denied === "locked") return new Response(lockedText(g.retryAfter), { status: 429, headers: { "cache-control": "no-store", "retry-after": String(g.retryAfter) } });
+  if (g.denied) return T("unauthorized", 401);
+  const who = g.who || { store: DEVICES.store, anon: true };
   if (!vapid()) return T("push not configured", 501);
   const store = getStore({ name: who.store, consistency: "strong" });
 

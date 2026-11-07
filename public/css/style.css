@@ -316,7 +316,7 @@ tr:last-child td { border-bottom: 0; }
 .syncdot:hover { background: var(--c2); color: var(--tx); }
 .syncdot i { width: 8px; height: 8px; border-radius: 50%; background: var(--mu2); }
 .syncdot.ok i { background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 22%, transparent); }
-.syncdot.busy i { background: var(--gd); } .syncdot.offline i, .syncdot.key i { background: var(--bad); } .syncdot .sico { position: relative; display: inline-grid; place-items: center; } .syncdot .sico .ic { width: 20px; height: 20px; } .syncdot .sico i { position: absolute; right: -3px; top: -3px; box-sizing: border-box; width: 11px; height: 11px; border: 2px solid var(--bg); box-shadow: none; }
+.syncdot.busy i { background: var(--gd); } .syncdot.offline i, .syncdot.key i, .syncdot.locked i { background: var(--bad); } .syncdot .sico { position: relative; display: inline-grid; place-items: center; } .syncdot .sico .ic { width: 20px; height: 20px; } .syncdot .sico i { position: absolute; right: -3px; top: -3px; box-sizing: border-box; width: 11px; height: 11px; border: 2px solid var(--bg); box-shadow: none; }
 
 /* =====================================================================
    HOME

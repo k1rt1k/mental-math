@@ -1,4 +1,14 @@
-# Mental Math Trainer 14.50 – fractions, negatives, real-life maths, and lighter sync
+# Mental Math Trainer 14.51 – safer sync keys, on top of fractions, negatives, real-life maths, and lighter sync
+
+## v14.51
+- **Wrong keys are throttled.** Every endpoint that takes a sync key (`/api/sync`, `/api/ai`, `/api/push`, and the new `/api/keys`) now checks it in one place (`netlify/lib/gate.mjs`). Eight wrong keys from one address in 15 minutes lock that address for 15 minutes: it gets `429` with `Retry-After`, and a correct key is refused too while the lock lasts, so guessing cannot simply continue. A success clears the count. A request with no key at all is never counted (an unconfigured device or an anonymous reminder device cannot lock anyone out). Only a hash of the address is stored, in the `mental-math-auth` blob store. The limiter is best effort and **fails open**: if the store is unreachable, nobody is locked out. The app shows a *Too many wrong keys, try later* status instead of a misleading "Offline" or "Wrong sync key".
+- **Minimum key length.** Choosing or changing a key in Settings now needs at least 12 characters and some variety (not `aaaaaaaaaaaa`); the dialog says what is wrong and asks again. The key already on the device is never re-judged. A `SYNC_KEY` set in Netlify before this rule **keeps working** (an upgrade must not lock anyone out), but the server flags it and Settings shows a notice asking for a longer one. The rule lives in `netlify/lib/auth.mjs` and `public/js/sync.js`; a test keeps the two in step.
+- **Make keys inside the app.** Settings, Cloud sync, *Learners and keys*. The main account (the `SYNC_KEY` variable) can add a learner by name: the server generates a key such as `k7f2-m9xq-3tpa-hv8e-r4nw` (about 98 bits, no look-alike characters), shows it once with a Copy button, and stores only its SHA-256. The new learner gets their own private cloud space, and AI Coach and reminders work for them. *Turn off* stops a key at once while keeping the saved progress; adding the same name again gives a new key and the same progress, which is also how a leaked key is rotated. Up to 10 learners can be made this way. No redeploy, no Netlify visit. Learners set up as `SYNC_KEY_<NAME>` variables are unchanged. Only `SYNC_KEY` can manage learners; anyone else is told so.
+- **Reminders** (`push-cron`) now also walk the stores of learners made in the app.
+- Internal: `resolveSyncUser` became `resolveEnvUser` (environment learners only); every handler uses `authenticate()` from `gate.mjs`. New blob stores: `mental-math-auth` (attempt counters) and `mental-math-learners` (the key hashes). No new dependencies.
+- Not included: the limit is per address, so an attacker who changes address is not slowed by it; that is acceptable because app-made keys are far beyond guessing, and the minimum length covers keys chosen by hand. Choosing your own key inside the app is not offered on purpose.
+- Version 14.51, cache `mm-v14-51`. Tests: `test/v1451-key-hardening.test.mjs`.
+
 
 ## v14.50
 - **Three new skills, so the content is no longer only whole non-negative numbers.** *Negatives* (crossing zero, subtracting a negative, signed × and ÷, chains), *Fractions* (a fraction of a number, simplifying, same and unlike denominators, ×, ÷; answers in lowest terms) and *Real-life* (tips, sale price, tax, successive discounts, unit conversion, clock gaps, recipe scaling, ratios, speed, unit price, splitting a bill). Each has twelve difficulty levels, tips, worked methods, guided five-stage Learn paths with shortcut drills, and its own rating on the skill radar. Existing data gains them at their starting level on load.
@@ -279,7 +289,7 @@ Driven by the 14.14 live self-test report. Every reply was read, not just checke
 ## Current backend contract
 This section describes the deployed backend as it is today; the release notes below are historical.
 - Fixed Netlify Blobs initialization: the documented API is `getStore(storeName)`. Strong consistency remains requested on `getWithMetadata` reads.
-- Added a deployment fingerprint to `GET /api/ai`: `buildVersion: "14.50"` and response header `x-mental-math-ai-version: 14.50`.
+- Added a deployment fingerprint to `GET /api/ai`: `buildVersion: "14.51"` and response header `x-mental-math-ai-version: 14.51`.
 - Exposes the active model allow-list and exact application safety policy in the diagnostic response.
 - Keeps Gemini 3.5 Flash-Lite primary and Gemini 3.1 Flash-Lite as the only backup.
 - Keeps the shared 300-upstream-attempt Pacific-day budget and independent 12 RPM rolling windows per model.
@@ -287,7 +297,7 @@ This section describes the deployed backend as it is today; the release notes be
 
 ## Required Netlify environment variables
 - `GEMINI_API_KEY`
-- `SYNC_KEY` (and any existing `SYNC_KEY_<NAME>` variables used by the second device)
+- `SYNC_KEY`, at least 12 characters (it is also the administrator that can add learners from Settings), and any existing `SYNC_KEY_<NAME>` variables used by the second device. Further learners no longer need a variable or a redeploy: add them in Settings, Learners and keys.
 
 Keep the Google AI Studio project unlinked from billing to maintain the intended $0 spend. The app cannot verify the billing state of the Google project.
 
@@ -313,7 +323,7 @@ The JSON must include:
 
 ```json
 {
-  "buildVersion": "14.50",
+  "buildVersion": "14.51",
   "defaultModel": "gemini-3.5-flash-lite",
   "models": ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite"],
   "budgetPolicy": {
@@ -323,7 +333,7 @@ The JSON must include:
 }
 ```
 
-The `budgetPolicy` object also includes the model list. If `buildVersion` is absent or not `14.50`, the new function bundle is not the one currently serving the site; redeploy the full project root to the correct linked Netlify site.
+The `budgetPolicy` object also includes the model list. If `buildVersion` is absent or not `14.51`, the new function bundle is not the one currently serving the site; redeploy the full project root to the correct linked Netlify site.
 
 ## Honest limitations
 - Automated tests use a mocked Blobs store and mocked Gemini responses; they cannot prove the user's live Netlify project, API key, Google model availability, or current provider capacity.

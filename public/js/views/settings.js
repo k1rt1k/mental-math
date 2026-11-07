@@ -5,7 +5,7 @@ import { A, register, go, view } from '../nav.js';
 import { dialog, confirmDlg, typedConfirmDlg, promptDlg, choiceDlg, toast, download, icon } from '../ui.js';
 import { ib } from '../info.js';
 import { applyTheme, ACC, FONTS, padOn, isTouch } from '../theme.js';
-import { syncKey, setSyncKey, pull, syncNow, statusText, status, fetchBackup } from '../sync.js';
+import { syncKey, setSyncKey, pull, syncNow, statusText, status, fetchBackup, keyProblem, isWeakKey, keysApi, MIN_KEY_LENGTH } from '../sync.js';
 import { state as remState, enable as remEnable, disable as remDisable, test as remTest, rem as remGet, setRem, isStandalone, isIOS } from '../notify.js';
 
 const seg = (act, cur, opts) => `<div class="seg" role="group">${opts.map(([v, l]) => `<button aria-pressed="${cur == v}" data-act="${esc(act)}" data-v="${esc(v)}">${l}</button>`).join('')}</div>`;
@@ -79,6 +79,8 @@ function settings() {
     <section class="card"><h3>Cloud sync${ib('s.sync')}</h3>
       <p class="mu" style="margin:6px 0 12px;max-width:56ch">${syncKey() ? "Your progress syncs to the personal cloud account selected by this device's key. Your settings (theme, accent, keypad, sound, goal and saved setups) sync too, so a new browser looks and behaves like your others. Reminders stay per device. Use your own key on your devices; the other learner must use a different key." : "Set this learner's personal sync password. Use the same password on other devices belonging to this learner and your settings will follow you. Another person must use their own different password."}</p>
       <div class="set"><div><div class="t">${syncKey() ? esc(statusText()) : 'Sync is off'}</div><div class="d">${syncKey() ? 'Key set on this device' : 'No key set'}</div></div><div class="btns"><button class="btn sm" data-act="syncKey">${syncKey() ? 'Change key' : 'Set up sync'}</button>${syncKey() ? '<button class="btn sm" data-act="syncNow">Sync now</button>' : ''}</div></div>
+      ${syncKey() && isWeakKey() ? `<div class="notice" role="status" style="margin:0 0 12px"><span>This sync key is shorter than ${MIN_KEY_LENGTH} characters, so it is easier to guess. Replace it with a longer one: set a new SYNC_KEY in Netlify, or ask the main account for a new key under Learners and keys.</span></div>` : ''}
+      ${syncKey() ? `<div class="set"><div><div class="t">Learners and keys</div><div class="d">Make a key for another person, or turn one off. Main account only.</div></div><button class="btn sm" data-act="learners">Manage</button></div>` : ''}
       ${syncKey() ? `<div class="set"><div><div class="t">Recover from cloud safety copy${ib('s.recover')}</div><div class="d">The server keeps a daily copy. This merges back anything missing here.</div></div><button class="btn sm" data-act="restoreCloud">Recover</button></div>` : ''}
     </section>
     <section class="card"><h3>Your data</h3>
@@ -130,13 +132,58 @@ export async function placement() {
 }
 
 A.syncKey = async () => {
-  const k = await promptDlg('Personal sync password', "Enter the sync password assigned to this learner. Use this same password on your own devices; the other learner uses a different password.", syncKey(), { ok: 'Save', hint: 'Leave empty to turn sync off. Treat the key like a password.' });
-  if (k === null) return;
-  const o = syncKey(), n = k.trim();
+  const o = syncKey();
+  let n = '', problem = '';
+  // Ask again until the key is long enough (or empty, which turns sync off). The key already on this device is never re-judged,
+  // so someone with an older short key can still open the dialog and leave it as it is.
+  for (;;) {
+    const k = await promptDlg('Personal sync password', "Enter the sync password assigned to this learner. Use this same password on your own devices; the other learner uses a different password.", problem ? n : o, { ok: 'Save', hint: problem ? `<b class="bad">${esc(problem)}</b> Keys made under Learners and keys are always long enough.` : `Leave empty to turn sync off. At least ${MIN_KEY_LENGTH} characters; treat the key like a password.` });
+    if (k === null) return;
+    n = k.trim();
+    problem = n && n !== o ? keyProblem(n) : '';
+    if (!problem) break;
+  }
   if (o && n && o !== n && S.sessions.length && !(await confirmDlg('Switch sync account?', `This device’s progress (<b>${S.sessions.length} sessions</b>) will be merged into the cloud account selected by the new password. Only continue if that is the intended account.`, { ok: 'Switch and merge' }))) return;
   setSyncKey(n);
   again();
   if (n) { await pull(); again(); } else toast('Sync turned off');
+};
+const showNewKey = (name, key) => dialog({
+  title: 'Key for ' + name,
+  body: `<p>Copy or write this key down now. It is shown only once: the server keeps no readable copy.</p><input class="inp" readonly value="${esc(key)}" aria-label="New sync key" style="margin:10px 0;font-family:var(--mono);letter-spacing:.02em"><button type="button" class="btn sm" data-copy>Copy key</button><p class="mu" style="margin-top:10px">On their device: Settings, then Set up sync, and enter this key.</p>`,
+  actions: [{ label: 'Done', value: true, primary: true }],
+  onOpen: (d) => {
+    const i = d.querySelector('input'); i.focus(); i.select();
+    d.querySelector('[data-copy]').addEventListener('click', async () => { try { await navigator.clipboard.writeText(key); toast('Copied'); } catch (e) { i.select(); toast('Press and hold to copy'); } });
+  },
+});
+/** Why a /api/keys call did not go through, as a sentence for a toast; '' when it did. */
+const keysWhy = (r) => (r.status == 429 ? (r.json && r.json.error) || 'Too many wrong keys. Try again later.' : r.status == 401 ? 'The sync key was not accepted.' : r.status == 403 ? 'Only the main account can manage learners.' : r.status >= 400 ? (r.json && r.json.error) || 'That did not work.' : '');
+A.learners = async () => {
+  let r;
+  try { r = await keysApi('GET'); } catch (e) { return toast('Could not reach the server'); }
+  if (keysWhy(r)) return toast(keysWhy(r));
+  if (!r.json.admin) return toast('Only the main account can manage learners.');
+  const list = r.json.learners || [], max = r.json.max || 10;
+  const opts = [];
+  if (list.length < max) opts.push({ value: 'add', title: 'Add a learner', desc: 'Makes a new key and shows it once' });
+  for (const l of list) opts.push({ value: 'rm:' + l.id, title: 'Turn off ' + l.name, desc: 'Their key stops working. Saved progress stays; adding the same name again gives a new key and the same progress.', danger: true });
+  const intro = list.length ? `<p>${list.length} learner${list.length == 1 ? '' : 's'} made here, besides the ones set up in Netlify.</p>` : '<p>No learners have been made here yet. The ones set up in Netlify keep working as before.</p>';
+  const v = await choiceDlg('Learners and keys', intro, opts);
+  if (v === 'add') {
+    const name = await promptDlg('New learner', 'Name (letters and numbers)', '', { ok: 'Create key', hint: 'The name picks their private cloud space. It cannot be changed later.' });
+    if (name === null || !name.trim()) return;
+    let c;
+    try { c = await keysApi('POST', { body: { name: name.trim() } }); } catch (e) { return toast('Could not reach the server'); }
+    if (keysWhy(c)) return toast(keysWhy(c));
+    await showNewKey(c.json.learner.name, c.json.key);
+  } else if (typeof v == 'string' && v.startsWith('rm:')) {
+    const id = v.slice(3), who = list.find((l) => l.id === id);
+    if (!who || !(await confirmDlg('Turn off this key?', `<b>${esc(who.name)}</b> will no longer be able to sync until you make them a new key. Their saved progress is kept.`, { ok: 'Turn off', danger: true }))) return;
+    let d;
+    try { d = await keysApi('DELETE', { query: '?id=' + encodeURIComponent(id) }); } catch (e) { return toast('Could not reach the server'); }
+    toast(keysWhy(d) || 'Key turned off');
+  }
 };
 A.aiStatus = async () => {
   let body;

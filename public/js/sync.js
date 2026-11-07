@@ -21,11 +21,19 @@ export function migrateLegacySyncKey(storage = localStorage, selectedUser = LEGA
 }
 try { migrateLegacySyncKey(); } catch { /* sync remains available for manual setup */ }
 export const syncStorageKey = () => 'mmTrainer.sync';
+/** Shortest key accepted when one is chosen or changed. Keep in step with netlify/lib/auth.mjs. */
+export const MIN_KEY_LENGTH = 12;
+export const keyProblem = (key) => {
+  const k = String(key || '').trim();
+  if (k.length < MIN_KEY_LENGTH) return `Use at least ${MIN_KEY_LENGTH} characters.`;
+  if (new Set(k.toLowerCase()).size < 5) return 'Use a key with more variety than that.';
+  return '';
+};
 export const syncKey = () => { try { return localStorage[syncStorageKey()] || ''; } catch (e) { return ''; } };
 export function setSyncKey(k) {
   try { k ? (localStorage[syncStorageKey()] = k) : localStorage.removeItem(syncStorageKey()); } catch (e) { /* storage blocked */ }
   epoch++; busy = false; conflicts = 0; writeCursor(null); fullNext = false; etag = ''; dirty = true;      // anything still in flight belongs to the old key and must not touch this account
-  synced = false; status = { kind: k ? 'busy' : 'off', msg: '', at: 0 };
+  synced = false; weakKey = false; status = { kind: k ? 'busy' : 'off', msg: '', at: 0 };
   emit();
 }
 
@@ -56,8 +64,10 @@ export async function packBody(json, can = typeof CompressionStream != 'undefine
   catch (e) { return { body: json, gz: false }; }
 }
 
-let synced = false, busy = false, epoch = 0, conflicts = 0, pushT, fullNext = false, etag = '', gzipOk = true, dirty = true, saves = 0, guard = () => false, onChange = () => {};
-export let status = { kind: syncKey() ? 'busy' : 'off', msg: '', at: 0 };   // kind: off | busy | ok | offline | key
+let weakKey = false, synced = false, busy = false, epoch = 0, conflicts = 0, pushT, fullNext = false, etag = '', gzipOk = true, dirty = true, saves = 0, guard = () => false, onChange = () => {};
+/** True when the server says this key is shorter than the current minimum (a key set up before the rule). */
+export const isWeakKey = () => weakKey;
+export let status = { kind: syncKey() ? 'busy' : 'off', msg: '', at: 0 };   // kind: off | busy | ok | offline | key | locked
 const subs = new Set();
 const emit = () => subs.forEach((f) => f(status));
 export const onStatus = (f) => { subs.add(f); return () => subs.delete(f); };
@@ -65,7 +75,7 @@ export const configure = (opts) => { if (opts.guard) guard = opts.guard; if (opt
 
 export const statusText = () => {
   const t = status.at ? new Date(status.at).toTimeString().slice(0, 5) : '';
-  return { off: 'Sync off', busy: 'Syncing…', ok: 'Synced ' + t, offline: 'Offline, will retry', key: 'Wrong sync key' }[status.kind];
+  return { off: 'Sync off', busy: 'Syncing…', ok: 'Synced ' + t, offline: 'Offline, will retry', key: 'Wrong sync key', locked: 'Too many wrong keys, try later' }[status.kind];
 };
 const set = (kind) => { status = { kind, at: kind == 'ok' ? Date.now() : status.at }; emit(); };
 
@@ -82,7 +92,8 @@ async function api(method, body, query = '') {
     return await r.json();
   } finally { clearTimeout(to); }
 }
-const fail = (e) => set(e instanceof HttpError && e.code == 401 ? 'key' : 'offline');
+// 401 is a wrong key; 429 is the server's limit on wrong keys (it also refuses a correct one for a while), so neither is "offline".
+const fail = (e) => set(e instanceof HttpError && e.code == 401 ? 'key' : e instanceof HttpError && e.code == 429 ? 'locked' : 'offline');
 
 export async function push() {
   if (!syncKey() || !synced || guard()) return;
@@ -117,7 +128,7 @@ export async function pull(afterConflict = false) {
     if (ep != epoch) return;            // the key changed while we waited: this answer is for another account
     set('ok');                          // reachable and authorised; a failing push below turns this into offline/key
     if (res.unchanged) { if (dirty) await push(); if (ep == epoch) busy = false; return; }
-    const r = res.data; etag = res.etag || '';
+    const r = res.data; etag = res.etag || ''; weakKey = !!res.weak;
     if (r && r.sk && Array.isArray(r.sessions)) {
       const before = S.sessions.length, uBefore = S.u || 0, prefsBefore = prefsSig();
       replaceState(mergeStates(S, r));
@@ -141,6 +152,16 @@ export async function syncNow() {
   if (synced) await push();
   await pull();
   return status.kind == 'ok';
+}
+
+/**
+ * Learner and key management (/api/keys). Resolves { status, json } for any HTTP answer instead of throwing, so the caller can
+ * tell "not the main account" (403) from "wrong key" (401) from "too many tries" (429). Rejects only when the network fails.
+ */
+export async function keysApi(method, { body, query = '' } = {}) {
+  const r = await fetch('/api/keys' + query, { method, headers: { 'x-sync-key': syncKey(), 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+  let json = {}; try { json = await r.json(); } catch (e) { /* an empty or non-JSON body */ }
+  return { status: r.status, json };
 }
 
 /** Fetch the server's daily safety copy (for the "restore" action). */

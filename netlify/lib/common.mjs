@@ -1,6 +1,6 @@
 import webpush from "web-push";
 import { users } from "./auth.mjs";
-export { users, resolveSyncUser } from "./auth.mjs";
+export { users, resolveEnvUser } from "./auth.mjs";
 
 /** Configure web-push from env vars. Returns { pub } or null when push is not set up. */
 export const vapid = () => {

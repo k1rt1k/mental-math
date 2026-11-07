@@ -44,10 +44,10 @@ const postAi = (key, body, extraHeaders = {}) => aiHandler(new Request('https://
   body: JSON.stringify(body || {}),
 }));
 
-test('v14.50 version and service-worker cache are aligned', () => {
-  assert.equal(VERSION, '14.50');
+test('v14.51 version and service-worker cache are aligned', () => {
+  assert.equal(VERSION, '14.51');
   const sw = fs.readFileSync(new URL('../public/sw.js', import.meta.url), 'utf8');
-  assert.match(sw, /mm-v14-50/);
+  assert.match(sw, /mm-v14-51/);
 });
 
 test('legacy User 2 selection migrates its state to the single canonical device slot without deleting the old data', () => {
