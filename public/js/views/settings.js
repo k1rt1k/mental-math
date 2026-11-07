@@ -298,6 +298,8 @@ A.csv = () => {
   download('mentalmath-sessions-' + ymd() + '.csv', r.join('\n'), 'text/csv'); toast('CSV downloaded');
 };
 A.import = () => document.querySelector('#imp').click();
+// The search bar sticks to the top while scrolling; give it a backing only once it has stuck (see .sfind in extras.css).
+addEventListener('scroll', () => { const f = document.querySelector('.sfind'); if (f) f.classList.toggle('stuck', f.getBoundingClientRect().top <= 0.5 && scrollY > 4); }, { passive: true });
 export function wireImport() {
   document.querySelector('#imp').onchange = (e) => {
     const f = e.target.files[0]; if (!f) return;

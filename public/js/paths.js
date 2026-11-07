@@ -1,8 +1,9 @@
 // Guided learning paths: progress, gating, assessment rules and the stage question generator. DOM-free (see views/paths.js for the screens).
 import { S, PATH_RET } from './state.js';
-import { IDS, gen, qk, T, ansMatch, symFor } from './engine.js';
+import { IDS, SK, gen, qk, T, ansMatch, symFor } from './engine.js';
 import { Session } from './session.js';
 import { PATHS, KINDS, PATH_STAGES } from './pathsData.js';
+import { MS, ctx as statsCtx } from './stats.js';
 
 export { PATHS, KINDS, PATH_STAGES };
 export const PHASES = ['Teach', 'Demonstrate', 'Practise', 'Check'];
@@ -162,4 +163,44 @@ export class PathSession extends Session {
     return res;
   }
   verdict() { return judge(this.pmode, this.rows, this.stg); }
+}
+
+/**
+ * Save a finished (or abandoned) path run as a lightweight session, like Flash does: it keeps the streak going and its minutes
+ * add up toward the daily goal (see learnToday in stats.js). Ratings are untouched (the run is frozen) and `by` stays empty, so
+ * pace charts and per-skill breakdowns never see it. Returns { rec, unlocked } or null when the run is too small to count.
+ * An abandoned run needs 5+ answers, the same floor as ordinary sessions; a finished one only needs something right.
+ */
+export function logPathRun(sess, done = true, wall = Date.now) {
+  if (!sess.ok || (!done && sess.n < 5)) return null;
+  sess.tick();
+  const dur = Math.max(1, Math.min(Math.round(sess.el), 90 * sess.n));   // a forgotten open tab must not buy goal minutes
+  const last = S.sessions.length ? S.sessions[S.sessions.length - 1].t : 0;
+  const lv = {}; IDS.forEach((k) => (lv[k] = +S.sk[k].lv.toFixed(2)));
+  const rec = { t: Math.max(wall(), last + 1), m: 'path', dur, n: sess.n, ok: sess.ok, ft: sess.ft, pts: sess.pts, tm: +(sess.tsum / sess.ok).toFixed(2), by: {}, lv, off: 0, ps: sess.skill };
+  S.sessions.push(rec);
+  const c = statsCtx(), unlocked = MS.filter((m) => m[2](c) && !S.ms.includes(m[0]));
+  unlocked.forEach((m) => S.ms.push(m[0]));
+  return { rec, unlocked };
+}
+
+/** Retention checks that can be taken right now, across every skill. [{ k, i, label, state }] */
+export function dueChecks(now = Date.now()) {
+  const out = [];
+  for (const k of IDS) { const p = progress(k, now); p.ret.forEach((r) => { if (r.state == 'due' || r.state == 'retry') out.push({ k, i: r.i, label: r.label, state: r.state }); }); }
+  return out;
+}
+/** Every check still to come (waiting or ready), with the time it opens. Sent to the reminder server, which decides what is due at send time. */
+export function pendingChecks(now = Date.now()) {
+  const out = [];
+  for (const k of IDS) { const p = progress(k, now); p.ret.forEach((r) => { if (r.dueAt && r.state != 'done' && r.state != 'locked') out.push({ at: r.dueAt, n: SK[k].n, l: r.label }); }); }
+  return out.sort((a, b) => a.at - b.at).slice(0, 26);
+}
+/** When the next waiting check opens (ms), or 0. Lets the nav badge refresh itself at that moment. */
+export const nextCheckAt = (now = Date.now()) => { const t = pendingChecks(now).map((x) => x.at).filter((t) => t > now); return t.length ? t[0] : 0; };
+
+/** The story of a mastered path, for the celebration and the share card. */
+export function masteryInfo(k) {
+  const r = rec(k), p = progress(k), starts = r.st.map((s) => s.at).filter(Boolean), end = r.ret[PATH_RET - 1].t || Date.now();
+  return { mastered: p.mastered, test: Math.round(100 * r.st[PATH_STAGES - 1].sc), days: starts.length ? Math.max(1, Math.round((end - Math.min(...starts)) / DAY) + 1) : 1, at: end, count: IDS.filter((x) => progress(x).mastered).length };
 }

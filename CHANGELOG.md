@@ -2,6 +2,18 @@
 
 Newest first. What is true of the app today is in [README.md](README.md). The release number is the `VERSION` file.
 
+## 14.73
+
+- **Learn-path practice now counts.** A path run (practise, check, timed test, retention check) is saved as a lightweight session, like Flash. It keeps the streak going and shows in history and the week. Its minutes add up toward the daily goal: every 2 minutes of Learn practice on a day is one goal session, so 15 minutes in Learn is no longer invisible. Ratings stay frozen, and path runs are kept out of pace charts, weekly pace and best-session stats. Leaving a run after 5+ answers still saves it; a run with nothing right, or fewer than 5 answers when abandoned, does not. Time per run is capped at 90 s per answer so a forgotten tab cannot buy goal minutes. The goal sheet and result screens say how Learn time is counted.
+- **Retention checks are hard to miss.** A badge with the number ready appears on the Learn tab and on *Guided paths*, and the app-icon badge includes them. It lights up the moment a waiting check opens, even with the app already open. The reminder notification now leads with a due check (and mentions waiting reviews), the streak nudge names it, and tapping either opens the path with the check ready. The server is sent the times checks open, so it never needs the app to be open to know what is due. Still true: a reminder is skipped on a day you already practised, and Learn practice now counts as practising.
+- **Mastering a path is a moment.** Passing the last retention check opens a celebration (confetti, your best timed test, days start to finish, paths mastered) with a *Share mastery card* image made the same way as the streak card (long skill names now shrink to fit). A mastered path's map keeps a share banner. Three new milestones: first path mastered, 5 paths, every path. The Learn heading now counts the real number of paths (it said ten).
+- Not in this release: the placement quiz and any change to the pace limits (10 of 12 at 1.25× par, 1.4× for retention checks); those still need real-learner data.
+- Tests: `test/v1473-path-credit-and-checks.test.mjs`.
+
+## 14.72
+
+- **Fixed: the dark box behind the Settings search and group chips.** The sticky bar painted a solid page-colour rectangle over the page's accent glow, so it showed as a hard-edged slab on desktop and phone. It is now see-through where it sits and only gets a frosted, full-width backing with a thin divider once it sticks to the top while you scroll.
+
 ## 14.71
 
 - **Fixed: devices that already had the app installed stayed blank even after the 14.70 fix.** A new release only takes over when `main.js` asks it to, and `main.js` was the file crashing, so the fixed worker downloaded and then waited forever (incognito worked because it has no old worker or saved data). For this release the worker now takes over on its own and reloads open tabs once (`RECOVER = true` in `sw.js`; turn it off in a later release).

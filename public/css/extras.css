@@ -235,7 +235,10 @@ html[data-offline] .offp { display: inline-flex; }
 .sgrp[hidden], .sgrp [hidden], .sjump[hidden], .sempty[hidden] { display: none !important; }
 .sgrp + .sgrp { margin-top: 8px; }
 h2.sg { margin: 28px 0 12px; scroll-margin-top: 16px; }
-.sfind { display: grid; gap: 10px; margin: -8px 0 4px; position: sticky; top: 0; z-index: 4; padding: 8px 0 6px; background: linear-gradient(var(--bg) 78%, transparent); }
+/* The search bar used to paint a solid page-colour box over the page's accent glow (body::before), which showed as a hard-edged dark rectangle.
+   It is now see-through where it normally sits, and only gets a frosted backing (full width, no hard edges) once it sticks to the top. */
+.sfind { --sp: clamp(20px, 3.4vw, 52px); display: grid; gap: 10px; margin: -8px calc(-1 * var(--sp)) 4px; position: sticky; top: 0; z-index: 4; padding: 8px var(--sp) 8px; background: transparent; border-bottom: 1px solid transparent; transition: background-color .15s, border-color .15s; }
+.sfind.stuck { background: color-mix(in srgb, var(--bg) 80%, transparent); -webkit-backdrop-filter: blur(14px) saturate(1.15); backdrop-filter: blur(14px) saturate(1.15); border-bottom-color: var(--ln); }
 .sfind .inp { max-width: 440px; }
 .sjump { display: flex; flex-wrap: wrap; gap: 6px; }
 .sempty { text-align: center; padding: 28px 16px; color: var(--mu); }
@@ -252,7 +255,7 @@ h2.sg { margin: 28px 0 12px; scroll-margin-top: 16px; }
 .pv-btn { display: inline-flex; align-items: center; padding: 3px 14px; border-radius: 999px; background: var(--ac); color: var(--bg); font-size: var(--t-xs); font-weight: 700; }
 .pv-t { margin: 0; color: var(--mu); font-size: var(--t-sm); }
 .pv-n { margin: 10px 0 0; font-size: var(--t-xs); }
-@media (max-width: 760px) { .pv { position: static; } .sfind { margin-top: -4px; } }
+@media (max-width: 760px) { .pv { position: static; } .sfind { --sp: 16px; margin-top: -4px; } }
 
 /* ---------- Daily leaderboard ---------- */
 .tbl tr.you td { background: color-mix(in srgb, var(--ac) 12%, transparent); font-weight: 650; }
@@ -734,3 +737,19 @@ button.fr:hover { background: color-mix(in srgb, var(--mu) 6%, transparent); }
 .stepper .btn { min-width: 38px; }
 .ms button.chip { font: inherit; cursor: pointer; }
 .ms button.chip:hover { border-color: var(--mu2); }
+
+/* v14.73: path mastery celebration and the Learn due-check badge */
+.pmast { --sc: var(--ac); text-align: center; padding: 34px 20px 26px; }
+.pmast .pmark { width: 72px; height: 72px; margin: 0 auto 14px; border-radius: 50%; display: grid; place-items: center; color: var(--ok); border: 2px solid var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); animation: pmpop .5s cubic-bezier(.2,1.4,.4,1) both; }
+.pmast .pmark svg { width: 36px; height: 36px; }
+.pmast h1 { margin: 4px 0 6px; }
+.pmast .lede { margin: 0 auto 18px; max-width: 46ch; }
+.pmstats { display: flex; justify-content: center; gap: 12px 28px; flex-wrap: wrap; margin: 0 0 20px; }
+.pmstats > div { display: flex; flex-direction: column; min-width: 96px; }
+.pmstats b { font-size: 28px; line-height: 1.1; }
+.pmast .btns { justify-content: center; }
+.pmbanner { border-color: color-mix(in srgb, var(--ok) 45%, transparent); }
+.learnseg .badge-inline { margin-left: 6px; }
+@keyframes pmpop { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .pmast .pmark { animation: none; } }
+[data-motion=reduce] .pmast .pmark { animation: none; }

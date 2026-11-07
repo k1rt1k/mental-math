@@ -13,7 +13,10 @@ export function drawCard(d, canvas = document.createElement('canvas')) {
   const sans = '"Inter", system-ui, -apple-system, "Segoe UI", sans-serif', serif = '"Fraunces", Georgia, serif';
   g.textBaseline = 'alphabetic';
   g.fillStyle = d.best ? gd : '#9aa7c0'; g.font = `700 40px ${sans}`; g.fillText((d.best ? '★ ' : '') + String(d.tag || 'Session').toUpperCase(), 80, 150);
-  g.fillStyle = '#ffffff'; g.font = `600 280px ${serif}`; g.fillText(String(d.big), 70, 520);
+  g.fillStyle = '#ffffff';
+  let bs = 280; g.font = `600 ${bs}px ${serif}`;
+  while (bs > 90 && g.measureText(String(d.big)).width > W - 140) { bs -= 10; g.font = `600 ${bs}px ${serif}`; }   // a skill name is wider than a day count
+  g.fillText(String(d.big), 70, 520);
   g.fillStyle = '#9aa7c0'; g.font = `500 44px ${sans}`; g.fillText(String(d.bigLabel || ''), 80, 590);
   const rows = (d.rows || []).slice(0, 4), cw = (W - 160 - 30 * (rows.length - 1)) / Math.max(1, rows.length);
   rows.forEach(([l, v], i) => {

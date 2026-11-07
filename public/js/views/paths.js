@@ -4,10 +4,11 @@ import { S, save } from '../state.js';
 import { SK, COL, IDS, T, how as howTo, ansMatch } from '../engine.js';
 import { TRICKS } from '../tricks.js';
 import { esc } from '../util.js';
-import { weakestSkills } from '../stats.js';
+import { weakestSkills, streak, learnToday } from '../stats.js';
+import { shareCard } from '../share.js';
 import { A, register, go, view, mark } from '../nav.js';
 import { icon, toast, burst, dialogOpen } from '../ui.js';
-import { PATHS, KINDS, PHASES, RET, RULES, PATH_STAGES, progress, donePhase, recordCheck, checkMode, PathSession, nextUp } from '../paths.js';
+import { PATHS, KINDS, PHASES, RET, RULES, PATH_STAGES, progress, donePhase, recordCheck, checkMode, PathSession, nextUp, logPathRun, masteryInfo, dueChecks } from '../paths.js';
 
 const $ = (s) => document.querySelector(s);
 const main = () => $('#main');
@@ -35,7 +36,7 @@ const cta = (k) => { const p = progress(k); return p.mastered ? 'Review' : p.due
 export function pathsGrid() {
   const nu = nextUp(S.sessions.length ? weakestSkills(1)[0] : 'mul');
   const top = nu ? `<div class="card nextup pcard"><div><div class="eyebrow">${nu.kind == 'retain' ? 'Ready now' : nu.kind == 'start' ? 'Suggested start' : 'Pick up where you left off'}</div><b>${esc(SK[nu.k].n)}: ${esc(nu.kind == 'retain' ? RET[nu.ret].label : PATHS[nu.k].stages[Math.max(0, nu.p.cur)].t)}</b><div class="mu">${esc(statusLine(nu.k))}</div></div><button class="btn primary" data-act="pathOpen" data-v="${esc(nu.k)}">${esc(cta(nu.k))}</button></div>` : '';
-  return `${top}<h2 class="phd">All ten paths</h2><div class="pgrid">${IDS.map((k) => {
+  return `${top}<h2 class="phd">All ${IDS.length} paths${IDS.filter((x) => progress(x).mastered).length ? ` <span class="mu" style="font-weight:500;font-size:.7em">· ${IDS.filter((x) => progress(x).mastered).length} mastered</span>` : ''}</h2><div class="pgrid">${IDS.map((k) => {
     const p = progress(k);
     return `<article class="card ppath" style="--sc:${COL[k]}"><div class="kc">${esc(SK[k].n)}${p.mastered ? ' <span class="pill ok2">Mastered ✓</span>' : p.assessed ? ' <span class="pill ok2">Assessed ✓</span>' : ''}</div>
       <h3>${esc(PATHS[k].blurb)}</h3>${bar(p.pct, k)}
@@ -73,6 +74,7 @@ function map() {
   main().innerHTML = `
   <div class="hd"><div><button class="btn sm ghost" data-act="pathExit">${icon('chev', 'flip')} Learn</button><h1 style="margin-top:8px">${esc(SK[k].n)} path</h1><p class="lede">${esc(P.blurb)}</p></div>
     <div class="pprog"><b class="num">${p.done}</b><span class="mu"> of ${p.total} milestones</span>${bar(p.pct, k)}</div></div>
+  ${p.mastered ? `<div class="card nextup pcard pmbanner" style="--sc:${COL[k]}"><div><b>${esc(SK[k].n)} is mastered</b><div class="mu">Every check passed. Show it off.</div></div><button class="btn primary" data-act="pathShare">Share mastery card</button></div>` : ''}
   <div class="pstages">${p.stages.map(stage).join('')}</div><h2>Does it stick?</h2><div class="prets">${ret}</div>
   <p class="mu" style="margin-top:18px;max-width:62ch">${sk(k)} Prefer to browse? The <button class="lnk2" data-act="pathLib" data-v="${esc(k)}">trick library</button> has every shortcut as a stand-alone card.</p>`;
 }
@@ -213,7 +215,7 @@ A.runHint = () => {
   fb(`${h.tip ? `<div class="tip">${esc(h.tip)}</div>` : ''}<div class="tip">${esc(h.how)}</div>`);
   const i = $('#pin'); i && i.focus({ preventScroll: true });
 };
-A.runLeave = () => { if (!run) return; const n = run.s.n; run = null; locked = false; save(); if (n) toast('Your answers so far are kept in your notebook and stats'); ctx.scr = 'lesson'; mark('path'); lesson(); };
+A.runLeave = () => { if (!run) return; const n = run.s.n, lg = logPathRun(run.s, false); run = null; locked = false; save(); if (n) toast(lg ? 'Saved to today’s practice. Your answers are in your notebook too' : 'Your answers so far are kept in your notebook and stats'); lg && lg.unlocked.forEach((m) => toast('Milestone: ' + m[1])); ctx.scr = 'lesson'; mark('path'); lesson(); };
 
 function finishRun() {
   const { s, mode, ret } = run, v = s.verdict();
@@ -221,10 +223,13 @@ function finishRun() {
   const si = ctx.si, k = ctx.k;
   if (mode == 'practise') donePhase(k, si, 2);
   else recordCheck(k, si, mode, { ...v, ret });
+  const lg = logPathRun(s, true);
   save();
-  ctx.res = { v, rows: s.rows, mode, ret, si, k, stage: s.stg };
+  ctx.res = { v, rows: s.rows, mode, ret, si, k, stage: s.stg, logged: !!lg };
+  lg && lg.unlocked.forEach((m) => toast('Milestone: ' + m[1]));
   ctx.scr = 'result';
   if (v.pass && mode != 'practise') burst(mode == 'test' || mode == 'retain' ? 70 : 36);
+  if (mode == 'retain' && v.pass && progress(k).mastered) { ctx.scr = 'mastery'; return celebrate(); }
   result();
 }
 
@@ -243,15 +248,38 @@ function result() {
   main().innerHTML = `<div class="card pres ${mode == 'practise' || v.pass ? 'pass' : 'fail'}" style="--sc:${COL[k]}"><div class="eyebrow">${esc(SK[k].n)} · ${esc(KINDS[si])}</div><h1>${esc(title)}</h1>
     <div class="pscore"><b class="num">${v.correct}/${v.n}</b><span class="mu">${mode == 'practise' ? 'first try' : 'first-try correct'}${R.need ? ' · ' + R.need + ' needed' : ''}</span></div>
     ${v.pace && R.pace ? `<div class="pace ${R.pace && v.pace > R.pace ? 'bad' : ''}">Pace ${v.pace}× par${R.pace ? ' (limit ' + R.pace + '×)' : ''}</div>` : ''}
-    ${why ? `<p>${esc(why)}</p>` : ''}${note}<div class="btns pnav">${next}</div></div>
+    ${why ? `<p>${esc(why)}</p>` : ''}${note}${ctx.res.logged ? learnLine() : ''}<div class="btns pnav">${next}</div></div>
     <h2>Every answer</h2><div class="card"><div class="plist">${rows.map((x) => `<div class="prow"><span>${esc(x.q)} = <b>${esc(x.a)}</b>${x.hinted ? ' <span class="mu">· hint</span>' : !x.first && x.ok ? ' <span class="mu">· slip first</span>' : ''}${x.ok ? '' : `<br><span class="mu">${esc(howTo({ q: x.q, a: x.a, sk: k }))}</span>`}</span><span><span class="mu num">${x.tm.toFixed(1)}s</span> <span class="${x.ok ? 'ok' : 'bad'}">${x.ok ? '✓' : '✗'}</span></span></div>`).join('')}</div></div>`;
   scrollTo({ top: 0, behavior: 'instant' });
 }
 
+/** What a logged run did for today: the streak, and the Learn minutes that add up toward the goal. */
+function learnLine() {
+  const L = learnToday(), m = Math.max(1, Math.round(L.secs / 60));
+  return `<p class="mu" style="margin-top:10px">Counts toward today’s streak. Learn practice today: ${m} min. Every 2 minutes adds one session to your daily goal${L.units ? ` (${L.units} so far)` : ''}.</p>`;
+}
+
+/** The share image for a mastered path: the same card the streak and results use. */
+const masteryCard = (k) => { const m = masteryInfo(k); return { tag: 'Path mastered', best: true, big: SK[k].n, bigLabel: 'mastered', rows: [['Timed test', m.test + '%'], ['Days', m.days], ['Paths', m.count + '/' + IDS.length]], streak: streak() }; };
+
+/** The payoff for finishing a path: shown once, when the last retention check is passed. Also reachable from a mastered path's map. */
+function celebrate() {
+  const k = ctx.k, m = masteryInfo(k), nu = nextUp(null), other = nu && nu.k != k ? nu : null;
+  main().innerHTML = `<div class="card pres pass pmast" style="--sc:${COL[k]}"><div class="pmark" aria-hidden="true">${icon('check')}</div>
+    <div class="eyebrow">${esc(SK[k].n)} path</div><h1>${esc(SK[k].n)} mastered</h1>
+    <p class="lede">All five stages, the timed test and both retention checks. It was still there a week later.</p>
+    <div class="pmstats"><div><b class="num">${m.test}%</b><span class="mu">best timed test</span></div><div><b class="num">${m.days}</b><span class="mu">${m.days == 1 ? 'day' : 'days'} start to finish</span></div><div><b class="num">${m.count}/${IDS.length}</b><span class="mu">paths mastered</span></div></div>
+    <div class="btns pnav"><button class="btn primary" data-act="pathShare" data-primary>Share mastery card</button>${other ? `<button class="btn" data-act="pathOpen" data-v="${esc(other.k)}">Next: ${esc(SK[other.k].n)}</button>` : ''}<button class="btn ghost" data-act="pathMap">Path map</button></div></div>`;
+  scrollTo({ top: 0, behavior: 'instant' });
+}
+A.pathShare = async () => { if (await shareCard(masteryCard(ctx.k)) == 'saved') toast('Image saved'); };
+
 /* ---------- actions ---------- */
 function open(k, si, ph) { ctx.k = k; ctx.si = si; ctx.ph = ph; ctx.dm = newDemo(); }
-function render() { mark('path'); (ctx.scr == 'lesson' ? lesson : ctx.scr == 'result' ? result : map)(); }
+function render() { mark('path'); (ctx.scr == 'lesson' ? lesson : ctx.scr == 'result' ? result : ctx.scr == 'mastery' ? celebrate : map)(); }
 A.pathOpen = (d) => { if (!PATHS[d.v]) return; ctx.k = d.v; ctx.scr = 'map'; go('path'); };
+/** Open the path with a check ready (a notification tap or the Learn badge). Falls back to Learn when nothing is due. */
+export function openDue() { const d = dueChecks()[0]; if (d) A.pathOpen({ v: d.k }); else go('learn'); }
 A.pathMap = () => { run = null; ctx.scr = 'map'; render(); scrollTo({ top: 0, behavior: 'instant' }); };
 A.pathExit = () => go('learn');
 A.pathLib = (d) => { import('./learn.js').then((m) => { m.setLearnFilter(d.v); go('learn'); }); };
@@ -277,7 +305,7 @@ register('path', () => {
   if (ctx.scr == 'result' && !ctx.res) ctx.scr = 'map';
   document.title = SK[ctx.k].n + ' path · Mental Math';
   if (ctx.scr == 'run') return;
-  ctx.scr == 'lesson' ? lesson() : ctx.scr == 'result' ? result() : map();
+  ctx.scr == 'lesson' ? lesson() : ctx.scr == 'result' ? result() : ctx.scr == 'mastery' ? celebrate() : map();
 });
 
 /* ---------- keys and visibility ---------- */

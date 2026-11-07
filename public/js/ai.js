@@ -131,7 +131,7 @@ export function buildCompactSummary(st = S) {
 
   // Everything below is app-measured; the server prompt tells the model to use it as written.
   const DAY = 864e5, now = Date.now();
-  const MODE = { daily: 'Daily', review: 'Review', survival: 'Survival', sprint: 'Sprint', train: 'Practice' };
+  const MODE = { daily: 'Daily', review: 'Review', survival: 'Survival', sprint: 'Sprint', train: 'Practice', path: 'Learn path' };
   const recentSessions = st.sessions.slice(-8).reverse().map((x) => {
     const ago = Math.max(0, Math.round((now - x.t) / DAY));
     return `${ago ? ago + 'd ago' : 'today'} ${MODE[x.m] || x.m || 'Practice'} ${x.dur}s: ${x.n ? Math.round((100 * x.ok) / x.n) : 0}% (${x.ok}/${x.n})${x.tm ? ', ' + x.tm + 's avg' : ''}, ${x.pts} pts`;
@@ -148,7 +148,7 @@ export function buildCompactSummary(st = S) {
     st.sessions.slice(-10).forEach((x) => { const b = x.by && x.by[k]; if (b) { n += b[0]; ok += b[1]; tm += b[2]; } });
     return `${SK[k].n}: ${Math.round(st.sk[k].lv * 100)}${move == null ? '' : ` (${move >= 0 ? '+' : ''}${move} over last ${rs.length} sessions)`}${n >= 5 ? `, ${Math.round((100 * ok) / n)}% over ${n} recent answers${ok ? ', ' + (tm / ok).toFixed(1) + 's avg' : ''}` : ''}`;
   }).join(' | ');
-  const best = st.sessions.filter((x) => x.dur >= 60 && x.n >= 5).sort((a, b) => b.pts * 60 / b.dur - a.pts * 60 / a.dur)[0];
+  const best = st.sessions.filter((x) => x.dur >= 60 && x.n >= 5 && x.m != 'path').sort((a, b) => b.pts * 60 / b.dur - a.pts * 60 / a.dur)[0];
   const bestSession = best ? `${Math.round((best.pts * 60) / best.dur)} pts/min (${best.n ? Math.round((100 * best.ok) / best.n) : 0}% over ${best.n} answers, ${Math.round((now - best.t) / DAY)}d ago)` : '';
   const missList = Object.values(st.weak || {}).sort((a, b) => (b.at || 0) - (a.at || 0)).slice(0, 8)
     .map((w, i) => {

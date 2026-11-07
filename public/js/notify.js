@@ -3,6 +3,7 @@
 import { S, save, onSave } from './state.js';
 import { ymd } from './util.js';
 import { streak } from './stats.js';
+import { pendingChecks } from './paths.js';
 import { syncKey } from './sync.js';
 
 export const isStandalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
@@ -35,7 +36,7 @@ export const rem = () => {
 export const setRem = (patch) => { S.rem = { ...rem(), ...patch }; save(); refreshSoon(); };
 const payload = (sub) => {
   const R = rem(), ts = S.sessions.length ? Math.max(...S.sessions.map((x) => x.t)) : 0;
-  return { sub: sub.toJSON(), times: R.times, days: R.days, skip: R.skip, tz: tz(), last: ts ? ymd(ts) : '', streak: streak(), due: Object.values(S.weak).filter((w) => w.due <= Date.now()).length, saveStreak: R.save, on: true };
+  return { sub: sub.toJSON(), times: R.times, days: R.days, skip: R.skip, tz: tz(), last: ts ? ymd(ts) : '', streak: streak(), due: Object.values(S.weak).filter((w) => w.due <= Date.now()).length, saveStreak: R.save, on: true, ret: pendingChecks() };
 };
 
 /** Turn reminders on. Returns { ok } or { ok:false, why } with a short user-facing reason. */
@@ -81,7 +82,7 @@ export function refreshSoon() {
     try {
       const reg = await navigator.serviceWorker.ready, sub = await reg.pushManager.getSubscription();
       if (!sub) return;
-      const p = payload(sub), sig = JSON.stringify([p.times, p.days, p.skip, p.last, p.streak, p.due, p.saveStreak, p.tz]);
+      const p = payload(sub), sig = JSON.stringify([p.times, p.days, p.skip, p.last, p.streak, p.due, p.saveStreak, p.tz, p.ret]);
       if (sig === lastSig) return;
       const r = await call('PUT', p);
       if (r.ok) lastSig = sig;

@@ -285,11 +285,11 @@ A.openTrick = (d) => { setLearnFilter(d.v); go('learn'); };
 A.goalSheet = async () => {
   const draw = () => {
     const goal = S.goal || 2, td = todayCount(), k = ymd(), ss = S.sessions.filter((x) => ymd(x.t) == k).sort((a, b) => a.t - b.t);
-    const rows = ss.map((x) => `<li><span class="wst">${esc(new Date(x.t).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }))}</span><b>${esc(modeLabel(x.m))}</b><span class="mu">${countsToGoal(x) ? 'counted toward the goal' : 'too short to count'}</span></li>`).join('');
+    const rows = ss.map((x) => `<li><span class="wst">${esc(new Date(x.t).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }))}</span><b>${esc(modeLabel(x.m))}</b><span class="mu">${x.m == 'path' ? 'Learn time: every 2 min counts' : countsToGoal(x) ? 'counted toward the goal' : 'too short to count'}</span></li>`).join('');
     return `<div class="ws"><div class="ws-hero"><b class="num">${td}<small class="mu">/${goal}</small></b><div><span>${td == 1 ? 'session' : 'sessions'} today</span><p class="mu">${td >= goal ? 'Goal reached. Anything more is a bonus.' : (goal - td) + ' more to reach today’s goal'}</p></div></div>
       <div class="ws-detail">${ss.length ? `<ul class="wsd-l wsd-static">${rows}</ul>` : '<p class="mu wsd-none">Nothing yet today. A session counts when it runs 2 minutes or more.</p>'}</div>
       <div class="gstep"><span>Daily goal</span><div class="stepper"><button type="button" class="btn sm" data-g="-1" aria-label="Lower the goal"${goal <= 1 ? ' disabled' : ''}>−</button><b class="num" aria-live="polite">${goal}</b><button type="button" class="btn sm" data-g="1" aria-label="Raise the goal"${goal >= 5 ? ' disabled' : ''}>+</button></div></div>
-      <p class="mu hint">2+ minutes of practice counts. So does a finished Sprint, a Survival run of 90 s or more, and a Flash run with 3 rounds right.</p></div>`;
+      <p class="mu hint">2+ minutes of practice counts. So does a finished Sprint, a Survival run of 90 s or more, a Flash run with 3 rounds right, and Learn path practice (every 2 minutes adds one).</p></div>`;
   };
   const before = S.goal || 2;
   const v = await dialog({

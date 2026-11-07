@@ -13,7 +13,8 @@ import { home, SL } from './views/home.js';
 import './views/coach.js';
 import './views/progress.js';
 import './views/learn.js';
-import './views/paths.js';
+import { openDue } from './views/paths.js';
+import { dueChecks, nextCheckAt } from './paths.js';
 import './views/notebook.js';
 import './views/flash.js';
 import { settings, wireImport, keysDialog, placement, helpDialog } from './views/settings.js';
@@ -25,10 +26,13 @@ import './motion.js';
 
 /* ---------- chrome ---------- */
 const NAV = [['home', 'Train', 'home'], ['coach', 'Coach', 'sparkle'], ['learn', 'Learn', 'bulb'], ['progress', 'Progress', 'chart'], ['notebook', 'Notebook', 'book'], ['settings', 'Settings', 'gear']];
+let navT = 0;
+document.addEventListener('visibilitychange', () => { if (!document.hidden) drawNav(); });   // checks open with the clock, not with a save
 function drawNav() {
-  const now = Date.now(), due = Object.values(S.weak).filter((w) => w.due <= now).length, st = streak(), runs = S.sessions.length;
-  const mk = (list) => list.map(([id, l, ic]) => { const n = id == 'notebook' && due ? (due > 99 ? '99+' : due) : ''; return `<button class="nv" data-go="${esc(id)}" aria-label="${esc(l)}${n ? ', ' + due + ' to review' : ''}"><span class="nvi">${icon(ic)}${n ? `<span class="badge">${n}</span>` : ''}</span><span>${l}</span></button>`; }).join(''), btns = mk(NAV);
-  setBadge(due);
+  const now = Date.now(), due = Object.values(S.weak).filter((w) => w.due <= now).length, chk = dueChecks(now).length, st = streak(), runs = S.sessions.length;
+  const mk = (list) => list.map(([id, l, ic]) => { const cnt = id == 'notebook' ? due : id == 'learn' ? chk : 0, n = cnt ? (cnt > 99 ? '99+' : cnt) : ''; return `<button class="nv" data-go="${esc(id)}" aria-label="${esc(l + (n ? ', ' + cnt + (id == 'learn' ? (cnt == 1 ? ' retention check ready' : ' retention checks ready') : ' to review') : ''))}"><span class="nvi">${icon(ic)}${n ? `<span class="badge">${n}</span>` : ''}</span><span>${l}</span></button>`; }).join(''), btns = mk(NAV);
+  setBadge(due + chk);
+  clearTimeout(navT); const nx = nextCheckAt(now); if (nx) navT = setTimeout(drawNav, Math.min(nx - now + 1000, 6 * 36e5));   // a waiting check opens while the app is open: light the badge then
   // The rail stays a compact icon rail; the wordmark and the streak/session context live inside it without adding rows.
   $('#rail').innerHTML = `<a class="brand" href="#/" aria-label="Mental Math, go home"><img class="logo" src="icon.svg" alt="" width="42" height="42"><span class="wm">Mental Math</span></a>${btns}<div class="railgrow"></div><div class="railfoot" aria-label="Your progress"><button type="button" class="rfb" data-act="streakCard" aria-haspopup="dialog" title="${st ? st + '-day streak' : 'No streak yet'}" aria-label="${esc((st ? st + '-day streak' : 'No streak yet') + '. Open streak details')}">${icon('flame', 'fill')}${st || '–'}</button><span title="${runs} ${runs == 1 ? 'session' : 'sessions'} logged">${icon('chart', 'chart')}${runs}</span></div>`;
   $('#tabs').innerHTML = mk(NAV.filter(([id]) => id != 'settings'));   // five tabs on a phone, so the labels can be readable; Settings is the gear on Home (the rail keeps it)
@@ -158,6 +162,7 @@ function launch(g) {
   if (isPlaying()) return;
   if (g == 'daily' || g == 'survival' || g == 'sprint') start(g);
   else if (g == 'review') Object.keys(S.weak).length ? start('review') : go('home');
+  else if (g == 'retain') openDue();
   else if (g == 'train') start(undefined, { dur: 120, only: 'all', off: 0, patt: undefined });
 }
 { // PWA shortcuts and notification taps: /?go=daily | survival | review | train

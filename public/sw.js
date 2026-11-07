@@ -1,5 +1,5 @@
 // Service worker: precache the app shell per release and serve it cache-first; a new release waits until the person taps Update.
-const C = 'mm-v14-71';
+const C = 'mm-v14-73';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'icon-monochrome-512.png', 'apple-touch-icon.png', 'favicon-32.png', 'badge-96.png', 'css/style.css', 'css/motion.css', 'css/extras.css', 'fonts/inter.woff2', 'fonts/fraunces.woff2', 'fonts/jbmono.woff2', 'fonts/sym.woff2', 'fonts/OFL.txt',
   'js/boot.js', 'js/main.js', 'js/util.js', 'js/engine.js', 'js/state.js', 'js/stats.js', 'js/session.js', 'js/sync.js', 'js/ui.js', 'js/charts.js', 'js/motion.js', 'js/morph.js', 'js/nav.js', 'js/theme.js', 'js/tricks.js', 'js/notify.js', 'js/ai.js', 'js/aiLocal.js', 'js/skillAi.js',
   'js/paths.js','js/pathsData.js','js/views/paths.js', 'js/views/home.js', 'js/views/streak.js', 'js/views/weeksheet.js', 'js/views/play.js', 'js/views/results.js', 'js/views/progress.js', 'js/views/notebook.js', 'js/views/learn.js', 'js/views/settings.js', 'js/views/coach.js', 'js/richtext.js', 'js/board.js', 'js/boardlogic.js', 'js/rest.js', 'js/chain.js', 'js/weekly.js', 'js/weekdata.js', 'js/views/flash.js', 'js/share.js', 'js/info.js', 'js/infotext.js'];
@@ -48,7 +48,7 @@ self.addEventListener('push', (e) => {
   e.waitUntil(self.registration.showNotification(title, {
     body: d.body || 'Time for a quick round.', tag: d.tag || 'mm-daily', renotify: true,
     icon: 'icon-192.png', badge: 'badge-96.png', data: { url },
-    actions: url.includes('review') ? [{ action: 'review', title: 'Review now' }] : [{ action: 'train', title: 'Practise' }, { action: 'daily', title: 'Daily challenge' }],
+    actions: url.includes('retain') ? [{ action: 'retain', title: 'Take the check' }] : url.includes('review') ? [{ action: 'review', title: 'Review now' }] : [{ action: 'train', title: 'Practise' }, { action: 'daily', title: 'Daily challenge' }],
   }));
 });
 self.addEventListener('notificationclick', (e) => {

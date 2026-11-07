@@ -43,7 +43,7 @@ export default async (req) => {
   if (req.method === "POST") {   // send a test notification to this device only
     const rec = { ...cleanRec(body) };
     try {
-      await webpush.sendNotification(sub, JSON.stringify({ ...message("daily", { ...rec, due: 0 }), title: "Reminders are on", body: "You will get a nudge at the times you chose.", tag: "mm-test" }), { TTL: 3600 });
+      await webpush.sendNotification(sub, JSON.stringify({ ...message("daily", { ...rec, due: 0, ret: [] }), title: "Reminders are on", body: "You will get a nudge at the times you chose.", tag: "mm-test" }), { TTL: 3600 });
       return J({ ok: true });
     } catch (e) {
       if (e.statusCode === 404 || e.statusCode === 410) { await store.delete(k).catch(() => {}); return T("subscription expired", 410); }

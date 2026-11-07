@@ -24,9 +24,9 @@ let mode = 'all'; // which kind of session the trend charts use. Daily/Survival 
 const MODES = [['all', 'All'], ['train', 'Train'], ['daily', 'Daily'], ['survival', 'Survival']];
 const RANGES = [[20, 'Last 20'], [40, 'Last 40'], [100, 'Last 100']];
 let fOpen = false;   // the Filters panel (session type and history length) is folded away until asked for
-const inMode = (s) => s.m != 'flash' && (mode == 'all' || (mode == 'train' ? ['train', 'focus', 'zeta'].includes(s.m) : s.m == mode));
+const inMode = (s) => s.m != 'flash' && s.m != 'path' && (mode == 'all' || (mode == 'train' ? ['train', 'focus', 'zeta'].includes(s.m) : s.m == mode));
 /** The previous session of the same kind and length, so "vs prev" compares like with like. */
-const prevOf = (x) => { for (let i = S.sessions.indexOf(x) - 1; i >= 0; i--) { const y = S.sessions[i]; if (y.m == x.m && y.dur == x.dur) return y; } return null; };
+const prevOf = (x) => { if (x.m == 'path') return null; for (let i = S.sessions.indexOf(x) - 1; i >= 0; i--) { const y = S.sessions[i]; if (y.m == x.m && y.dur == x.dur) return y; } return null; };
 
 function progress() {
   document.title = 'Progress · Mental Math';

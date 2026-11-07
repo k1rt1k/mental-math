@@ -1,5 +1,5 @@
 // Read-only statistics derived from state: streaks, weekly comparisons, milestones, coaching text.
-import { S, avgLv, RECALL_GAP } from './state.js';
+import { S, avgLv, RECALL_GAP, PATH_RET } from './state.js';
 import { IDS, SK, SH, weakness, zetaEstimate } from './engine.js';
 import { TRICKS } from './tricks.js';
 import { ymd, dayAgo } from './util.js';
@@ -99,9 +99,13 @@ export function ctx() {
     perf: S.sessions.some((s) => s.n >= 30 && (s.ft ?? s.ok) == s.n),   // perfect = every answer right on the first try
     dy: Object.keys(S.daily || {}).length,
     sv: Math.max(0, ...S.sessions.filter((s) => s.m == 'survival').map((s) => s.ok)),
+    pm: masteredPaths().length,   // Learn paths with every stage and both retention checks passed
     spt: S.best && S.best.sprint ? S.best.sprint.t : 9999,   // best Sprint time in seconds
   };
 }
+
+/** Skills whose Learn path is mastered: all stages passed and every retention check passed. Read straight from saved progress (js/paths.js has the full picture). */
+export const masteredPaths = () => IDS.filter((k) => { const e = S.paths && S.paths[k]; return !!e && Array.isArray(e.st) && e.st.length > 0 && e.st.every((x) => x && x.pass > 0) && Array.isArray(e.ret) && e.ret.length >= PATH_RET && e.ret.every((r) => r && r.ok); });
 
 /** [id, label, test(ctx), hint] */
 export const MS = [
@@ -112,18 +116,28 @@ export const MS = [
   ['sv20', 'Survival: 20 correct', (c) => c.sv >= 20], ['sv50', 'Survival: 50 correct', (c) => c.sv >= 50],
   ['pf', 'Perfect session (30+ answers)', (c) => c.perf],
   ['sp1', 'First Sprint', (c) => c.spt < 9999], ['sp60', 'Sprint under 60 s', (c) => c.spt <= 60], ['sp40', 'Sprint under 40 s', (c) => c.spt <= 40],
+  ['pm1', 'First Learn path mastered', (c) => c.pm >= 1], ['pm5', '5 Learn paths mastered', (c) => c.pm >= 5], ['pm13', 'Every Learn path mastered', (c) => c.pm >= IDS.length],
 ];
 
 /** What the daily goal counts on the given day. One definition for Home, the plan and the recommendation. */
 /** Does this run count toward the daily goal? 2+ minutes of practice, a completed Sprint (20 right) or a Survival run of 90 s+. Short or empty runs never do. */
 export const countsToGoal = (x) => x.ok > 0 && (x.m == 'flash' ? x.ok >= 3 : (x.dur >= 120 || (x.m == 'sprint' && x.ok >= 20) || (x.m == 'survival' && x.dur >= 90)));   // a Flash run is short by nature, so it counts for the goal by rounds right, not by length
-export const todayCount = (now = Date.now()) => { const d = ymd(now); return S.sessions.filter((x) => ymd(x.t) == d && countsToGoal(x)).length; };
+/** Learn-path runs are short (a practice is 8 questions), so they count for the goal by the minute: every 2 minutes of path practice on a day is one goal session. */
+export const PATH_GOAL_S = 120;
+/** Seconds of Learn-path practice on a day, and how that converts to goal sessions. A run with nothing right never counts. */
+export function learnToday(now = Date.now()) {
+  const d = ymd(now), secs = S.sessions.filter((x) => x.m == 'path' && x.ok > 0 && ymd(x.t) == d).reduce((a, x) => a + x.dur, 0);
+  return { secs, units: Math.floor(secs / PATH_GOAL_S), toNext: PATH_GOAL_S - (secs % PATH_GOAL_S) };
+}
+export const todayCount = (now = Date.now()) => { const d = ymd(now); return S.sessions.filter((x) => x.m != 'path' && ymd(x.t) == d && countsToGoal(x)).length + learnToday(now).units; };
+/** Flash and Learn-path points are not comparable with timed play, so they stay out of pace charts and records. */
+export const isPace = (s) => s.m != 'flash' && s.m != 'path';
 
 /** When do you play best? Sessions grouped by time of day: [label, sessions, accuracy %, points per minute]. Needs 3+ sessions in a slot to count. */
 export const SLOTS = [['Morning', 5, 12], ['Afternoon', 12, 18], ['Evening', 18, 23], ['Night', 23, 29]];
 export function hourStats() {
   const out = SLOTS.map(([l]) => ({ l, s: 0, n: 0, ok: 0, pm: 0 }));
-  S.sessions.filter((x) => x.dur >= 60).forEach((x) => {
+  S.sessions.filter((x) => x.dur >= 60 && x.m != 'path').forEach((x) => {
     let h = new Date(x.t).getHours(); if (h < 5) h += 24;
     const i = SLOTS.findIndex(([, a, b]) => h >= a && h < b), o = out[i < 0 ? 3 : i];
     o.s++; o.n += x.n; o.ok += x.ok; o.pm += (x.pts * 60) / x.dur;
@@ -148,7 +162,7 @@ export function records() {
 }
 
 export function week(a, b) {
-  const now = Date.now(), x = S.sessions.filter((s) => s.t >= now - b * DAY && s.t < now - a * DAY), px = x.filter((s) => s.m != 'flash');   // Flash points are not comparable with the others, so they stay out of pace
+  const now = Date.now(), x = S.sessions.filter((s) => s.t >= now - b * DAY && s.t < now - a * DAY), px = x.filter((s) => s.m != 'flash').filter((s) => s.m != 'path');   // Flash and Learn-path points are not comparable with the others, so they stay out of pace
   const n = x.reduce((q, s) => q + s.n, 0), ok = x.reduce((q, s) => q + s.ok, 0), pc = px.reduce((q, s) => q + (s.pts * 60) / s.dur, 0);
   return { s: x.length, n, acc: n ? (100 * ok) / n : 0, pace: px.length ? pc / px.length : 0 };
 }
@@ -178,7 +192,7 @@ export function coach(e) {
 }
 
 /** Human-readable name for a saved session's mode id (history table, detail dialog, AI context). */
-const MODE_LABEL = { train: 'Train', focus: 'Focus', zeta: 'Custom ranges', daily: 'Daily challenge', survival: 'Survival', review: 'Review', sprint: 'Sprint' };
+const MODE_LABEL = { train: 'Train', focus: 'Focus', zeta: 'Custom ranges', daily: 'Daily challenge', survival: 'Survival', review: 'Review', sprint: 'Sprint', flash: 'Flash', path: 'Learn path' };
 export const modeLabel = (m) => MODE_LABEL[m] || 'Train';
 
 export const shareLine = (r) => {
@@ -186,7 +200,7 @@ export const shareLine = (r) => {
   // skill that actually appears in the saved run before falling back to it.
   const by = r.by && Object.keys(r.by).filter((k) => r.by[k] && r.by[k][0]);
   const focus = r.m == 'focus' && by && by.length == 1 ? by[0] : (S.cfg || {}).only;
-  const nm = r.m == 'review' ? 'Review' : r.m == 'daily' ? 'Daily challenge' : r.m == 'survival' ? 'Survival' : r.m == 'sprint' ? 'Sprint 20' : r.m == 'flash' ? 'Flash' : r.m == 'zeta' ? 'Custom ranges' : (r.m == 'focus' ? (SK[focus] || { n: 'Focus' }).n : 'Train') + ' ' + r.dur + 's';
+  const nm = r.m == 'review' ? 'Review' : r.m == 'daily' ? 'Daily challenge' : r.m == 'survival' ? 'Survival' : r.m == 'sprint' ? 'Sprint 20' : r.m == 'flash' ? 'Flash' : r.m == 'path' ? 'Learn path' : r.m == 'zeta' ? 'Custom ranges' : (r.m == 'focus' ? (SK[focus] || { n: 'Focus' }).n : 'Train') + ' ' + r.dur + 's';
   return `Mental Math ${ymd(r.t)} · ${nm} · ${r.ok} correct · ${Math.round((100 * r.ok) / Math.max(1, r.n))}% · ${r.pts} pts · ${r.tm}s avg · ${streak()}-day streak`;
 };
 export { SH };
@@ -296,7 +310,7 @@ export function plan(now = Date.now()) {
 }
 
 /** [current, target] toward a milestone, for the progress hints on locked ones. */
-const PROG = { s3: ['ls', 3], s7: ['ls', 7], s14: ['ls', 14], s30: ['ls', 30], a1: ['n', 100], a2: ['n', 1e3], a3: ['n', 5e3], a4: ['n', 2e4], l6: ['mx', 6], l8: ['mx', 8], l10: ['mx', 10], m6: ['mn', 6], d1: ['dy', 1], d7: ['dy', 7], d30: ['dy', 30], sv20: ['sv', 20], sv50: ['sv', 50] };
+const PROG = { s3: ['ls', 3], s7: ['ls', 7], s14: ['ls', 14], s30: ['ls', 30], a1: ['n', 100], a2: ['n', 1e3], a3: ['n', 5e3], a4: ['n', 2e4], l6: ['mx', 6], l8: ['mx', 8], l10: ['mx', 10], m6: ['mn', 6], d1: ['dy', 1], d7: ['dy', 7], d30: ['dy', 30], sv20: ['sv', 20], sv50: ['sv', 50], pm1: ['pm', 1], pm5: ['pm', 5], pm13: ['pm', IDS.length] };
 export function msProgress(id, c = ctx()) {
   const p = PROG[id];
   if (!p) return null;

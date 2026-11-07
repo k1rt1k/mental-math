@@ -46,18 +46,29 @@ const DAILY = [
   ['Ready for a round?', 'Your ratings only climb when you play.'],
 ];
 
+/** Learn-path retention checks whose time has come, from the list the app last sent ({ at, n, l } each). */
+export const retDue = (rec, now = Date.now()) => (Array.isArray(rec.ret) ? rec.ret : []).filter((x) => x && x.at > 0 && x.at <= now);
+
 /** Notification text for a reminder kind. `rec` supplies streak / due counts; `now` picks a rotating variant. */
 export function message(kind, rec, now = Date.now()) {
   const st = +rec.streak || 0, due = +rec.due || 0;
   const day = Math.floor(now / 864e5);
+  const rd = retDue(rec, now), one = rd[0] ? `${rd[0].n} ${String(rd[0].l || 'check').toLowerCase()}` : '';
   if (kind == 'streak') {
-    return { title: `Keep your ${st}-day streak alive`, body: 'A 2-minute session before bed is enough.', tag: 'mm-streak', url: '/?go=train' };
+    return { title: `Keep your ${st}-day streak alive`, body: rd.length ? `Your ${one} is ready, and Learn practice counts for the streak.` : 'A 2-minute session before bed is enough.', tag: 'mm-streak', url: rd.length ? '/?go=retain' : '/?go=train' };
+  }
+  if (rd.length) {   // a retention check is the one thing that cannot be done earlier, so it leads
+    const more = due >= 5 ? ` ${Math.min(due, 20)} review questions are waiting too.` : '';
+    return rd.length == 1 ? { title: `Your ${one} is ready`, body: 'Six questions show what actually stuck.' + more, tag: 'mm-daily', url: '/?go=retain' } : { title: `${rd.length} retention checks are ready`, body: 'A few minutes shows what actually stuck.' + more, tag: 'mm-daily', url: '/?go=retain' };
   }
   if (due >= 5) return { title: `${Math.min(due, 20)} questions are due for review`, body: 'Spaced review is the fastest way to stop repeating a mistake.', tag: 'mm-daily', url: '/?go=review' };
   const [t, b] = DAILY[day % DAILY.length];
   const flame = st >= 2 ? ` ${st}-day streak, keep it going.` : '';
   return { title: t, body: b + flame, tag: 'mm-daily', url: '/?go=train' };
 }
+
+/** Retention checks the app expects to open: at most 26, each a time plus short plain-text names. */
+const cleanRet = (a) => (Array.isArray(a) ? a : []).slice(0, 26).map((x) => ({ at: Math.round(+(x && x.at)), n: String((x && x.n) || '').replace(/[^\p{L}\p{N} &'-]/gu, '').slice(0, 24), l: String((x && x.l) || '').replace(/[^\p{L}\p{N} -]/gu, '').slice(0, 24) })).filter((x) => Number.isFinite(x.at) && x.at > 0 && x.at < 8.64e15);
 
 /** Clamp and normalise a client-supplied reminder record so a bad payload can never break the scheduler. */
 export function cleanRec(b) {
@@ -69,5 +80,5 @@ export function cleanRec(b) {
   times = times.filter((t, i) => times.findIndex((u) => slotKey(u) === slotKey(t)) === i);
   if (!times.length) times = [{ h: 19, m: 0 }];
   const days = [...new Set((Array.isArray(b.days) ? b.days : [0, 1, 2, 3, 4, 5, 6]).map((d) => int(d, 0, 6, -1)).filter((d) => d >= 0))].sort();
-  return { times, days: days.length ? days : [0, 1, 2, 3, 4, 5, 6], skip: b.skip !== false, tz, last: date(b.last), streak: int(b.streak, 0, 9999, 0), due: int(b.due, 0, 9999, 0), saveStreak: b.saveStreak !== false, on: b.on !== false };
+  return { times, days: days.length ? days : [0, 1, 2, 3, 4, 5, 6], skip: b.skip !== false, tz, last: date(b.last), streak: int(b.streak, 0, 9999, 0), due: int(b.due, 0, 9999, 0), saveStreak: b.saveStreak !== false, on: b.on !== false, ret: cleanRet(b.ret) };
 }

@@ -3,7 +3,7 @@ import { IDS, SK, COL } from '../engine.js';
 import { TRICKS } from '../tricks.js';
 import { esc } from '../util.js';
 import { weakestSkills } from '../stats.js';
-import { PATHS } from '../paths.js';
+import { PATHS, dueChecks } from '../paths.js';
 import { pathsGrid } from './paths.js';
 import { register, A } from '../nav.js';
 import { drill } from './home.js';
@@ -28,7 +28,8 @@ function learn() {
     const mastered = o.n >= 15 && acc >= 90 && sp && sp <= 1;
     return `${mastered ? '<span class="pill ok2">Mastered ✓</span> ' : ''}<span class="mu">You: ${o.n} tries · <span class="${acc >= 90 ? 'ok' : acc < 75 ? 'bad' : ''}">${acc}%</span> accurate${sp ? ' · ' + sp.toFixed(2) + '× par time' : ''}${sp ? ib('l.par') : ''}</span>`;
   };
-  const seg = `<div class="seg learnseg" role="group" aria-label="Learn"><button aria-pressed="${tab == 'paths'}" data-act="learnTab" data-v="paths">Guided paths</button><button aria-pressed="${tab == 'lib'}" data-act="learnTab" data-v="lib">Shortcut library</button></div>`;
+  const nChk = dueChecks().length;
+  const seg = `<div class="seg learnseg" role="group" aria-label="Learn"><button aria-pressed="${tab == 'paths'}" data-act="learnTab" data-v="paths">Guided paths${nChk ? ` <span class="badge-inline" aria-label="${esc(nChk + (nChk == 1 ? ' retention check ready' : ' retention checks ready'))}">${nChk}</span>` : ''}</button><button aria-pressed="${tab == 'lib'}" data-act="learnTab" data-v="lib">Shortcut library</button></div>`;
   if (tab == 'paths') {
     document.querySelector('#main').innerHTML = `<div class="hd"><h1>Learn${ib('l.path')}</h1></div>${seg}
     <p class="mu" style="margin:14px 0 16px;max-width:64ch">A path takes one skill from the basics to a timed mastery test. Every stage teaches, shows a worked example, lets you practise, then checks what you can do alone. Passing a check unlocks the next stage, and two later checks (a day and a week on) test what you still remember.</p>${pathsGrid()}`;
