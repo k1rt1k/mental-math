@@ -2,6 +2,11 @@
 
 Newest first. What is true of the app today is in [README.md](README.md). The release number is the `VERSION` file.
 
+## 14.70
+
+- **Fixed: blank screen on launch for anyone with saved Learn-path progress.** The saved state is read the moment `state.js` loads, but the path-cleaning helpers it needs (`cleanStage`, `cleanRet`, `fromLegacy`, `betterStage`, `betterRet`) were `const`s declared further down the file, so loading threw `Cannot access 'cleanStage' before initialization` and nothing rendered. Fresh installs were not affected, which is why it slipped through. They are now hoisted function declarations. The version is bumped so the service worker replaces the cached broken file.
+- Tests: `test/v1469-saved-paths-boot.test.mjs` boots the real module with saved paths in both the new and the v14.47 shapes.
+
 ## 14.69
 
 - Guided learning paths rebuilt: five stages per skill (Foundation, Intermediate, Mental shortcuts, Independent practice, Mastery assessment), each with teach, worked example, practice and check. Mastery is a timed test plus next-day and one-week retention checks.

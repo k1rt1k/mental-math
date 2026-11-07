@@ -477,9 +477,9 @@ function mergeRecallEntry(x, y) {
  * at = first activity. ret = the delayed retention checks (next day, one week). Progress only ever grows, so a merge keeps
  * the furthest value per field and can never un-pass a stage.
  * Data from v14.47's first paths (rows keyed by stage number: { demo, pass, n, ft }) is carried over as passed stages. */
-const cleanStage = (r) => (isObj(r) ? { ph: clamp(Math.round(num(r.ph, 0)), 0, 3), pass: Math.max(0, num(r.pass, 0)), sc: clamp(num(r.sc, 0), 0, 1), at: Math.max(0, num(r.at, 0)) } : { ph: 0, pass: 0, sc: 0, at: 0 });
-const cleanRet = (r) => (isObj(r) ? { t: Math.max(0, num(r.t, 0)), ok: r.ok ? 1 : 0 } : { t: 0, ok: 0 });
-const fromLegacy = (e) => ({ st: Array.from({ length: PATH_STAGES }, (_, i) => { const r = e[i + 1]; return isObj(r) ? { ph: +r.pass ? 3 : +r.demo ? 2 : 0, pass: Math.max(0, num(r.pass, 0)), sc: r.n ? clamp(num(r.ft, 0) / num(r.n, 1), 0, 1) : 0, at: Math.max(0, num(r.at, 0)) } : null; }) });
+function cleanStage(r) { return (isObj(r) ? { ph: clamp(Math.round(num(r.ph, 0)), 0, 3), pass: Math.max(0, num(r.pass, 0)), sc: clamp(num(r.sc, 0), 0, 1), at: Math.max(0, num(r.at, 0)) } : { ph: 0, pass: 0, sc: 0, at: 0 }); }
+function cleanRet(r) { return (isObj(r) ? { t: Math.max(0, num(r.t, 0)), ok: r.ok ? 1 : 0 } : { t: 0, ok: 0 }); }
+function fromLegacy(e) { return ({ st: Array.from({ length: PATH_STAGES }, (_, i) => { const r = e[i + 1]; return isObj(r) ? { ph: +r.pass ? 3 : +r.demo ? 2 : 0, pass: Math.max(0, num(r.pass, 0)), sc: r.n ? clamp(num(r.ft, 0) / num(r.n, 1), 0, 1) : 0, at: Math.max(0, num(r.at, 0)) } : null; }) }); }
 export function cleanPaths(p) {
   const out = {};
   if (!isObj(p)) return out;
@@ -493,8 +493,8 @@ export function cleanPaths(p) {
   });
   return out;
 }
-const betterStage = (x, y) => (((x.pass > 0) - (y.pass > 0)) || x.ph - y.ph || x.sc - y.sc || y.pass - x.pass) >= 0 ? x : y;
-const betterRet = (x, y) => ((x.ok - y.ok) || x.t - y.t) >= 0 ? x : y;
+function betterStage(x, y) { return (((x.pass > 0) - (y.pass > 0)) || x.ph - y.ph || x.sc - y.sc || y.pass - x.pass) >= 0 ? x : y; }
+function betterRet(x, y) { return ((x.ok - y.ok) || x.t - y.t) >= 0 ? x : y; }
 export function mergePaths(a, b) {
   a = cleanPaths(a); b = cleanPaths(b);
   const out = {};
