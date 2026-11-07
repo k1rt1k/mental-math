@@ -55,3 +55,13 @@ test('the weekly summary counts the last seven days against the seven before', a
   assert.ok(weekLines(w).some((l) => /vs last week/.test(l)));
   replaceState(fresh()); assert.equal(weekData(NOW).empty, true); assert.equal(weekText(weekData(NOW)), '');
 });
+
+test('the weekly card imports every weekdata helper it calls (a missing sgn crashed Progress once both weeks had sessions)', async () => {
+  const wd = await import('../public/js/weekdata.js');
+  const src = readFileSync(new URL('../public/js/weekly.js', import.meta.url), 'utf8');
+  const imp = /import \{([^}]*)\} from '\.\/weekdata\.js'/.exec(src)[1].split(',').map((x) => x.trim());
+  for (const name of Object.keys(wd)) if (new RegExp('\\b' + name + '\\(').test(src)) assert.ok(imp.includes(name), name + ' is used in weekly.js but not imported');
+  assert.equal(wd.sgn(3), '+3'); assert.equal(wd.sgn(-2), '−2'); assert.equal(wd.sgn(0), '±0');
+  // every bare helper weekly.js calls must exist somewhere it can reach
+  assert.ok(typeof wd.sgn == 'function', 'sgn must be exported');
+});

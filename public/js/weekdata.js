@@ -18,7 +18,7 @@ export function weekData(now = Date.now()) {
   const fl = cur.filter((s) => s.m == 'flash');
   return { empty: !cur.length, ...c, prev: p, days, streak: streak(), gain: gains[0] && gains[0][1] >= 1 ? { id: gains[0][0], by: Math.round(gains[0][1]) } : null, daily: dly ? { day: dly[0], pts: dly[1] } : null, flash: fl.length ? { runs: fl.length, best: Math.max(...fl.map((s) => s.pts)) } : null };
 }
-const sgn = (d) => (d > 0 ? '+' : d < 0 ? '−' : '±') + Math.abs(d);
+export const sgn = (d) => (d > 0 ? '+' : d < 0 ? '−' : '±') + Math.abs(d);
 export function weekLines(w) {
   if (w.empty) return [];
   const L = [`${w.days} of 7 days practised${w.streak ? ', ' + w.streak + '-day streak' : ''}`, `${w.sessions} session${w.sessions == 1 ? '' : 's'}, ${w.n} answers, ${w.min} min`, `Accuracy ${w.acc}%${w.prev.sessions ? ' (' + sgn(w.acc - w.prev.acc) + ' vs last week)' : ''}`];

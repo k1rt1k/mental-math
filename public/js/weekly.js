@@ -3,7 +3,7 @@ import { esc } from './util.js';
 import { A } from './nav.js';
 import { copy, toast } from './ui.js';
 import { shareCard } from './share.js';
-import { weekData, weekLines, weekText } from './weekdata.js';
+import { weekData, weekLines, weekText, sgn } from './weekdata.js';
 
 export function weekCard() {
   const w = weekData();

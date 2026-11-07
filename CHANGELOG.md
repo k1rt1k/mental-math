@@ -2,6 +2,10 @@
 
 Newest first. What is true of the app today is in [README.md](README.md). The release number is the `VERSION` file.
 
+## v14.55
+- **Fixed: Progress crashed ("This screen hit a problem") once there were sessions in both the last seven days and the seven before.** The *Your week* card (new in 14.54) called `sgn()` for its "vs last" deltas, but `sgn` was neither exported from `weekdata.js` nor imported in `weekly.js`, so painting the card threw a `ReferenceError`. It is now exported and imported. Nothing stored was affected; no data was lost.
+- Test: `test/v1454-flash-weekly.test.mjs` now checks that `weekly.js` imports every `weekdata.js` helper it calls, and the behaviour of `sgn`.
+
 ## v14.54
 - **Flash (chain) mode.** Home, *Flash*. Numbers flash one at a time, you keep a running total and type it. Five rounds per run; choose how many numbers (4, 6, 8, 10), the speed (1.5 s down to 0.45 s each), the digits (1 to 3) and whether numbers are subtracted too. The total never goes below zero, so no minus key is needed, and the same number never shows twice in a row. A 3-2-1 lead-in, a blank gap between numbers, nothing flashes into a hidden tab, Escape stops a run, Enter moves on. After each round the full sum is shown. A finished run with at least one round right is saved as one session (`m: 'flash'`, points grow with count, digits and speed), so it syncs like any other, but it has no skills or ratings, does not count towards the daily goal or streak, and is kept out of the pace and trend charts. Pure logic in `public/js/chain.js`, screen in `public/js/views/flash.js`. The settings are kept on the device only.
 - **Weekly summary card.** Progress, Overview, *Your week*: days practised out of seven, answers, accuracy and minutes against the week before, the biggest rating gain, best Daily, Flash runs, and *Copy text* / *Share image* (the same card the results screen shares). It is worked out from the sessions on the device; nothing is sent anywhere. `public/js/weekdata.js` (numbers), `public/js/weekly.js` (card).
