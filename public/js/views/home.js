@@ -55,6 +55,7 @@ function home() {
     `<button class="mode" data-act="daily"><span class="mi">${icon('cal')}</span><b>Daily</b><span class="mdesc">${dly ? 'Today ' + dly + ' pts' : '60\u00a0s · same for everyone'}</span></button>`,
     `<button class="mode" data-act="survival"><span class="mi">${icon('heart')}</span><b>Survival</b><span class="mdesc">3 lives${svBest ? ' · best ' + svBest.pts : ', rising difficulty'}</span></button>`,
     `<button class="mode" data-act="sprint"><span class="mi">${icon('bolt')}</span><b>Sprint</b><span class="mdesc">20 questions${S.best.sprint ? ' · best ' + S.best.sprint.t + '\u00a0s' : ', fastest time'}</span></button>`,
+    `<button class="mode" data-act="flash"><span class="mi">${icon('star')}</span><b>Flash</b><span class="mdesc">${(() => { const b = Math.max(0, ...S.sessions.filter((x) => x.m == 'flash').map((x) => x.pts)); return b ? 'Running total · best ' + b : 'Numbers flash, you add'; })()}</span></button>`,
   ];
   if (has) { modes.shift(); modes.push(
     `<button class="mode" data-act="weakest"><span class="mi">${icon('target')}</span><b>Drill weakest</b><span class="mdesc">${esc(SK[w1].n)}</span></button>`); }

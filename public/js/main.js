@@ -14,6 +14,7 @@ import './views/coach.js';
 import './views/progress.js';
 import './views/learn.js';
 import './views/notebook.js';
+import './views/flash.js';
 import { settings, wireImport, keysDialog, placement, helpDialog } from './views/settings.js';
 import { resultsKey } from './views/results.js';
 import { setBadge, refreshSoon } from './notify.js';

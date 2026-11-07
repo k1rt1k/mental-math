@@ -230,3 +230,12 @@ h2.sg { margin: 28px 0 12px; scroll-margin-top: 16px; }
 
 /* ---------- Daily leaderboard ---------- */
 .tbl tr.you td { background: color-mix(in srgb, var(--ac) 12%, transparent); font-weight: 650; }
+
+/* ---------- Flash mode and the weekly card ---------- */
+.flw { display: grid; justify-items: center; align-content: center; gap: 14px; min-height: 58vh; text-align: center; }
+.fl-n { font: 600 clamp(88px, 22vw, 200px)/1 var(--qfont); letter-spacing: -.03em; min-height: 1.1em; color: var(--tx); font-variant-numeric: tabular-nums; }
+.fl-n.on { color: var(--ac); }
+.fl-q { font: 600 var(--t-lg) var(--sans); } .fl-a { max-width: 260px; text-align: center; font: 600 36px var(--mono); min-height: 64px; }
+.fl-r { font: 600 clamp(44px, 10vw, 72px)/1 var(--qfont); } .fl-r.ok { color: var(--ok); } .fl-r.bad { color: var(--bad); }
+.fl-x { font: 600 var(--t-lg) var(--mono); word-break: break-word; }
+.wk7l { margin: 12px 0 0; padding-left: 18px; color: var(--mu); } .wk7l li + li { margin-top: 4px; }

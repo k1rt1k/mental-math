@@ -117,9 +117,9 @@ export function records() {
 }
 
 export function week(a, b) {
-  const now = Date.now(), x = S.sessions.filter((s) => s.t >= now - b * DAY && s.t < now - a * DAY);
-  const n = x.reduce((q, s) => q + s.n, 0), ok = x.reduce((q, s) => q + s.ok, 0), pc = x.reduce((q, s) => q + (s.pts * 60) / s.dur, 0);
-  return { s: x.length, n, acc: n ? (100 * ok) / n : 0, pace: x.length ? pc / x.length : 0 };
+  const now = Date.now(), x = S.sessions.filter((s) => s.t >= now - b * DAY && s.t < now - a * DAY), px = x.filter((s) => s.m != 'flash');   // Flash points are not comparable with the others, so they stay out of pace
+  const n = x.reduce((q, s) => q + s.n, 0), ok = x.reduce((q, s) => q + s.ok, 0), pc = px.reduce((q, s) => q + (s.pts * 60) / s.dur, 0);
+  return { s: x.length, n, acc: n ? (100 * ok) / n : 0, pace: px.length ? pc / px.length : 0 };
 }
 
 /** Rating of a skill as of N days ago (from the per-session snapshots). */
@@ -155,7 +155,7 @@ export const shareLine = (r) => {
   // skill that actually appears in the saved run before falling back to it.
   const by = r.by && Object.keys(r.by).filter((k) => r.by[k] && r.by[k][0]);
   const focus = r.m == 'focus' && by && by.length == 1 ? by[0] : (S.cfg || {}).only;
-  const nm = r.m == 'review' ? 'Review' : r.m == 'daily' ? 'Daily challenge' : r.m == 'survival' ? 'Survival' : r.m == 'sprint' ? 'Sprint 20' : r.m == 'zeta' ? 'Custom ranges' : (r.m == 'focus' ? (SK[focus] || { n: 'Focus' }).n : 'Train') + ' ' + r.dur + 's';
+  const nm = r.m == 'review' ? 'Review' : r.m == 'daily' ? 'Daily challenge' : r.m == 'survival' ? 'Survival' : r.m == 'sprint' ? 'Sprint 20' : r.m == 'flash' ? 'Flash' : r.m == 'zeta' ? 'Custom ranges' : (r.m == 'focus' ? (SK[focus] || { n: 'Focus' }).n : 'Train') + ' ' + r.dur + 's';
   return `Mental Math ${ymd(r.t)} · ${nm} · ${r.ok} correct · ${Math.round((100 * r.ok) / Math.max(1, r.n))}% · ${r.pts} pts · ${r.tm}s avg · ${streak()}-day streak`;
 };
 export { SH };

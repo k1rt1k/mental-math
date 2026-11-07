@@ -12,6 +12,7 @@ import { showAiSheet } from '../ai.js';
 import { askSkillAi } from '../skillAi.js';
 import { ZDEF, zNorm } from '../engine.js';
 import { ib, ibs } from '../info.js';
+import { weekCard } from '../weekly.js';
 const statB = (k) => ib('p.' + k);
 
 let range = 40;   // sessions shown in trend charts
@@ -20,7 +21,7 @@ let mode = 'all'; // which kind of session the trend charts use. Daily/Survival 
 const MODES = [['all', 'All'], ['train', 'Train'], ['daily', 'Daily'], ['survival', 'Survival']];
 const RANGES = [[20, 'Last 20'], [40, 'Last 40'], [100, 'Last 100']];
 let fOpen = false;   // the Filters panel (session type and history length) is folded away until asked for
-const inMode = (s) => mode == 'all' || (mode == 'train' ? ['train', 'focus', 'zeta'].includes(s.m) : s.m == mode);
+const inMode = (s) => s.m != 'flash' && (mode == 'all' || (mode == 'train' ? ['train', 'focus', 'zeta'].includes(s.m) : s.m == mode));
 /** The previous session of the same kind and length, so "vs prev" compares like with like. */
 const prevOf = (x) => { for (let i = S.sessions.indexOf(x) - 1; i >= 0; i--) { const y = S.sessions[i]; if (y.m == x.m && y.dur == x.dur) return y; } return null; };
 
@@ -66,6 +67,7 @@ function progress() {
     <div><h2>Accuracy<span class="sub">%</span>${ib('p.acc')}</h2><div class="card">${spark(L.map((s) => pct(s.ok, Math.max(1, s.n))), '#ff9f5a', { unit: '%', labels: L.map(sessLabel) })}</div></div>
     <div><h2>Answers per day<span class="sub">last 14 days</span></h2><div class="card">${(() => { const D = [...Array(14)].map((_, i) => ymd(dayAgo(13 - i))); return bars(D.map((d) => S.sessions.filter((s) => ymd(s.t) == d).reduce((q, s) => q + s.n, 0)), 'var(--ac)', D); })()}</div></div>
   </div>
+  ${weekCard()}
   <h2>This week vs last${ib('p.wvl')}</h2>
   <div class="card wvl"><div><span>Sessions</span><b>${a.s}</b>${dlt(a.s, b.s).replace('<span', '<small').replace('</span>', '</small>')}</div><div><span>Answers</span><b>${a.n}</b>${dlt(a.n, b.n).replace('<span', '<small').replace('</span>', '</small>')}</div><div><span>Accuracy</span><b>${Math.round(a.acc)}%</b>${dlt(a.acc, b.acc, '%').replace('<span', '<small').replace('</span>', '</small>')}</div><div><span>Pace / min</span><b>${Math.round(a.pace)}</b>${dlt(a.pace, b.pace).replace('<span', '<small').replace('</span>', '</small>')}</div></div>
   ${hourCard}`,
