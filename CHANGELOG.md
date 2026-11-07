@@ -2,6 +2,16 @@
 
 Newest first. What is true of the app today is in [README.md](README.md). The release number is the `VERSION` file.
 
+## v14.56
+- **Phone tab bar: five tabs, readable labels.** The bottom bar drops Settings, so each tab is wider and the labels go from 8.5–10 px to 11–12 px (no negative letter-spacing, taller 54 px targets, larger icons and badge). Settings is a gear at the top right of Home on phones; the desktop rail still has all six. Notebook stays a tab because it carries the due-review badge. Settings is not reachable from other screens on a phone except through Home (the `s` shortcut still works with a keyboard).
+- **Flash answers use the shared number pad.** With the keypad on (the default on touch), the answer is a readout driven by the same `.pad` as practice (same flip setting), so the phone keyboard never covers the page; the physical keyboard (digits, Backspace, Enter) drives the same readout. With the keypad off, a plain number box is used. Typed or pasted junk is stripped to digits (at most six): `12abc` is `12`, and an empty answer is ignored.
+- **Sound and vibration.** A soft tick per number (rising as the chain grows), a chime for a right answer, a low buzz plus a short vibration for a wrong one. They follow the same Sound and Vibration switches as the other modes.
+- **Pause.** A Pause button (and Esc) stops the run; Resume starts the current round again with new numbers; Quit run leaves without saving. Esc while paused quits.
+- **Best per setting.** Each combination of numbers, speed, digits and subtract keeps its own best, shown on the setup screen and the results screen. Kept on this device only, like the Flash settings.
+- **Streak and goal.** Correction to 14.54: a Flash run with a right answer *does* count for the streak (any session with a right answer does); the 14.54 note saying it did not was wrong. It now also counts toward the daily goal when at least 3 of 5 rounds are right (before, that depended on how long the run happened to take), and the results screen says so.
+- **Look.** The flashing number glows in the accent colour and pops in (still, under Reduce motion and in the light theme). All inline styles in `flash.js` moved to classes in `extras.css`.
+- Tests: `test/v1456-nav-flash.test.mjs`; `test/v144-mobile.test.mjs` now expects five columns.
+
 ## v14.55
 - **Fixed: Progress crashed ("This screen hit a problem") once there were sessions in both the last seven days and the seven before.** The *Your week* card (new in 14.54) called `sgn()` for its "vs last" deltas, but `sgn` was neither exported from `weekdata.js` nor imported in `weekly.js`, so painting the card threw a `ReferenceError`. It is now exported and imported. Nothing stored was affected; no data was lost.
 - Test: `test/v1454-flash-weekly.test.mjs` now checks that `weekly.js` imports every `weekdata.js` helper it calls, and the behaviour of `sgn`.

@@ -9,8 +9,8 @@ const html = readFileSync(new URL('../public/index.html', import.meta.url), 'utf
 const sw = readFileSync(new URL('../public/sw.js', import.meta.url), 'utf8');
 const nav = readFileSync(new URL('../public/js/main.js', import.meta.url), 'utf8');
 
-test('mobile bottom navigation defines six non-wrapping columns', () => {
-  assert.match(css, /#tabs\s*\{[^}]*grid-template-columns:\s*repeat\(6,\s*minmax\(0,\s*1fr\)\)/s);
+test('mobile bottom navigation defines five non-wrapping columns', () => {
+  assert.match(css, /#tabs\s*\{[^}]*grid-template-columns:\s*repeat\(5,\s*minmax\(0,\s*1fr\)\)/s);
   assert.match(css, /#tabs \.nv\s*\{[^}]*min-width:\s*0/s);
   assert.match(css, /#tabs \.nv > span:last-child\s*\{[^}]*white-space:\s*nowrap/s);
 });

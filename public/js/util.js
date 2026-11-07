@@ -37,7 +37,7 @@ export const ago = (t) => {
 };
 
 /** Shown in the footer. Keep in step with the cache name in sw.js (a test enforces this). */
-export const VERSION = '14.55';
+export const VERSION = '14.56';
 /** "due now" / "due in 40 min" / "due in 3 days" for a spaced-review timestamp. */
 export const dueIn = (t, now = Date.now()) => {
   const m = Math.round((t - now) / 6e4);

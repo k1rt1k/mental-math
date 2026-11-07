@@ -15,3 +15,7 @@ export function makeChain(cfg, rnd = Math.random) {
 export const roundPts = (cfg) => Math.round(cfg.c * cfg.d * (1000 / cfg.s) * 10);
 export const expr = (ch) => ch.items.map((q, i) => (i ? (q.sub ? ' − ' : ' + ') : '') + q.x).join('') + ' = ' + ch.total;
 
+/** The key a Flash setting is filed under, so every combination keeps its own best. */
+export const bestKey = (c) => [c.c, c.s, c.d, c.neg ? 1 : 0].join('-');
+/** Digits only, at most six, so typed or pasted junk can never become an answer ("12abc" is 12, never accepted as is). */
+export const digitsOnly = (s) => String(s ?? '').replace(/\D/g, '').slice(0, 6);

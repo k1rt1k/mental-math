@@ -85,7 +85,7 @@ export const MS = [
 
 /** What the daily goal counts on the given day. One definition for Home, the plan and the recommendation. */
 /** Does this run count toward the daily goal? 2+ minutes of practice, a completed Sprint (20 right) or a Survival run of 90 s+. Short or empty runs never do. */
-export const countsToGoal = (x) => x.ok > 0 && (x.dur >= 120 || (x.m == 'sprint' && x.ok >= 20) || (x.m == 'survival' && x.dur >= 90));
+export const countsToGoal = (x) => x.ok > 0 && (x.m == 'flash' ? x.ok >= 3 : (x.dur >= 120 || (x.m == 'sprint' && x.ok >= 20) || (x.m == 'survival' && x.dur >= 90)));   // a Flash run is short by nature, so it counts for the goal by rounds right, not by length
 export const todayCount = (now = Date.now()) => { const d = ymd(now); return S.sessions.filter((x) => ymd(x.t) == d && countsToGoal(x)).length; };
 
 /** When do you play best? Sessions grouped by time of day: [label, sessions, accuracy %, points per minute]. Needs 3+ sessions in a slot to count. */

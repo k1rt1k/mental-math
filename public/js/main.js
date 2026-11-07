@@ -25,11 +25,11 @@ import './motion.js';
 const NAV = [['home', 'Train', 'home'], ['coach', 'Coach', 'sparkle'], ['learn', 'Learn', 'bulb'], ['progress', 'Progress', 'chart'], ['notebook', 'Notebook', 'book'], ['settings', 'Settings', 'gear']];
 function drawNav() {
   const now = Date.now(), due = Object.values(S.weak).filter((w) => w.due <= now).length, st = streak(), runs = S.sessions.length;
-  const btns = NAV.map(([id, l, ic]) => { const n = id == 'notebook' && due ? (due > 99 ? '99+' : due) : ''; return `<button class="nv" data-go="${esc(id)}" aria-label="${esc(l)}${n ? ', ' + due + ' to review' : ''}"><span class="nvi">${icon(ic)}${n ? `<span class="badge">${n}</span>` : ''}</span><span>${l}</span></button>`; }).join('');
+  const mk = (list) => list.map(([id, l, ic]) => { const n = id == 'notebook' && due ? (due > 99 ? '99+' : due) : ''; return `<button class="nv" data-go="${esc(id)}" aria-label="${esc(l)}${n ? ', ' + due + ' to review' : ''}"><span class="nvi">${icon(ic)}${n ? `<span class="badge">${n}</span>` : ''}</span><span>${l}</span></button>`; }).join(''), btns = mk(NAV);
   setBadge(due);
   // The rail stays a compact icon rail; the wordmark and the streak/session context live inside it without adding rows.
   $('#rail').innerHTML = `<a class="brand" href="#/" aria-label="Mental Math, go home"><img class="logo" src="icon.svg" alt="" width="42" height="42"><span class="wm">Mental Math</span></a>${btns}<div class="railgrow"></div><div class="railfoot" aria-label="Your progress"><span title="${st ? st + '-day streak' : 'No streak yet'}">${icon('flame', 'fill')}${st || '–'}</span><span title="${runs} ${runs == 1 ? 'session' : 'sessions'} logged">${icon('chart', 'chart')}${runs}</span></div>`;
-  $('#tabs').innerHTML = btns;
+  $('#tabs').innerHTML = mk(NAV.filter(([id]) => id != 'settings'));   // five tabs on a phone, so the labels can be readable; Settings is the gear on Home (the rail keeps it)
   document.querySelectorAll('[data-go]').forEach((b) => b.dataset.go == view.scr && b.setAttribute('aria-current', 'page'));
 }
 onSave(drawNav);

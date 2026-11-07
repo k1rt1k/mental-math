@@ -1,5 +1,5 @@
 // Service worker: precache the app shell, network-first with a timeout so a flaky connection never hangs the app.
-const C = 'mm-v14-55';
+const C = 'mm-v14-56';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'icon-monochrome-512.png', 'apple-touch-icon.png', 'favicon-32.png', 'badge-96.png', 'css/style.css', 'css/motion.css', 'css/extras.css', 'fonts/inter.woff2', 'fonts/fraunces.woff2', 'fonts/jbmono.woff2', 'fonts/sym.woff2', 'fonts/OFL.txt',
   'js/boot.js', 'js/main.js', 'js/util.js', 'js/engine.js', 'js/state.js', 'js/stats.js', 'js/session.js', 'js/sync.js', 'js/ui.js', 'js/charts.js', 'js/motion.js', 'js/morph.js', 'js/nav.js', 'js/theme.js', 'js/tricks.js', 'js/notify.js', 'js/ai.js', 'js/aiLocal.js', 'js/skillAi.js',
   'js/paths.js', 'js/views/home.js', 'js/views/play.js', 'js/views/results.js', 'js/views/progress.js', 'js/views/notebook.js', 'js/views/learn.js', 'js/views/settings.js', 'js/views/coach.js', 'js/richtext.js', 'js/board.js', 'js/chain.js', 'js/weekly.js', 'js/weekdata.js', 'js/views/flash.js', 'js/share.js', 'js/info.js', 'js/infotext.js'];

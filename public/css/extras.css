@@ -233,9 +233,26 @@ h2.sg { margin: 28px 0 12px; scroll-margin-top: 16px; }
 
 /* ---------- Flash mode and the weekly card ---------- */
 .flw { display: grid; justify-items: center; align-content: center; gap: 14px; min-height: 58vh; text-align: center; }
+.flw.ask { min-height: 0; align-content: start; }
+.fl-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: min(100%, 420px); }
 .fl-n { font: 600 clamp(88px, 22vw, 200px)/1 var(--qfont); letter-spacing: -.03em; min-height: 1.1em; color: var(--tx); font-variant-numeric: tabular-nums; }
-.fl-n.on { color: var(--ac); }
+.fl-n.on { color: var(--ac); text-shadow: 0 0 .32em color-mix(in srgb, var(--ac) 55%, transparent), 0 0 .9em color-mix(in srgb, var(--ac) 24%, transparent); animation: fl-pop .14s var(--ease, ease-out) both; }
+[data-theme=light] .fl-n.on { text-shadow: none; }
+[data-motion=reduce] .fl-n.on { animation: none; }
+@keyframes fl-pop { from { transform: scale(.9); opacity: .25; } to { transform: none; opacity: 1; } }
 .fl-q { font: 600 var(--t-lg) var(--sans); } .fl-a { max-width: 260px; text-align: center; font: 600 36px var(--mono); min-height: 64px; }
+.fl-val { min-width: 5ch; min-height: 64px; padding: 0 18px; display: flex; align-items: center; justify-content: center; font: 600 clamp(40px, 12vw, 56px)/1 var(--mono); font-variant-numeric: tabular-nums; border-bottom: 2px solid var(--ln2); }
+.fl-val .cur { display: inline-block; width: 3px; height: .86em; margin-left: 3px; border-radius: 2px; background: currentColor; animation: blink 1.05s steps(1) infinite; }
+.fl-pad, .fl-padact { width: min(100%, 420px); }
+.fl-padact { grid-template-columns: 1fr; }
+.padact.fl-padact .btn.primary { background: linear-gradient(180deg, var(--btn-top), var(--btn-bot)); border-color: color-mix(in srgb, var(--ac) 70%, #000); color: var(--ach); }
 .fl-r { font: 600 clamp(44px, 10vw, 72px)/1 var(--qfont); } .fl-r.ok { color: var(--ok); } .fl-r.bad { color: var(--bad); }
 .fl-x { font: 600 var(--t-lg) var(--mono); word-break: break-word; }
+.fl-card { max-width: 640px; } .fl-lead { margin: 0 0 6px; } .fl-best { margin-top: 10px; } .fl-note { margin: 12px 0 0; font-size: var(--t-xs); }
+.fl-sub { font-size: var(--t-sm); } .fl-tip { max-width: 44ch; margin-top: 8px; }
+.fl-btns { margin-top: 14px; } .fl-btns.c { justify-content: center; } .flw .fl-btns { margin-top: 6px; }
+/* Settings sits behind a gear in Home's header on phones (the bottom bar has five tabs); the desktop rail still has it. */
+.hd-gear { display: none; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 999px; background: none; color: var(--mu); cursor: pointer; }
+.hd-gear .ic { width: 22px; height: 22px; } .hd-gear:hover { background: var(--c2); color: var(--tx); }
+@media (max-width: 760px) { .hd-gear { display: inline-grid; } }
 .wk7l { margin: 12px 0 0; padding-left: 18px; color: var(--mu); } .wk7l li + li { margin-top: 4px; }
