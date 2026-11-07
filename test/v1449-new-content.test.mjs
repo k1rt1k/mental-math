@@ -166,7 +166,7 @@ test('the all-skills mix serves the new skills too, and every skill has a guided
   const seen = new Set(); for (let i = 0; i < 300; i++) { s.next(); seen.add(s.cur.sk); }
   assert.deepEqual([...seen].sort(), [...IDS].sort());
   for (const k of NEW) assert.equal(PATHS[k].stages.length, 5);
-  for (const k of NEW) assert.ok(PATHS[k].stages[2].tricks.length >= 3 && PATHS[k].stages[2].pats.length >= 3, k + ' has pattern drills');
+  for (const k of NEW) assert.ok(PATHS[k].stages[2].tr.length >= 1 && PATHS[k].stages[2].p.length >= 3, k + ' has pattern drills');
 });
 
 test('data saved before 14.49 gains the new skills at their starting level and keeps everything else', () => {

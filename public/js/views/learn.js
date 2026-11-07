@@ -1,56 +1,19 @@
 import { S, save } from '../state.js';
-import { IDS, SK, COL, gen, how, symFor, ansMatch } from '../engine.js';
+import { IDS, SK, COL } from '../engine.js';
 import { TRICKS } from '../tricks.js';
 import { esc } from '../util.js';
 import { weakestSkills } from '../stats.js';
-import { PATHS, pathProgress, stageCfg, demoQuestion, recordPathDemo, goalText } from '../paths.js';
-import { register, A, go } from '../nav.js';
+import { PATHS } from '../paths.js';
+import { pathsGrid } from './paths.js';
+import { register, A } from '../nav.js';
 import { drill } from './home.js';
-import { start } from './play.js';
-import { dialog, icon } from '../ui.js';
+import { icon } from '../ui.js';
 import { ib } from '../info.js';
 import { showAiSheet } from '../ai.js';
 
-let filter = 'all', pathSk = null;
-export const setLearnFilter = (k) => { filter = k; if (k != 'all' && PATHS[k]) pathSk = k; };
-
-/** The five-stage journey for one skill. Every stage carries a teach panel, a worked example, a practice run and an assessment goal. */
-function guide() {
-  const sk = pathSk && PATHS[pathSk] ? pathSk : (pathSk = weakestSkills(1)[0] || 'mul');
-  const p = PATHS[sk], prog = pathProgress(sk), next = prog.next && prog.next.id;
-  const chips = IDS.map((k) => {
-    const q = pathProgress(k);
-    return `<button class="chip" aria-pressed="${k == sk}" data-act="pathPick" data-v="${esc(k)}"><span class="dot" style="--sc:${COL[k]}"></span>${esc(SK[k].n)} <span class="mu">${q.done}/5</span></button>`;
-  }).join('');
-  const stage = (st, i) => {
-    const n = i + 1, done = st.complete, passed = st.passed, isNext = st.id == next;
-    const pill = done ? '<span class="pill ok2">Complete ✓</span>' : passed ? '<span class="pill">Assessment passed</span>' : isNext ? '<span class="pill sg2">Next</span>' : '<span class="pill">Not started</span>';
-    const ret = st.retention;
-    const retLine = ret
-      ? `<span class="${ret.met ? 'ok' : 'mu'}">${ret.met ? '✓' : '○'} Delayed retention${ret.cohort ? ` · ${ret.cohort} pair${ret.cohort == 1 ? '' : 's'}${ret.met ? ` · ${Math.round(ret.retentionRate * 100)}% kept` : ''}` : ` · 0 of ${ret.min} pairs`}${ret.pending && !ret.met ? ` · ${ret.pending} waiting` : ''}</span>`
-      : '';
-    const tricks = st.id == 'shortcuts' && st.tricks.length
-      ? `<div class="stage-tricks"><span class="mu">Shortcuts in this stage:</span> ${st.tricks.map((t) => `<button class="lnk2" data-act="tryTrick" data-v="${esc(t.id)}">${esc(t.title)}</button>`).join('')}</div>`
-      : '';
-    const last = st.row && st.row.n
-      ? `Last run: ${st.row.ft}/${st.row.n} first try · ${st.row.spd.toFixed(2)}× par`
-      : 'No saved run for this stage yet';
-    return `<li class="stage ${done ? 'done' : passed ? 'passed' : isNext ? 'next' : ''}" ${done ? 'data-done="1"' : ''}>
-      <div class="stage-h"><span class="stage-n" aria-hidden="true">${n}</span><div class="stage-title"><b>${esc(st.name)}</b><span class="mu">${esc(st.blurb)}</span></div>${pill}</div>
-      <p class="stage-teach">${esc(st.teach)}</p>
-      ${tricks}
-      <div class="stage-checks"><span class="${st.demo ? 'ok' : 'mu'}">${st.demo ? '✓' : '○'} Worked example seen</span><span class="${passed ? 'ok' : 'mu'}">${passed ? '✓' : '○'} Assessment passed</span>${retLine}</div>
-      <div class="stage-goal mu">Goal: ${esc(goalText(st.goal))}${ret ? ` · retention: ${ret.min} pairs at ${Math.round(ret.rate * 100)}%+ after 7 days` : ''}</div>
-      <div class="stage-foot"><span class="mu">${esc(last)}</span><span class="btns"><button class="btn sm" data-act="pathDemo" data-sk="${esc(sk)}" data-v="${n}">See it worked</button><button class="btn sm primary" data-act="pathPractise" data-sk="${esc(sk)}" data-v="${n}">${st.id == 'mastery' ? 'Start timed test' : `Practise ${st.dur}s`}</button></span></div>
-    </li>`;
-  };
-  return `<section class="card guide" aria-label="Guided learning path">
-    <div class="guide-hd"><div><div class="eyebrow">Guided path${ib('l.path')}</div><h2>${esc(p.title)}</h2><p class="mu">${esc(p.blurb)}</p></div><div class="guide-num"><b class="num">${prog.done}<small>/5</small></b><span>${prog.complete ? 'Path complete' : next ? 'Next: ' + esc(prog.next.name) : ''}</span></div></div>
-    <div class="bar pathbar" style="--sc:${COL[sk]}" role="progressbar" aria-label="Guided path progress" aria-valuemin="0" aria-valuemax="5" aria-valuenow="${prog.done}"><i style="width:${Math.round(prog.pct * 100)}%"></i></div>
-    <div class="chips fscroll" role="group" aria-label="Choose a guided path">${chips}</div>
-    <ol class="stages">${prog.stages.map(stage).join('')}</ol>
-  </section>`;
-}
+let filter = 'all', tab = 'paths';
+/** Opening Learn on one skill's shortcuts (from a skill sheet, say) lands on the library, filtered. */
+export const setLearnFilter = (k) => { filter = k; tab = 'lib'; };
 
 function learn() {
   document.title = 'Learn · Mental Math';
@@ -65,10 +28,16 @@ function learn() {
     const mastered = o.n >= 15 && acc >= 90 && sp && sp <= 1;
     return `${mastered ? '<span class="pill ok2">Mastered ✓</span> ' : ''}<span class="mu">You: ${o.n} tries · <span class="${acc >= 90 ? 'ok' : acc < 75 ? 'bad' : ''}">${acc}%</span> accurate${sp ? ' · ' + sp.toFixed(2) + '× par time' : ''}${sp ? ib('l.par') : ''}</span>`;
   };
+  const seg = `<div class="seg learnseg" role="group" aria-label="Learn"><button aria-pressed="${tab == 'paths'}" data-act="learnTab" data-v="paths">Guided paths</button><button aria-pressed="${tab == 'lib'}" data-act="learnTab" data-v="lib">Shortcut library</button></div>`;
+  if (tab == 'paths') {
+    document.querySelector('#main').innerHTML = `<div class="hd"><h1>Learn${ib('l.path')}</h1></div>${seg}
+    <p class="mu" style="margin:14px 0 16px;max-width:64ch">A path takes one skill from the basics to a timed mastery test. Every stage teaches, shows a worked example, lets you practise, then checks what you can do alone. Passing a check unlocks the next stage, and two later checks (a day and a week on) test what you still remember.</p>${pathsGrid()}`;
+    return;
+  }
   document.querySelector('#main').innerHTML = `
   <div class="hd"><h1>Learn${ib('l.intro')}</h1>${S.sessions.length ? `<div class="btns"><button class="btn" data-act="aiNextTrick">${icon('sparkle')} AI: which trick next?</button></div>` : ''}</div>
-  ${guide()}
-  <h2>Shortcut library</h2>
+  ${seg}
+  <h2 style="margin-top:18px">Shortcut library</h2>
   <div class="chips fscroll" style="margin-bottom:16px" role="group" aria-label="Filter by skill"><button class="chip" aria-pressed="${filter == 'all'}" data-act="learnFilter" data-v="all">All</button>${IDS.filter((k) => TRICKS.some((t) => t.sk == k)).map((k) => `<button class="chip" aria-pressed="${filter == k}" data-act="learnFilter" data-v="${esc(k)}"><span class="dot" style="--sc:${COL[k]}"></span>${esc(SK[k].n)}</button>`).join('')}</div>
   <div class="tricks">${list.map((t) => `<article class="card trick" style="--sc:${COL[t.sk]}">
     <div class="kc">${esc(SK[t.sk].n)}${S.sessions.length && sugg.has(t.id) ? ' <span class="pill sg2">Suggested for you</span>' : ''}</div><h3>${esc(t.title)}</h3>
@@ -82,51 +51,7 @@ A.aiNextTrick = () => {
   showAiSheet({ title: 'Which trick should you learn next?', action: 'nexttrick', context: { tricks, skillRatings }, extra: (res) => TRICKS.filter((t) => String(res.text || '').includes(t.title)).slice(0, 2).map((t) => ({ label: `Practise: ${t.title}`, run: () => drill(t.sk, t.pt) })) });
 };
 A.learnFilter = (d) => { filter = d.v; learn(); };
-A.pathPick = (d) => { if (PATHS[d.v]) { pathSk = d.v; learn(); } };
-A.openPath = (d) => { if (PATHS[d.v]) { pathSk = d.v; go('learn'); } };
-A.pathPractise = (d) => {
-  const sk = d.sk, id = +d.v, cfg = stageCfg(sk, id);
-  if (cfg && PATHS[sk]) start(undefined, cfg, { sk, stage: id });
-};
-/** Show, don't tell: a worked example for this stage. Seeing the method (or solving it) ticks the demo step. */
-A.pathDemo = async (d) => {
-  const sk = d.sk, id = +d.v, st = PATHS[sk] && PATHS[sk].stages[id - 1];
-  if (!st) return;
-  let p = demoQuestion(sk, id), shown = false;
-  const mark = () => { if (!shown) { shown = true; recordPathDemo(sk, id); save(); } };
-  const examples = st.tricks.length
-    ? `<div class="ex">${st.tricks.slice(0, 3).map((t) => `<div><b>${esc(t.title)}</b> · ${esc(t.rule)}</div>`).join('')}</div>`
-    : '';
-  const out = await dialog({
-    title: `${SK[sk].n} · ${st.name}`,
-    body: `<p>${esc(st.teach)}</p>${examples}<div class="tryq" id="pq" aria-live="polite">${esc(p.q)}</div>
-      <input class="inp tryin" id="pi" inputmode="numeric" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Your answer">
-      <div class="tryres" id="prr" role="status" aria-live="polite"></div>
-      <div class="btns" style="margin-top:10px"><button type="button" class="btn sm" id="pc">Check<kbd>Enter</kbd></button><button type="button" class="btn sm" id="ps">Show method</button><button type="button" class="btn sm ghost" id="pn">Another</button></div>`,
-    actions: [{ label: 'Done', value: false }, { label: 'Practise this stage', value: 'practise', primary: true }],
-    onOpen: (dlg) => {
-      const q = dlg.querySelector('#pq'), inp = dlg.querySelector('#pi'), res = dlg.querySelector('#prr');
-      const show = () => { q.textContent = p.q; inp.inputMode = symFor(p.sk) ? 'text' : 'numeric'; inp.value = ''; res.innerHTML = ''; inp.focus(); };
-      const reveal = () => {
-        mark();
-        res.innerHTML = `<span class="ok">${esc(p.q)} = ${esc(p.a)}</span>${p.tip ? `<div class="tip">${esc(p.tip)}</div>` : ''}<div class="tip">${esc(how(p))}</div>`;
-      };
-      const check = () => {
-        if (!inp.value.trim()) return;
-        if (ansMatch(inp.value.trim().replace(/−/g, '-'), p.a)) { mark(); res.innerHTML = '<span class="ok">✓ Correct. The method is below.</span>'; }
-        else { res.innerHTML = '<span class="bad">Not quite.</span> <span class="mu">Try again, or show the method.</span>'; inp.select(); return; }
-        res.insertAdjacentHTML('beforeend', `<div class="tip">${esc(how(p))}</div>`);
-      };
-      dlg.querySelector('#pc').onclick = check;
-      dlg.querySelector('#ps').onclick = reveal;
-      dlg.querySelector('#pn').onclick = () => { p = demoQuestion(sk, id); show(); };
-      inp.addEventListener('keydown', (e) => { if (e.key == 'Enter') { e.preventDefault(); check(); } });
-      show();
-    },
-  });
-  if (out == 'practise') A.pathPractise({ sk, v: String(id) });
-  else if (shown) learn();
-};
+A.learnTab = (d) => { tab = d.v == 'lib' ? 'lib' : 'paths'; learn(); };
 A.aiTrick = (d) => {
   const t = TRICKS.find((x) => x.id == d.v); if (!t) return;
   const o = t.pt && S.pat[SK[t.sk].n + ' · ' + t.pt];

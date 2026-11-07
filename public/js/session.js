@@ -4,7 +4,6 @@ import { S, save, persist, cfgNow, master, recordLapse, recordRecall, bump, revi
 import { IDS, CORE, SK, symFor, ansMatch, T, factOf, errKind, timeCap, worth, speedMult, gen, how, qk, perfScore, nextRating, weakness, INTERVALS, MASTER_BOX, genZeta, zNorm, zKey } from './engine.js';
 import { clamp, ymd, seeded } from './util.js';
 import { ctx, MS, weakFacts } from './stats.js';
-import { recordPathRun } from './paths.js';
 
 export const mkOf = (c) =>
   c.only == 'zeta' ? 'zeta' + zKey(c.zeta) + c.dur :
@@ -54,7 +53,6 @@ export class Session {
     this.now = deps.now || (() => performance.now());
     this.wall = deps.wall || Date.now;   // wall-clock time for saved history (tests can supply a fixed clock)
     this.rand = deps.rand || Math.random;
-    this.path = deps.path && deps.path.sk && SK[deps.path.sk] && deps.path.stage ? { sk: deps.path.sk, stage: Math.max(1, Math.round(+deps.path.stage)) } : null;
     const cf = deps.cfg ? Object.assign(cfgNow(), deps.cfg) : cfgNow(), rv = opt === 'review', dy = opt === 'daily', sv = opt === 'survival', sp = opt === 'sprint';
     const mx = (cf.mix || []).filter((k) => IDS.includes(k));
     const on = rv ? 'review' : dy ? 'daily' : sv || sp ? 'all' : cf.only == 'mix' ? (mx.length == 1 ? mx[0] : mx.length ? 'mix' : 'all') : cf.only;
@@ -330,9 +328,8 @@ export class Session {
     Object.keys(S.best).filter((k) => /^daily\d/.test(k)).sort().slice(0, -7).forEach((k) => delete S.best[k]);
     const c = ctx(), unlocked = MS.filter((m) => m[2](c) && !S.ms.includes(m[0]));
     unlocked.forEach((m) => S.ms.push(m[0]));
-    const path = e.path ? recordPathRun(e.path.sk, e.path.stage, { n: e.n, ok: e.ok, ft: e.ft, spd: e.ok ? e.rs / e.ok : 9, dur: rec.dur }, Date.now()) : null;
     save();
     const dl = IDS.map((k, i) => [k, Math.round((S.sk[k].lv - e.lv0[i]) * 100)]).filter((x) => Math.abs(x[1]) >= 3);
-    return { rec, tag, newBest, unlocked, dl, full, sprint: spScore, bestBy, path };
+    return { rec, tag, newBest, unlocked, dl, full, sprint: spScore, bestBy };
   }
 }

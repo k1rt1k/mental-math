@@ -43,8 +43,8 @@ export const CAL = 2;
  */
 export const RECALL_GAP = 7 * 864e5;
 export const RECALL_MAX = 500;
-/** Guided paths have five stages; keeping the count here lets migration reject stray keys. */
-export const PATH_STAGES = 5;
+/** Guided paths: five stages and two delayed retention checks per skill. */
+export const PATH_STAGES = 5, PATH_RET = 2;
 const num = (x, d) => (Number.isFinite(+x) && x !== null && x !== '' ? +x : d);
 
 
@@ -273,22 +273,7 @@ export function migrate(o) {
     const key = qk(q), prev = out.recall[key];
     out.recall[key] = prev ? mergeRecallEntry(prev, row) : row;
   });
-  // Guided-path progress: one row per skill and stage, keeping the best run and the demo/pass stamps.
-  out.paths = {};
-  Object.entries(s.paths && typeof s.paths == 'object' && !Array.isArray(s.paths) ? s.paths : {}).forEach(([sk, rows]) => {
-    if (!SK[sk] || !rows || typeof rows != 'object' || Array.isArray(rows)) return;
-    out.paths[sk] = {};
-    Object.entries(rows).forEach(([id, r]) => {
-      const idn = Math.round(fin(id));
-      if (!(idn >= 1 && idn <= PATH_STAGES) || !r || typeof r != 'object') return;
-      const n = Math.max(0, Math.round(fin(r.n)));
-      const ok = clamp(Math.round(fin(r.ok)), 0, n), ft = clamp(Math.round(fin(r.ft)), 0, ok);
-      out.paths[sk][idn] = {
-        seen: +r.seen ? 1 : 0, demo: +r.demo ? 1 : 0, at: Math.max(0, fin(r.at)),
-        n, ok, ft, spd: clamp(fin(r.spd, 9), 0.01, 99), pass: Math.max(0, fin(r.pass)),
-      };
-    });
-  });
+  out.paths = cleanPaths(s.paths);
   const cfg = cleanCfg(out.cfg);
   if (cfg) out.cfg = cfg; else delete out.cfg;
   // Saved setups: Home maps and slices this list, so it must always be an array of usable rows.
@@ -486,23 +471,38 @@ function mergeRecallEntry(x, y) {
   const sk = pick.sk || x.sk || y.sk || '';
   return { ...pick, ...(sk ? { sk } : {}) };
 }
-/**
- * One guided-path row. A passing run wins over a failing one; otherwise the better first-try run
- * wins. The demo/pass stamps are monotonic, so a merge never removes progress.
- */
-function mergePathEntry(x, y) {
-  if (!x) return y;
-  if (!y) return x;
-  const score = (r) => [r.pass ? 1 : 0, r.n ? r.ft / r.n : 0, r.ft || 0, r.n || 0, -(r.spd || 9)];
-  const a = score(x), b = score(y), better = a.some((v, i) => v !== b[i]) ? a.findIndex((v, i) => v !== b[i]) : -1;
-  const best = better < 0 || a[better] > b[better] ? x : y;
-  return {
-    ...best,
-    seen: Math.max(x.seen || 0, y.seen || 0),
-    demo: Math.max(x.demo || 0, y.demo || 0),
-    pass: Math.max(x.pass || 0, y.pass || 0),
-    at: Math.max(x.at || 0, y.at || 0),
-  };
+/* ---------- guided learning paths ----------
+ * S.paths[skill] = { st: [{ ph, pass, sc, at } x 5], ret: [{ t, ok } x 2] }
+ * ph = lesson phases finished (0-3), pass = time the stage check was passed (0 = not yet), sc = best check score 0..1,
+ * at = first activity. ret = the delayed retention checks (next day, one week). Progress only ever grows, so a merge keeps
+ * the furthest value per field and can never un-pass a stage.
+ * Data from v14.47's first paths (rows keyed by stage number: { demo, pass, n, ft }) is carried over as passed stages. */
+const cleanStage = (r) => (isObj(r) ? { ph: clamp(Math.round(num(r.ph, 0)), 0, 3), pass: Math.max(0, num(r.pass, 0)), sc: clamp(num(r.sc, 0), 0, 1), at: Math.max(0, num(r.at, 0)) } : { ph: 0, pass: 0, sc: 0, at: 0 });
+const cleanRet = (r) => (isObj(r) ? { t: Math.max(0, num(r.t, 0)), ok: r.ok ? 1 : 0 } : { t: 0, ok: 0 });
+const fromLegacy = (e) => ({ st: Array.from({ length: PATH_STAGES }, (_, i) => { const r = e[i + 1]; return isObj(r) ? { ph: +r.pass ? 3 : +r.demo ? 2 : 0, pass: Math.max(0, num(r.pass, 0)), sc: r.n ? clamp(num(r.ft, 0) / num(r.n, 1), 0, 1) : 0, at: Math.max(0, num(r.at, 0)) } : null; }) });
+export function cleanPaths(p) {
+  const out = {};
+  if (!isObj(p)) return out;
+  IDS.forEach((k) => {
+    let e = p[k];
+    if (!isObj(e)) return;
+    if (!Array.isArray(e.st) && Object.keys(e).some((x) => /^[1-5]$/.test(x))) e = fromLegacy(e);
+    const st = Array.from({ length: PATH_STAGES }, (_, i) => cleanStage(Array.isArray(e.st) ? e.st[i] : null));
+    const ret = Array.from({ length: PATH_RET }, (_, i) => cleanRet(Array.isArray(e.ret) ? e.ret[i] : null));
+    if (st.some((x) => x.ph || x.pass) || ret.some((x) => x.t)) out[k] = { st, ret };
+  });
+  return out;
+}
+const betterStage = (x, y) => (((x.pass > 0) - (y.pass > 0)) || x.ph - y.ph || x.sc - y.sc || y.pass - x.pass) >= 0 ? x : y;
+const betterRet = (x, y) => ((x.ok - y.ok) || x.t - y.t) >= 0 ? x : y;
+export function mergePaths(a, b) {
+  a = cleanPaths(a); b = cleanPaths(b);
+  const out = {};
+  new Set([...Object.keys(a), ...Object.keys(b)]).forEach((k) => {
+    const x = a[k], y = b[k];
+    out[k] = !x || !y ? JSON.parse(JSON.stringify(x || y)) : { st: x.st.map((s, i) => ({ ...betterStage(s, y.st[i]) })), ret: x.ret.map((r, i) => ({ ...betterRet(r, y.ret[i]) })) };
+  });
+  return out;
 }
 /** A backup or safety copy being merged back in belongs to the current epoch, so it is a union rather than something an erase discards. */
 export const asCurrent = (o) => ({ ...o, wipe: S.wipe });
@@ -554,16 +554,7 @@ export function mergeStates(a, b) {
   m.recall = { ...od.recall };
   Object.entries(nw.recall).forEach(([k, r]) => { const o = m.recall[k]; m.recall[k] = o ? mergeRecallEntry(o, r) : r; });
   trimRecall(m);
-  // Guided-path progress is a union: every stage keeps its best run, its demo and its pass.
-  m.paths = {};
-  new Set([...Object.keys(a.paths), ...Object.keys(b.paths)]).forEach((sk) => {
-    if (!SK[sk]) return;
-    m.paths[sk] = {};
-    new Set([...Object.keys(a.paths[sk] || {}), ...Object.keys(b.paths[sk] || {})]).forEach((id) => {
-      const row = mergePathEntry(a.paths[sk] && a.paths[sk][id], b.paths[sk] && b.paths[sk][id]);
-      if (row) m.paths[sk][id] = row;
-    });
-  });
+  m.paths = mergePaths(a.paths, b.paths);   // guided paths: the furthest progress per stage wins
   Object.keys(m.weak).forEach((k) => {
     const w = m.weak[k], mk = qk(w.q || k);
     const retired = Math.max(m.gone[k] || 0, (m.mastered[mk] && m.mastered[mk].masteredAt) || 0);

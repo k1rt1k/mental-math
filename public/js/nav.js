@@ -8,10 +8,13 @@ export const register = (name, fn) => (routes[name] = fn);
 const MAIN = ['home', 'coach', 'learn', 'progress', 'notebook', 'settings'];
 let skipHash = false;
 
+/** Screens that belong to a main tab highlight it: the path flow lives under Learn. */
+export const navOf = (name) => (name == 'path' ? 'learn' : name);
+
 export function mark(name) {
   view.scr = name;
   document.body.classList.toggle('playing', name == 'play');
-  $$('[data-go]').forEach((b) => (name == b.dataset.go ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current')));
+  $$('[data-go]').forEach((b) => (navOf(name) == b.dataset.go ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current')));
   const m = $('#main');
   m.dataset.scr = name;                    // which screen the DOM below belongs to (morph.js only patches in place within one screen)
   m.focus({ preventScroll: true });

@@ -2,6 +2,13 @@
 
 Newest first. What is true of the app today is in [README.md](README.md). The release number is the `VERSION` file.
 
+## 14.69
+
+- Guided learning paths rebuilt: five stages per skill (Foundation, Intermediate, Mental shortcuts, Independent practice, Mastery assessment), each with teach, worked example, practice and check. Mastery is a timed test plus next-day and one-week retention checks.
+- Now covers all 13 skills, including Negatives, Fractions and Everyday maths.
+- Learn has two tabs: Guided paths and Shortcut library. Home shows a Continue-your-path card.
+- Old v14.47 path progress is converted on load.
+
 ## v14.68
 More of the app answers a tap. Each of these opens something you already had a sheet or a screen for, or a small new one:
 - **Home: the goal ring** opens *Today's goal*: the sessions you played today and whether each counted, how many are left, and a − / + to change the daily goal without going to Settings. *Start a session* is one tap away.

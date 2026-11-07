@@ -1,333 +1,165 @@
-// Guided learning paths: five teach → demonstrate → practise → assess stages for every skill.
-// The catalogue is pure data; progress lives in `S.paths` (one row per skill + stage) so it syncs
-// and merges like the rest of the learner's history.
-import { S } from './state.js';
-import { IDS, SK, gen } from './engine.js';
-import { TRICKS } from './tricks.js';
-import { retentionStats, RETENTION_MIN } from './stats.js';
-import { clamp } from './util.js';
+// Guided learning paths: progress, gating, assessment rules and the stage question generator. DOM-free (see views/paths.js for the screens).
+import { S, PATH_RET } from './state.js';
+import { IDS, gen, qk, T, ansMatch, symFor } from './engine.js';
+import { Session } from './session.js';
+import { PATHS, KINDS, PATH_STAGES } from './pathsData.js';
 
-/** One delayed-retention bar shared by the catalogue, the UI and the tests. */
-export const RETENTION_RATE = 0.6;
+export { PATHS, KINDS, PATH_STAGES };
+export const PHASES = ['Teach', 'Demonstrate', 'Practise', 'Check'];
+const DAY = 864e5;
+/** Delayed retention checks: the first is due a day after the mastery test is passed, the second a week after the first. */
+export const RET = [{ label: 'Next-day check', gap: DAY }, { label: 'One-week check', gap: 7 * DAY }];
+/** A failed retention check can be retaken a day later, after a refresher. */
+export const RETRY_GAP = DAY;
 
-/** Stage definitions shared by every path. `goal` is checked against one saved run. */
-const STAGE_META = [
-  {
-    id: 'foundation', name: 'Foundation', blurb: 'Start here: the basic facts and the size of the numbers.',
-    dur: 60, goal: { n: 8, acc: 0.8, spd: 1.6 },
-  },
-  {
-    id: 'intermediate', name: 'Intermediate', blurb: 'The main method, with carrying, splitting and place value.',
-    dur: 90, goal: { n: 10, acc: 0.8, spd: 1.45 },
-  },
-  {
-    id: 'shortcuts', name: 'Mental shortcuts', blurb: 'The tricks that turn a long calculation into one small step.',
-    dur: 90, goal: { n: 8, acc: 0.8, spd: 1.45 },
-  },
-  {
-    id: 'independent', name: 'Independent practice', blurb: 'Mixed questions, no pattern hint. Choose the method yourself.',
-    dur: 120, goal: { n: 12, acc: 0.85, spd: 1.3 },
-  },
-  {
-    id: 'mastery', name: 'Mastery assessment', blurb: 'A timed test now, then a delayed retention check after seven days.',
-    dur: 120, goal: { n: 15, acc: 0.85, spd: 1.25 }, retention: { min: RETENTION_MIN, rate: RETENTION_RATE },
-  },
-];
-
-/** Per-skill content. `tricks` are shortcut ids from tricks.js; only those with a `pt` drive a pattern drill. */
-const SPEC = {
-  add: {
-    title: 'Addition mastery',
-    blurb: 'From quick facts to carrying, left-to-right addition and clean two-digit sums.',
-    teach: {
-      foundation: 'Start with the biggest place value. 47 + 38 is 47 + 30 = 77, then 77 + 8 = 85. Small numbers first, so the route becomes automatic.',
-      intermediate: 'When a column passes ten, carry it once and keep going. Add the tens, then the ones, and fold the carry in at the end.',
-      shortcuts: 'Left-to-right addition and rounding one number up, then taking back the difference, save working memory. Try 68 + 29 as 68 + 30 − 1.',
-      independent: 'Mixed addition at your current level. No pattern prompt: pick the route that fits the numbers, and put first-try accuracy before speed.',
-      mastery: 'A timed mixed addition test. Then the delayed check: questions you answer cleanly now should still be right after seven days.',
-    },
-    tricks: ['addl'],
-  },
-  sub: {
-    title: 'Subtraction mastery',
-    blurb: 'Borrowing, counting up and compensating without losing your place.',
-    teach: {
-      foundation: 'Subtraction is the reverse of addition. When the gap is small, count up from the smaller number; when a digit is too big, borrow one ten.',
-      intermediate: 'For 83 − 47, add 3 to both numbers: 86 − 50 = 36. Compensating turns a borrow into a round number.',
-      shortcuts: 'Subtract the nearest round number and correct: 83 − 50 = 33, then add back the 3 you overshot.',
-      independent: 'Mixed subtraction with no hint. Watch for the borrow before you start, not halfway through.',
-      mastery: 'A timed mixed subtraction test, then a delayed recall check on the questions you answered cleanly.',
-    },
-    tricks: ['subc'],
-  },
-  mul: {
-    title: 'Multiplication mastery',
-    blurb: 'Table facts, two-digit splitting and the ×11, ×25, ×99 and near-100 shortcuts.',
-    teach: {
-      foundation: 'Multiplication is repeated addition plus place value: 14 × 3 is 10 × 3 + 4 × 3. Know the 2–12 tables cold before two-digit products.',
-      intermediate: 'Split the smaller number into tens and ones: 14 × 23 = 14 × 20 + 14 × 3 = 280 + 42 = 322.',
-      shortcuts: 'Once splitting is solid, look for structure: ×11, ×25, ×99/×101 and pairs near 100 each collapse into one small calculation.',
-      independent: 'Mixed multiplication without a trick prompt. Choose the method that fits the numbers; speed follows accuracy.',
-      mastery: 'A timed mixed multiplication test, then a delayed retention check on the questions you answer cleanly.',
-    },
-    tricks: ['mul11', 'mul25', 'mul99', 'mul100', 'split'],
-  },
-  div: {
-    title: 'Division mastery',
-    blurb: 'Quotients, remainders and multiplying up in easy chunks.',
-    teach: {
-      foundation: 'Division asks “how many groups?”. Use the multiplication table backwards: 56 ÷ 7 = 8 because 7 × 8 = 56.',
-      intermediate: 'For larger divisions, multiply up in chunks: 391 ÷ 17 → 17 × 20 = 340, 51 left → 17 × 3 = 51, so 23.',
-      shortcuts: 'Estimate the quotient first, then correct it with one multiplication. The gap left over is the remainder.',
-      independent: 'Mixed division with no prompt. Say the multiplication fact that proves your answer before you type it.',
-      mastery: 'A timed mixed division test, then a delayed recall check on the questions you answered cleanly.',
-    },
-    tricks: ['divm'],
-  },
-  sq: {
-    title: 'Squares mastery',
-    blurb: 'Squares to know cold, then the endings-in-5, near-50 and near-100 patterns.',
-    teach: {
-      foundation: 'A square is a number times itself. Learn the squares to 15 × 15; they anchor every shortcut that follows.',
-      intermediate: 'Split around a round number: 43² = (40 + 3)² = 1600 + 240 + 9 = 1849.',
-      shortcuts: 'Ends in 5, near 50, near 100: each has a one-line pattern that removes the long multiplication.',
-      independent: 'Mixed squares with no hint. Decide whether the number is near a round base before you calculate.',
-      mastery: 'A timed mixed squares test, then a delayed retention check on the questions you answer cleanly.',
-    },
-    tricks: ['sq5', 'sq50', 'sq100'],
-  },
-  pw: {
-    title: 'Roots & cubes mastery',
-    blurb: 'Squares, cubes and the last-digit rules that make roots quick.',
-    teach: {
-      foundation: 'Roots undo squares and cubes. Learn the squares to 20² and the cubes to 10³; they are the lookup table.',
-      intermediate: 'Estimate between two known roots, then use the last digit to choose the final answer: √576 is between 20 and 30 and ends in 4 or 6, so 24.',
-      shortcuts: 'Last-digit rules for square and cube roots turn a search into a two-step check.',
-      independent: 'Mixed roots and cubes with no prompt. Estimate the size first, then use the ending to finish.',
-      mastery: 'A timed mixed roots-and-cubes test, then a delayed retention check on the questions you answer cleanly.',
-    },
-    tricks: ['sqrt', 'cube', 'cbrt'],
-  },
-  pct: {
-    title: 'Percent mastery',
-    blurb: 'Build any percentage from 10% and 1%, then use friendly fractions.',
-    teach: {
-      foundation: 'Percent means per hundred. 10% is one decimal place left; 1% is two. Build the answer from those two pieces.',
-      intermediate: '15% = 10% + 5%, and 5% is half of 10%. 17% = 10% + seven lots of 1%.',
-      shortcuts: 'Friendly fractions make many percentages instant: 50% half, 25% a quarter, 75% three quarters, 20% a fifth.',
-      independent: 'Mixed percentages with no hint. Find the ten-percent anchor first, then add or subtract the small piece.',
-      mastery: 'A timed mixed percent test, then a delayed retention check on the questions you answer cleanly.',
-    },
-    tricks: ['pct10'],
-  },
-  ops: {
-    title: 'Multi-step mastery',
-    blurb: 'Order of operations and a steady running total.',
-    teach: {
-      foundation: 'Order of operations: brackets first, then × and ÷, then + and −. Say the intermediate result out loud in your head.',
-      intermediate: 'Keep a running total and do one operation at a time. For (a + b) × c, add first, then multiply.',
-      shortcuts: 'Look for a common factor or a round number before calculating: in 7 + 6 × 5, do 6 × 5 first, then add 7.',
-      independent: 'Mixed multi-step questions with no hint. Bracket the calculation in your head before you touch the keypad.',
-      mastery: 'A timed mixed multi-step test, then a delayed retention check on the questions you answer cleanly.',
-    },
-    tricks: ['ops'],
-  },
-  mod: {
-    title: 'Remainders mastery',
-    blurb: 'Nearest multiples, digit sums and mod 11.',
-    teach: {
-      foundation: 'A remainder is what is left after the largest multiple that fits. 200 mod 7: 7 × 28 = 196, so the answer is 4.',
-      intermediate: 'Find the nearest multiple below the number, subtract, and check the remainder is smaller than the divisor.',
-      shortcuts: 'Mod 9 and mod 3 collapse to a digit sum; mod 11 uses an alternating sum from the right.',
-      independent: 'Mixed remainders with no hint. Pick between nearest multiple, digit sum and alternating sum.',
-      mastery: 'A timed mixed remainders test, then a delayed retention check on the questions you answer cleanly.',
-    },
-    tricks: ['mod9', 'mod11', 'modn'],
-  },
-  dec: {
-    title: 'Decimals mastery',
-    blurb: 'Friendly fractions, moving the point and whole-number answers.',
-    teach: {
-      foundation: 'Decimals are fractions with a point. 0.5 = 1/2, 0.25 = 1/4, 0.2 = 1/5, 0.1 = 1/10. Multiplying by a power of ten moves the point.',
-      intermediate: 'Ignore the point, multiply whole numbers, then put it back: 3.6 × 15 → 36 × 15 = 540 → 54.',
-      shortcuts: 'Friendly decimals become halving, quartering or dividing by five; dividing by 0.5 doubles.',
-      independent: 'Mixed decimals with no hint. Decide whether to move the point or turn the decimal into a fraction.',
-      mastery: 'A timed mixed decimals test, then a delayed retention check on the questions you answer cleanly.',
-    },
-    tricks: ['decf', 'decd', 'decs', 'dect'],
-  },
-  neg: {
-    title: 'Negatives mastery',
-    blurb: 'Signs, crossing zero, subtracting negatives and signed products.',
-    teach: {
-      foundation: 'A negative number is below zero. Adding a negative moves left on the number line; adding a positive moves right. Start with sums that cross zero, like −7 + 12.',
-      intermediate: 'When the signs differ, subtract the smaller size from the bigger and keep the sign of the bigger one. When both are negative, add the sizes and keep the minus.',
-      shortcuts: 'Subtracting a negative is adding. In × and ÷, the same signs give a positive and different signs give a negative, so do the sizes first.',
-      independent: 'Mixed signed questions with no hint. Decide first whether the answer is positive or negative, then find its size.',
-      mastery: 'A timed mixed negatives test, then a delayed retention check on the questions you answer cleanly.',
-    },
-    tricks: ['negx', 'negd', 'negm'],
-  },
-  frac: {
-    title: 'Fractions mastery',
-    blurb: 'Fractions of a number, simplifying, and adding, multiplying and dividing fractions.',
-    teach: {
-      foundation: 'A fraction of a number: divide by the bottom, then multiply by the top. 3/4 of 36 is 36 ÷ 4 = 9, then 9 × 3 = 27. Type a fraction answer with the / key.',
-      intermediate: 'Simplify by dividing the top and bottom by the same number. With the same bottom, add or subtract the tops and keep the bottom.',
-      shortcuts: 'Unlike bottoms: cross-multiply, a/b + c/d = (ad + cb)/bd. To multiply, multiply across. To divide, flip the second fraction and multiply.',
-      independent: 'Mixed fractions with no hint. Answer in lowest terms: a whole number if it divides out, otherwise a/b.',
-      mastery: 'A timed mixed fractions test, then a delayed retention check on the questions you answer cleanly.',
-    },
-    tricks: ['fraco', 'fracs', 'fracd', 'fracm'],
-  },
-  life: {
-    title: 'Real-life maths mastery',
-    blurb: 'Tips, discounts, tax, unit conversion, clock gaps, recipes and rates.',
-    teach: {
-      foundation: 'Everyday sums. A 10% tip is the bill with the point moved one place left. A discount of p% means you pay (100 − p)%. Use the . key for answers like 7.2.',
-      intermediate: 'Convert units by thinking which is bigger: big unit to small, multiply; small to big, divide. For clock gaps, count up to the next whole hour first.',
-      shortcuts: 'Build any percentage from 10%: 20% is double, 15% is 10% plus half of it, 25% off is three quarters. Scale a recipe by finding the amount for one.',
-      independent: 'Mixed real-life questions with no hint. Work out which operation the story is asking for before you calculate.',
-      mastery: 'A timed mixed real-life test, then a delayed retention check on the questions you answer cleanly.',
-    },
-    tricks: ['lifet', 'lifes', 'lifeu', 'lifec'],
-  },
+/** How each kind of run is judged. n questions; need = correct first-try answers; pace = mean time ÷ par over correct answers (null = not judged). */
+export const RULES = {
+  practise: (st) => ({ n: 8, need: 0, pace: null, hints: true, guided: 2 }),
+  check: (st) => ({ n: 5, need: 4, pace: null, hints: false }),
+  test: (st) => ({ n: 12, need: 10, pace: 1.25, hints: false }),
+  retain: (st) => ({ n: 6, need: 5, pace: 1.4, hints: false }),
 };
+/** Which run the stage's final Check phase is: the last stage is the timed mastery test. */
+export const checkMode = (si) => (si == PATH_STAGES - 1 ? 'test' : 'check');
 
-const trick = (id) => TRICKS.find((t) => t.id === id);
+export const stagesOf = (k) => PATHS[k].stages;
+export const hasPath = (k) => !!PATHS[k];
 
-function build(sk) {
-  const s = SPEC[sk];
-  if (!s) throw new Error('No guided path for ' + sk);
-  const stages = STAGE_META.map((m, i) => {
-    const tricks = m.id === 'shortcuts' ? s.tricks.map(trick).filter(Boolean) : [];
-    const pats = tricks.map((t) => t.pt).filter(Boolean);
-    const drill = { only: sk, dur: m.dur };
-    if (pats.length) drill.pats = [...new Set(pats)];
-    return {
-      ...m,
-      teach: s.teach[m.id] || '',
-      tricks,
-      pats,
-      drill,
-      assess: `${m.goal.n}+ answers · ${Math.round(m.goal.acc * 100)}% first try · ${m.goal.spd.toFixed(2)}× par or faster`,
-      retention: m.retention ? { ...m.retention } : null,
-    };
-  });
-  return { sk, ...s, stages };
+/** The (read-only) saved record for a skill, with empty defaults. */
+export function rec(k) {
+  const e = S.paths && S.paths[k];
+  return e || { st: Array.from({ length: PATH_STAGES }, () => ({ ph: 0, pass: 0, sc: 0, at: 0 })), ret: Array.from({ length: PATH_RET }, () => ({ t: 0, ok: 0 })) };
 }
-
-/** Every skill gets the same five-stage journey; only the teaching and shortcut list change. */
-export const PATHS = Object.fromEntries(IDS.map((k) => [k, build(k)]));
-
-export const pathFor = (sk) => PATHS[sk] || null;
-export const stageNumber = (id) => Math.max(1, Math.min(STAGE_META.length, Math.round(+id || 1)));
-
-/** The drill config for one stage. Kept in one place so the UI and tests agree. */
-export function stageCfg(sk, id) {
-  const st = PATHS[sk] && PATHS[sk].stages[stageNumber(id) - 1];
-  if (!st) return null;
-  const cfg = { only: sk, dur: st.drill.dur };
-  if (st.drill.pats && st.drill.pats.length) cfg.pats = st.drill.pats.slice();
-  return cfg;
-}
-
-const rowFor = (sk, id) => {
-  const idn = stageNumber(id);
+/** The writable record, created on first use. */
+export function ensure(k) {
   S.paths = S.paths || {};
-  const rows = (S.paths[sk] = S.paths[sk] || {});
-  return (rows[idn] = rows[idn] || { seen: 0, demo: 0, at: 0, n: 0, ok: 0, ft: 0, spd: 9, pass: 0 });
-};
-
-/** Record that the learner has seen one worked example for this stage. */
-export function recordPathDemo(sk, id, now = Date.now()) {
-  if (!PATHS[sk]) return false;
-  const row = rowFor(sk, id);
-  row.demo = 1;
-  row.at = Math.max(row.at || 0, now);
-  return true;
+  if (!S.paths[k]) S.paths[k] = JSON.parse(JSON.stringify(rec(k)));
+  return S.paths[k];
 }
 
-/** A run is the best evidence so far when it passed, then by first-try rate, then volume, then pace. */
-function betterRun(a, b) {
-  const key = (r) => [r.pass ? 1 : 0, r.n ? r.ft / r.n : 0, r.ft || 0, r.n || 0, -(r.spd || 9)];
-  const x = key(a), y = key(b);
-  for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return x[i] > y[i];
-  return false;
+/** Status of one retention check. state: locked | waiting | due | done | retry. */
+export function retState(k, i, now = Date.now()) {
+  const r = rec(k), last = r.st[PATH_STAGES - 1];
+  if (!last.pass) return { state: 'locked', dueAt: 0 };
+  const prev = i == 0 ? last.pass : r.ret[i - 1].ok ? r.ret[i - 1].t : 0;
+  if (!prev) return { state: 'locked', dueAt: 0 };
+  const me = r.ret[i];
+  if (me.ok) return { state: 'done', dueAt: 0, t: me.t };
+  const dueAt = me.t ? me.t + RETRY_GAP : prev + RET[i].gap;
+  return { state: now >= dueAt ? (me.t ? 'retry' : 'due') : 'waiting', dueAt };
 }
 
-/**
- * Record one finished stage run. `run` is { n, ok, ft, spd, dur }, where `spd` is the average
- * time ÷ par for correct answers. A passing run stamps `pass`; a failing run can still improve
- * the displayed best. The caller saves and refreshes the view.
- */
-export function recordPathRun(sk, id, run, now = Date.now()) {
-  const n = Math.max(0, Math.round(+run.n || 0)), ok = clamp(Math.round(+run.ok || 0), 0, n), ft = clamp(Math.round(+run.ft || 0), 0, ok);
-  const spd = Number.isFinite(+run.spd) && +run.spd > 0 ? +run.spd : 9;
-  const idn = stageNumber(id), st = PATHS[sk] && PATHS[sk].stages[idn - 1];
-  if (!st) return null;
-  const pass = n >= st.goal.n && (n ? ft / n : 0) >= st.goal.acc && spd <= st.goal.spd;
-  const row = rowFor(sk, idn);
-  const candidate = { n, ok, ft, spd, pass: pass ? now : 0 };
-  if (pass || betterRun(candidate, row)) Object.assign(row, { n, ok, ft, spd });
-  if (pass) row.pass = Math.max(row.pass || 0, now);
-  row.at = Math.max(row.at || 0, now);
-  const stt = stageState(sk, idn), progress = pathProgress(sk);
-  return {
-    sk, stage: idn, name: st.name, skill: SK[sk].n,
-    pass, complete: stt.complete, retention: stt.retention,
-    pathComplete: progress.complete, pathDone: progress.done,
-  };
+/** Everything the screens need about one skill's path. */
+export function progress(k, now = Date.now()) {
+  const r = rec(k);
+  const stages = r.st.map((s, i) => {
+    const open = i == 0 || r.st[i - 1].pass > 0;
+    return { i, open, done: s.pass > 0, ph: s.ph, sc: s.sc, state: s.pass ? 'done' : !open ? 'locked' : s.ph || s.at ? 'current' : 'open' };
+  });
+  const ret = RET.map((x, i) => ({ i, label: x.label, ...retState(k, i, now) }));
+  const cur = stages.find((s) => !s.done);
+  const done = stages.filter((s) => s.done).length + ret.filter((x) => x.state == 'done').length;
+  const total = PATH_STAGES + RET.length;
+  const dueRet = ret.find((x) => x.state == 'due' || x.state == 'retry');
+  return { stages, ret, cur: cur ? cur.i : -1, done, total, pct: done / total, assessed: stages.every((s) => s.done), mastered: ret.every((x) => x.state == 'done'), dueRet: dueRet ? dueRet.i : -1, started: stages.some((s) => s.ph || s.pass || s.at) };
 }
 
-/** Delayed retention for one skill, using only question pairs that carry that skill. */
-export function retentionFor(sk) {
-  const r = retentionStats(sk);
-  const min = RETENTION_MIN;
-  return { ...r, min, rate: RETENTION_RATE, met: r.cohort >= min && r.retentionRate >= RETENTION_RATE };
+/** Mark that a lesson phase (0 teach, 1 demonstrate, 2 practise) was finished. Never moves backwards. */
+export function donePhase(k, si, ph, now = Date.now()) {
+  const s = ensure(k).st[si];
+  s.ph = Math.max(s.ph, Math.min(3, ph + 1)); s.at = s.at || now;
 }
-
-/** Everything the Learn screen needs about one stage. */
-export function stageState(sk, id) {
-  const idn = stageNumber(id), st = PATHS[sk] && PATHS[sk].stages[idn - 1];
-  if (!st) return null;
-  const row = (S.paths && S.paths[sk] && S.paths[sk][idn]) || null;
-  const demo = !!(row && row.demo), passed = !!(row && row.pass);
-  const retention = idn === 5 ? retentionFor(sk) : null;
-  return { stage: st, row, demo, passed, complete: demo && passed && (!retention || retention.met), retention };
-}
-
-export function pathProgress(sk) {
-  const p = PATHS[sk];
-  if (!p) return { done: 0, total: 0, pct: 0, stages: [], next: null, complete: false };
-  const stages = p.stages.map((st, i) => ({ ...st, ...stageState(sk, i + 1) }));
-  const done = stages.filter((s) => s.complete).length;
-  return { done, total: stages.length, pct: done / stages.length, stages, next: stages.find((s) => !s.complete) || null, complete: done === stages.length };
-}
-
-/**
- * A question for the "show me" step. Shortcut stages search for the first trick's pattern, so
- * the demonstration really matches the rule being taught. Math.random is fine here: this is
- * presentation, not saved data.
- */
-export function demoQuestion(sk, id, R = Math.random) {
-  const idn = stageNumber(id), st = PATHS[sk] && PATHS[sk].stages[idn - 1];
-  if (!st) return null;
-  const base = clamp(Math.round(+((S.sk[sk] || {}).lv) || 5), 1, 12);
-  const d = idn === 1 ? Math.max(1, base - 1) : idn === 5 ? Math.min(12, base + 1) : base;
-  const first = idn === 3 ? st.tricks.find((t) => t.pt) : null;
-  if (first) for (let i = 0; i < 120; i++) {
-    const p = gen(sk, i < 40 ? Math.max(1, d - 1) : i < 80 ? d : Math.min(12, d + 2), R);
-    if (p.pt === first.pt) return p;
+/** Record a stage check or retention result. Returns the judged result. */
+export function recordCheck(k, si, mode, result, now = Date.now()) {
+  const e = ensure(k);
+  if (mode == 'retain') {
+    const i = result.ret, slot = e.ret[i];
+    slot.t = now; slot.ok = result.pass ? 1 : 0;
+    return result;
   }
-  return gen(sk, d, R);
+  const s = e.st[si];
+  s.at = s.at || now; s.sc = Math.max(s.sc, result.n ? result.correct / result.n : 0);
+  if (result.pass) { s.pass = s.pass || now; s.ph = 3; }
+  return result;
 }
 
-/** "8+ answers · 80% first try · 1.60× par or faster" — used under every stage. */
-export const goalText = (goal) => `${goal.n}+ answers · ${Math.round(goal.acc * 100)}% first try · ${goal.spd.toFixed(2)}× par or faster`;
+/**
+ * Judge a finished run. rows: [{ ok, first, hinted, r }] (r = time ÷ par). A "correct" answer is right on the first try without a hint.
+ */
+export function judge(mode, rows, st) {
+  const R = RULES[mode](st), n = Math.max(R.n, rows.length);
+  const good = rows.filter((x) => x.ok && x.first && !x.hinted);
+  const pace = good.length ? good.reduce((a, x) => a + x.r, 0) / good.length : 0;
+  const enough = good.length >= R.need, quick = R.pace == null || (good.length > 0 && pace <= R.pace);
+  const pass = R.need == 0 ? true : enough && quick;
+  return { mode, pass, correct: good.length, n, need: R.need, pace: +pace.toFixed(2), paceLimit: R.pace, reason: pass ? '' : !enough ? 'accuracy' : 'pace' };
+}
 
-/** One line for the results screen. */
-export function pathResultText(out) {
-  if (!out) return '';
-  return out.pathComplete ? `${out.skill} guided path complete` : `${out.skill} · ${out.name} passed`;
+/** Which skill's path to suggest on Home / Learn: a due retention check, then the path in progress, then one for the weakest skill. */
+export function nextUp(weakest) {
+  let best = null;
+  for (const k of IDS) {
+    const p = progress(k);
+    if (p.dueRet >= 0) return { k, kind: 'retain', ret: p.dueRet, p };
+    if (p.started && !p.assessed && !best) best = { k, kind: 'continue', p };
+  }
+  if (best) return best;
+  const k = weakest && PATHS[weakest] ? weakest : 'mul';
+  const p = progress(k);
+  return p.assessed ? null : { k, kind: p.started ? 'continue' : 'start', p };
+}
+
+/** One generated question for a stage. Round-robins the stage's patterns, widening the difficulty if a pattern only exists higher up. */
+export function stageQuestion(k, st, n, R = Math.random, seen = new Set(), wide = 1) {
+  const pats = st.p;
+  for (let i = 0; i < 70; i++) {
+    const want = pats ? pats[(n + (i > 25 ? i : 0)) % pats.length] : null;
+    const base = st.d + (R() - 0.5) * wide;
+    const d = i < 25 ? base : i < 50 ? Math.max(base, 8) : 11;
+    const c = gen(k, d, R);
+    if (pats && (i < 25 ? c.pt != want : !pats.includes(c.pt))) continue;
+    if (seen.has(qk(c.q))) continue;
+    return c;
+  }
+  return gen(k, st.d, R);
+}
+
+/**
+ * A stage run driven by the same Session class as ordinary practice, so every answer feeds the notebook, pattern stats and
+ * delayed-recall ledger. Ratings never move (frozen) and nothing is saved as a session.
+ */
+export class PathSession extends Session {
+  constructor(skill, si, mode, deps = {}) {
+    super(undefined, { ...deps, cfg: { only: skill, dur: 0, off: 0, patt: undefined, pats: undefined, wf: false, mix: [] } });
+    this.skill = skill; this.si = si; this.pmode = mode;
+    this.stg = stagesOf(skill)[si];
+    this.rule = RULES[mode](this.stg);
+    this.frozen = true; this.un = true; this.asked = new Set(); this.rows = [];
+    this.cap = this.rule.n;
+  }
+  nextQ() {
+    const wide = this.stg.p ? 1 : this.pmode == 'practise' || this.pmode == 'check' ? 2 : 1;
+    const p = stageQuestion(this.skill, this.stg, this.n, this.rand, this.asked, wide);
+    this.asked.add(qk(p.q));
+    p.bonus = 0;
+    return p;
+  }
+  /** Type one character (digit, or this skill's symbol such as - / .) and judge at once: no near-miss grace, no Enter-to-submit. Returns 'more' | 'ok' | 'bad'. */
+  judgeBuf(ch) {
+    const sym = symFor(this.cur.sk);
+    if (!(/\d/.test(ch) || ch === sym || (ch === '-' && String(this.cur.a).startsWith('-')))) return 'more';
+    if (this.wrong) { this.wrong = 0; this.buf = ''; }
+    this.buf += ch;
+    const ans = String(this.cur.a);
+    if (ansMatch(this.buf, ans)) return 'ok';
+    return this.buf.length >= ans.length ? this.slip() : 'more';
+  }
+  get finished() { return this.n >= this.cap; }
+  /** Answer the current question and remember what the verdict needs. */
+  record(ok) {
+    const p = this.cur, par = T(p.sk, p.d, p.a), first = !p.tries, res = this.answer(ok);
+    this.rows.push({ q: p.q, a: p.a, ok, first, hinted: !!p.hinted, r: res.r, tm: res.tm, par });
+    return res;
+  }
+  verdict() { return judge(this.pmode, this.rows, this.stg); }
 }

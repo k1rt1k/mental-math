@@ -13,6 +13,7 @@ import { home, SL } from './views/home.js';
 import './views/coach.js';
 import './views/progress.js';
 import './views/learn.js';
+import './views/paths.js';
 import './views/notebook.js';
 import './views/flash.js';
 import { settings, wireImport, keysDialog, placement, helpDialog } from './views/settings.js';
@@ -64,6 +65,7 @@ addEventListener('keydown', (e) => {
     if (['Enter', ' ', 'Backspace', 'Escape'].includes(k) || /^\d$/.test(k) || k.length == 1) { e.preventDefault(); document.activeElement && document.activeElement.blur && document.activeElement.blur(); playKey(k); }
     return;
   }
+  if (view.scr == 'path') return;                 // the path screens handle their own keys
   const onCtl = e.target.matches && e.target.matches('button,a,summary,[role=button],[role=switch],[role=radio]');
   if ((k == 'Enter' || k == ' ') && onCtl) return;       // let the focused control act
   if (k.length > 1 && !['Enter', 'Escape', 'ArrowLeft', 'ArrowRight'].includes(k)) return;

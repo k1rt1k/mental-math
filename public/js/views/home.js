@@ -8,6 +8,7 @@ import { icon, promptDlg, dialog, toast } from '../ui.js';
 import { ib } from '../info.js';
 import { spark, sessLabel } from '../charts.js';
 import { setLearnFilter } from './learn.js';
+import { pathCard } from './paths.js';
 import { A, register, view, go } from '../nav.js';
 import { syncKey, statusText, status } from '../sync.js';
 import { applyTheme } from '../theme.js';
@@ -92,6 +93,7 @@ function home() {
 
     <div class="modes m3">${modes.join('')}</div>
 
+    ${pathCard()}
     <section class="card tod" aria-label="Trick of the day"><div class="eyebrow">Trick of the day · ${kc(t.sk, SK[t.sk].n)}${ib('home.trick')}</div><div class="todt"><div><button type="button" class="todgo" data-act="openTrick" data-v="${esc(t.sk)}" aria-label="${esc('Open ' + SK[t.sk].n + ' tricks in Learn')}"><b>${esc(t.title)}</b></button><div class="mu">${esc(t.rule)}</div><div class="todx">${esc(t.ex[0])}</div></div><div class="btns"><button class="btn sm" data-act="tryTrick" data-v="${esc(t.id)}">Try one</button><button class="btn sm tonal" data-act="practiceTrick" data-v="${esc(t.id)}">Practise</button></div></div></section>
     ${has ? reviewCard(saved, dueNow, now) : ''}
     ${has ? skillsFold() : howItWorks()}
