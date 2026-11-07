@@ -618,3 +618,89 @@ dialog.dlg.synsheet .body { color: var(--tx); }
 .syn-ic .ic { width: 24px; height: 24px; }
 .syn-ic i { position: absolute; right: 2px; top: 2px; box-sizing: border-box; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--c); background: var(--mu2); }
 .syn.ok .syn-ic i { background: var(--ok); } .syn.busy .syn-ic i { background: var(--gd); } .syn.offline .syn-ic i, .syn.key .syn-ic i, .syn.locked .syn-ic i { background: var(--bad); }
+
+/* ---------- This week sheet (v14.67): the Home week card opens it ---------- */
+.wk b[role=button], .wkopen[role=button] { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.wk b[role=button] { transition: transform .15s var(--ease, ease-out), filter .15s; }
+.wk b[role=button]:hover { transform: translateY(-2px); filter: brightness(1.12); }
+.wk b[role=button]:active { transform: scale(.94); }
+.wkopen[role=button] { border-radius: 12px; transition: background .15s; }
+.mini.wkopen:hover, .wkn.wkopen:hover { background: color-mix(in srgb, var(--mu) 8%, transparent); }
+.wkn.wkopen { margin-inline: -6px; padding-inline: 6px; }
+.wk b[role=button]:focus-visible, .wkopen[role=button]:focus-visible { outline: 2px solid var(--ac); outline-offset: 2px; }
+dialog.dlg.wsheet { width: min(480px, calc(100vw - 32px)); }
+@media (max-width: 560px) { dialog.dlg.wsheet { width: 100%; } }
+.ws { display: grid; gap: 16px; }
+.ws-hero { display: flex; align-items: center; gap: 14px; }
+.ws-hero .num { font-size: 44px; line-height: 1; font-family: var(--serif, inherit); }
+.ws-hero span { font-weight: 650; }
+.ws-hero p { margin: 3px 0 0; font-size: var(--t-sm); }
+.ws-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.ws-stats > div { display: grid; gap: 2px; padding: 10px 12px; border-radius: 14px; background: var(--c2); border: 1px solid var(--ln); }
+.ws-stats span { font-size: 11.5px; color: var(--mu); }
+.ws-stats b { font: 680 20px/1.1 var(--sans); letter-spacing: -.02em; }
+.ws-stats small { font-size: 11px; color: var(--mu); }
+.ws-stats small.ok { color: var(--ok); } .ws-stats small.bad { color: var(--bad, #e5645b); }
+.ws-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.wsday { display: grid; grid-template-rows: auto 44px auto; gap: 5px; justify-items: center; padding: 8px 0 7px; border-radius: 12px; border: 1px solid transparent; background: color-mix(in srgb, var(--mu) 9%, transparent); color: var(--mu); font: inherit; cursor: pointer; transition: background .15s, transform .15s var(--ease, ease-out); }
+.wsday:hover { background: color-mix(in srgb, var(--mu) 16%, transparent); }
+.wsday:active { transform: scale(.95); }
+.wsday .wsl { font-size: 11px; font-weight: 650; }
+.wsday .wsn { font-size: 12.5px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.wsday .wsb { width: 14px; height: 44px; border-radius: 7px; display: flex; align-items: flex-end; background: color-mix(in srgb, var(--mu) 12%, transparent); overflow: hidden; }
+.wsday .wsb i { display: block; width: 100%; border-radius: 7px; background: color-mix(in srgb, var(--ac) 60%, var(--c)); animation: wsgrow .45s var(--ease, ease-out) both; }
+.wsday.on .wsb i { background: var(--ok); }
+.wsday.today .wsn { color: var(--tx); }
+.wsday.sel { background: var(--c); border-color: var(--tx); color: var(--tx); box-shadow: 0 1px 6px rgba(0,0,0,.18); }
+.wsday:focus-visible { outline: 2px solid var(--ac); outline-offset: 2px; }
+@keyframes wsgrow { from { height: 0; } }
+.ws-detail { padding: 12px 14px; border-radius: 16px; background: var(--c2); border: 1px solid var(--ln); min-height: 64px; }
+.wsd-h { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.wsd-h b { font-size: var(--t-sm); }
+.wsd-h span { font-size: 12px; }
+.wsd-none { margin: 6px 0 0; font-size: 13px; }
+.wsd-l { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
+.wsd-l li { display: grid; grid-template-columns: 62px 1fr auto; gap: 2px 10px; align-items: baseline; font-size: 13px; }
+.wsd-l .wst { color: var(--mu); font-variant-numeric: tabular-nums; font-size: 12px; }
+.wsd-l .wsp { grid-column: 2 / 4; font-size: 12px; }
+.wsd-l li > .mu:not(.wsp) { text-align: right; font-size: 12px; }
+.ws-hi { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: 13px; }
+.ws-hi li, .ws-next { display: flex; gap: 8px; align-items: center; }
+.ws-hi .ic, .ws-next .ic { width: 15px; height: 15px; flex: none; color: var(--gd); }
+.ws-next { font-size: 13px; } .ws-next b { color: var(--tx); }
+@media (prefers-reduced-motion: reduce) { .wsday .wsb i { animation: none; } .wk b[role=button], .wsday { transition: none; } }
+
+/* ---------- More tap targets (v14.68) ---------- */
+.stat-hit { position: absolute; inset: 0; z-index: 1; width: 100%; border: 0; padding: 0; border-radius: inherit; background: transparent; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background .15s; }
+.stat-hit:hover { background: color-mix(in srgb, var(--mu) 7%, transparent); }
+.stat-hit:active { background: color-mix(in srgb, var(--mu) 12%, transparent); }
+.stat-hit:focus-visible { outline: 2px solid var(--ac); outline-offset: -2px; }
+.stat .ib { z-index: 2; }
+.card.wkopen[role=button] { transition: background .15s, transform .15s var(--ease, ease-out); }
+.card.wkopen[role=button]:hover { background: color-mix(in srgb, var(--mu) 6%, var(--c)); }
+.card.wkopen[role=button]:active { transform: scale(.99); }
+.lvl.wkopen, .zline.wkopen { margin-inline: -6px; padding-inline: 6px; }
+.zline.wkopen { padding-bottom: 6px; }
+.hero .goal svg[data-act] { cursor: pointer; transition: transform .2s var(--ease, ease-out); }
+.hero .goal svg[data-act]:hover { transform: scale(1.04); }
+.hero .goal svg[data-act]:active { transform: scale(.97); }
+button.fr { width: 100%; background: none; border-width: 0 0 1px; border-style: solid; border-color: var(--ln); border-radius: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; align-items: center; transition: background .15s; }
+button.fr:last-child { border-bottom: 0; }
+button.fr > b { margin-left: auto; }
+button.fr .go { flex: none; display: grid; place-items: center; color: var(--mu); opacity: .55; margin-left: -4px; transition: transform .15s var(--ease, ease-out), opacity .15s; }
+button.fr .go .ic { width: 15px; height: 15px; }
+button.fr:hover .go, button.fr:focus-visible .go { opacity: 1; transform: translateX(2px); }
+button.fr:hover { background: color-mix(in srgb, var(--mu) 6%, transparent); }
+.todgo { display: block; max-width: 100%; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.todgo:hover b { text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+.wsrow { display: grid; grid-template-columns: 62px 1fr auto; gap: 2px 10px; align-items: baseline; width: 100%; padding: 6px 8px; margin: -6px -8px; border: 0; border-radius: 10px; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; transition: background .15s; }
+.wsrow:hover { background: color-mix(in srgb, var(--mu) 10%, transparent); }
+.wsd-l li:has(> .wsrow) { display: block; }
+.wsd-l li:has(> .wsrow) .wsrow .wsp { grid-column: 2 / 4; }
+.wsd-static li { grid-template-columns: 62px 1fr auto; }
+.ws-hero small { font-size: 24px; margin-left: 2px; }
+.gstep { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border-radius: 14px; background: var(--c2); border: 1px solid var(--ln); font-weight: 600; font-size: var(--t-sm); }
+.stepper { display: flex; align-items: center; gap: 12px; } .stepper b { min-width: 1.5ch; text-align: center; font-size: 18px; }
+.stepper .btn { min-width: 38px; }
+.ms button.chip { font: inherit; cursor: pointer; }
+.ms button.chip:hover { border-color: var(--mu2); }

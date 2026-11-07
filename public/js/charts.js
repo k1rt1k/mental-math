@@ -166,7 +166,7 @@ function clearCell() { hmSel && hmSel.classList.remove('sel'); hmSel = null; if 
 const hmCells = (hm) => [...hm.querySelectorAll('b[data-d]')];
 
 let dragging = null;
-const svgAt = (e) => e.target.closest && e.target.closest('svg.ix');
+const svgAt = (e) => { const s = e.target.closest && e.target.closest('svg.ix'); return s && !s.dataset.act ? s : null; };   // an svg with its own data-act (the goal ring) is a button, not a chart
 
 document.addEventListener('pointerdown', (e) => {
   delete document.documentElement.dataset.kb;            // mouse or touch: no focus ring on charts
@@ -197,7 +197,7 @@ document.addEventListener('pointerout', (e) => {          // a mouse leaving jus
 document.addEventListener('keydown', (e) => {
   const t = e.target; if (!t || !t.matches) return;
   if (e.key == 'Tab' || e.key.startsWith('Arrow')) document.documentElement.dataset.kb = '1';   // keyboard user: show the focus ring
-  if (t.matches('svg.ix')) {
+  if (t.matches('svg.ix') && !t.dataset.act) {
     const n = data(t).length, i = cur && cur.svg === t ? cur.i : -1;
     const ix = e.key == 'ArrowRight' || e.key == 'ArrowDown' ? (i < 0 ? 0 : i + 1) : e.key == 'ArrowLeft' || e.key == 'ArrowUp' ? (i < 0 ? n - 1 : i - 1) : e.key == 'Home' ? 0 : e.key == 'End' ? n - 1 : e.key == 'Enter' || e.key == ' ' ? (i < 0 ? n - 1 : i) : null;
     if (e.key == 'Escape') { clearChart(); return; }

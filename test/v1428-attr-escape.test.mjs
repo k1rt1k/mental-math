@@ -17,6 +17,7 @@ const SAFE = new Set([
   "runs == 1 ? 'session' : 'sessions'", "st ? st + '-day streak' : 'No streak yet'", "n ? ', ' + due + ' to review' : ''",
   "p.done ? ', done' : ''", "skOpen() ? 'hide' : 'show'",
   'fmt(mn)', 'fmt(mx)', 'fmt(v[v.length - 1])', 'heatWeeks()', 'ymd(t)', 'ymd(x.t)', 'Number(ol[2])', 'Number(f[2]).toFixed(3)',
+  '6 - i', 'idx',   // loop indexes (week strip, week sheet)
   'pts(P, tips)',   // escapes inside the helper
 ]);
 

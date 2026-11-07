@@ -2,7 +2,7 @@
 import { S } from './state.js';
 import { IDS, SK } from './engine.js';
 import { esc, ymd, dayAgo } from './util.js';
-import { streak, lvAgo } from './stats.js';
+import { streak, lvAgo, days } from './stats.js';
 
 const DAY = 864e5;
 const sum = (xs, f) => xs.reduce((q, x) => q + f(x), 0);
@@ -17,6 +17,17 @@ export function weekData(now = Date.now()) {
   const dly = Object.entries(S.daily || {}).filter(([d]) => d >= ymd(now - 6 * DAY) && d <= ymd(now)).map(([d, v]) => [d, v]).sort((a, b) => b[1] - a[1])[0];
   const fl = cur.filter((s) => s.m == 'flash');
   return { empty: !cur.length, ...c, prev: p, days, streak: streak(), gain: gains[0] && gains[0][1] >= 1 ? { id: gains[0][0], by: Math.round(gains[0][1]) } : null, daily: dly ? { day: dly[0], pts: dly[1] } : null, flash: fl.length ? { runs: fl.length, best: Math.max(...fl.map((s) => s.pts)) } : null };
+}
+/** One calendar day ('YYYY-MM-DD'): its sessions and totals. `D` is the set of practised days, passed in so a loop does not rebuild it. */
+export function dayInfo(k, now = Date.now(), D = days()) {
+  const t = new Date(k + 'T12:00:00').getTime(), ss = S.sessions.filter((s) => ymd(s.t) == k).sort((a, b) => a.t - b.t);
+  const n = ss.reduce((q, s) => q + s.n, 0), ok = ss.reduce((q, s) => q + s.ok, 0), i = Math.round((dayAgo(0, now) - t) / DAY);
+  return { i, t, k, on: D.has(k), today: i == 0, sessions: ss, n, acc: n ? Math.round((100 * ok) / n) : 0, min: Math.round(ss.reduce((q, s) => q + s.dur, 0) / 60), pts: ss.reduce((q, s) => q + (s.pts || 0), 0) };
+}
+/** The seven calendar days ending today, oldest first. */
+export function weekDays(now = Date.now()) {
+  const D = days();
+  return [6, 5, 4, 3, 2, 1, 0].map((i) => dayInfo(ymd(dayAgo(i, now)), now, D));
 }
 export const sgn = (d) => (d > 0 ? '+' : d < 0 ? '−' : '±') + Math.abs(d);
 export function weekLines(w) {

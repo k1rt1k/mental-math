@@ -2,6 +2,24 @@
 
 Newest first. What is true of the app today is in [README.md](README.md). The release number is the `VERSION` file.
 
+## v14.68
+More of the app answers a tap. Each of these opens something you already had a sheet or a screen for, or a small new one:
+- **Home: the goal ring** opens *Today's goal*: the sessions you played today and whether each counted, how many are left, and a − / + to change the daily goal without going to Settings. *Start a session* is one tap away.
+- **Home: Personal bests** rows open the record behind them: the session itself (Train, Survival, Sprint, accuracy), the day (Daily) or your streak. A row with no record yet stays plain.
+- **Home: Skill balance** opens Progress on its Skills tab, and the Zetamac line opens its explanation. The **Trick of the day** title opens Learn on that skill.
+- **Progress: the six stat cards** open something: Streak (the streak sheet), Rating and Zetamac (Skills tab), Sessions (History), 7-day retention (Notebook) and Best 2-min train (that session). The "i" on each card still works on its own.
+- **Progress: This week vs last** opens the week sheet. Skill names in *Biggest 7-day gain / Weakest* and in the Weakness map open that skill's sheet.
+- **Progress: heatmap days** open that day (click a practised day, or Enter on the focused map); the hover tooltip is unchanged. **Milestone chips** tell you how far off each one is.
+- **Sessions listed in the week sheet** open their details. One new sheet, `Day`, lists any single day's sessions.
+- The goal ring is a real button now (it no longer also pops its chart tooltip).
+- Tests: `test/v1468-tap-targets.test.mjs`.
+
+## v14.67
+- **The "This week" card on Home now opens.** Tap the seven-day strip, the three numbers or the footer line and a sheet opens (slides up on phones, pops in on larger screens), the same way the streak sheet does. It shows days practised, answers, accuracy and minutes against the week before, and a tappable row of the seven days, each with a bar for how much you answered.
+- **Pick a day to see what happened.** Tapping a day lists its sessions (time, mode, answers, accuracy, length, points). Tapping a day on the Home strip opens the sheet already on that day; the left and right arrow keys move between days. Below that: the week's highlights (biggest gain, best Daily, Flash) and the next unlock, with *Share image* as on the streak sheet.
+- The week card's day cells and number rows are real buttons for keyboard and screen readers, with a hover and focus state. The sheet's files are in the offline cache (`weeksheet.js`).
+- Tests: `test/v1467-week-sheet.test.mjs`.
+
 ## v14.66
 - **Settings no longer looks like a theme toggle.** The gear was a circle with eight rays, which is a sun. It is now a real cog. It is the same icon in the desktop rail, the Home header and anywhere else the gear appears.
 - **The cloud on Home reads as a button on phones.** It was a bare icon next to the streak pill, with nothing to say it could be tapped. The cloud and the cog are now round buttons with the same look, and the cloud pulses while it is syncing.

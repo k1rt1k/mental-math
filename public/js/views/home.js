@@ -1,8 +1,8 @@
 import { S, save, avgLv, cfgNow } from '../state.js';
 import { IDS, SK, COL, rank, ZDEF, zNorm, zLabel } from '../engine.js';
-import { esc, ymd, fmtLen, VERSION, dayAgo, dueIn } from '../util.js';
+import { esc, ymd, fmtLen, VERSION, dayAgo, dueIn, clamp } from '../util.js';
 import { restChip } from '../rest.js';
-import { streak, STREAK_MARKS, restInfo, days, plan, todayCount, trickOfDay, weakestSkills, MS, week, zDef, zMD, recommend, lvAgo, records } from '../stats.js';
+import { streak, STREAK_MARKS, restInfo, days, plan, todayCount, trickOfDay, weakestSkills, MS, week, zDef, zMD, recommend, lvAgo, records, countsToGoal, modeLabel } from '../stats.js';
 import { radar, ring } from '../charts.js';
 import { icon, promptDlg, dialog, toast } from '../ui.js';
 import { ib } from '../info.js';
@@ -16,6 +16,7 @@ import { mkOf } from '../session.js';
 import { exportBackup } from './settings.js';
 import { showAiSheet } from '../ai.js';
 import './streak.js';
+import './weeksheet.js';
 import { askSkillAi } from '../skillAi.js';
 
 const LENS = [30, 60, 120, 300, 600, 0];
@@ -74,7 +75,7 @@ function home() {
     <section class="card hero" aria-label="Today">
       <div><div class="eyebrow">Recommended now${ib('home.rec')}</div><h2>${esc(heroTitle)}</h2><p>${esc(rec.why)}</p>
         <div class="btns"><button class="btn primary lg" data-act="${esc(heroAct)}">${icon('play', 'fill')} ${esc(heroCta)}${heroAct == 'start' ? '<kbd>Enter</kbd>' : ''}</button>${has ? `<button class="btn ghost ask" data-act="aiFocus">${icon('sparkle')} Ask AI</button>` : ''}</div></div>
-      <div class="goal">${ring(td / goal, td + '/' + goal, 120)}<div class="mu">today’s goal${ib('home.goal')}</div></div>
+      <div class="goal">${ring(td / goal, td + '/' + goal, 120).replace('role="img"', 'role="button" data-act="goalSheet" aria-haspopup="dialog"').replace(/aria-label="[^"]*"/, 'aria-label="' + esc('Today’s goal: ' + td + ' of ' + goal + ' sessions. Open details') + '"')}<div class="mu">today’s goal${ib('home.goal')}</div></div>
       ${has ? `<div class="hsess"><div class="hsrow"><div class="chips lens" role="group" aria-label="Session length">${LENS.map((d) => chip(cf.dur == d, 'cfg', 'dur:' + d, fmtLen(d))).join('')}${chip(!LENS.includes(cf.dur), 'customLen', '', 'Custom…')}</div></div>
         ${presetRow()}
         <div class="hsfoot"><div class="mu hbest">${bst ? 'Beat your best: <b class="tx">' + bst.pts + ' pts</b>' : 'Your first run here sets the ghost to race against'}</div><button class="btn sm" data-act="toggleCustom" aria-expanded="${open}" aria-controls="cust">${open ? 'Hide options' : 'Customize'}</button></div>
@@ -91,18 +92,18 @@ function home() {
 
     <div class="modes m3">${modes.join('')}</div>
 
-    <section class="card tod" aria-label="Trick of the day"><div class="eyebrow">Trick of the day · ${kc(t.sk, SK[t.sk].n)}${ib('home.trick')}</div><div class="todt"><div><b>${esc(t.title)}</b><div class="mu">${esc(t.rule)}</div><div class="todx">${esc(t.ex[0])}</div></div><div class="btns"><button class="btn sm" data-act="tryTrick" data-v="${esc(t.id)}">Try one</button><button class="btn sm tonal" data-act="practiceTrick" data-v="${esc(t.id)}">Practise</button></div></div></section>
+    <section class="card tod" aria-label="Trick of the day"><div class="eyebrow">Trick of the day · ${kc(t.sk, SK[t.sk].n)}${ib('home.trick')}</div><div class="todt"><div><button type="button" class="todgo" data-act="openTrick" data-v="${esc(t.sk)}" aria-label="${esc('Open ' + SK[t.sk].n + ' tricks in Learn')}"><b>${esc(t.title)}</b></button><div class="mu">${esc(t.rule)}</div><div class="todx">${esc(t.ex[0])}</div></div><div class="btns"><button class="btn sm" data-act="tryTrick" data-v="${esc(t.id)}">Try one</button><button class="btn sm tonal" data-act="practiceTrick" data-v="${esc(t.id)}">Practise</button></div></div></section>
     ${has ? reviewCard(saved, dueNow, now) : ''}
     ${has ? skillsFold() : howItWorks()}
    </div>
 
    ${has ? `<aside class="home-side" aria-label="Your stats">
      <section class="card" aria-label="This week"><h3>This week${ib('home.week')}</h3>${weekStrip(D)}
-       <div class="mini"><div><b>${a.s}</b><span>${a.s == 1 ? 'session' : 'sessions'}</span></div><div><b>${a.n}</b><span>${a.n == 1 ? 'answer' : 'answers'}</span></div><div><b>${Math.round(a.acc)}%</b><span>accurate${b.s && dd ? ` <span class="${dd >= 0 ? 'ok' : 'bad'}">${dd >= 0 ? '▲' : '▼'}${Math.abs(dd)}</span>` : ''}</span></div></div>
-       <div class="wkn mu"><span>${[6, 5, 4, 3, 2, 1, 0].filter((i) => D.has(ymd(dayAgo(i)))).length} of 7 days practised</span><span>${nextMs ? 'Next unlock: ' + esc(nextMs[1]) : 'Every milestone unlocked'}</span></div></section>
-     <section class="card" aria-label="Skill balance"><h3>Skill balance${ib('home.balance')}</h3><div class="lvl"><b class="num" title="Average rating across skills">${r}</b><span>${esc(rank(r))}</span></div>${radar()}
-       <div class="zline mu"><span>Zetamac estimate <b class="tx">${zDef()}</b></span><span>× ÷ only <b class="tx">${zMD()}</b></span></div></section>
-     <section class="card" aria-label="Personal bests"><h3>Personal bests</h3>${records().map(([l, v]) => `<div class="fr"><span class="mu">${l}</span><b>${v}</b></div>`).join('')}</section>
+       <div class="mini wkopen" role="button" tabindex="0" data-act="weekSheet" aria-haspopup="dialog" aria-label="This week in detail"><div><b>${a.s}</b><span>${a.s == 1 ? 'session' : 'sessions'}</span></div><div><b>${a.n}</b><span>${a.n == 1 ? 'answer' : 'answers'}</span></div><div><b>${Math.round(a.acc)}%</b><span>accurate${b.s && dd ? ` <span class="${dd >= 0 ? 'ok' : 'bad'}">${dd >= 0 ? '▲' : '▼'}${Math.abs(dd)}</span>` : ''}</span></div></div>
+       <div class="wkn mu wkopen" role="button" tabindex="0" data-act="weekSheet" aria-haspopup="dialog" aria-label="This week in detail"><span>${[6, 5, 4, 3, 2, 1, 0].filter((i) => D.has(ymd(dayAgo(i)))).length} of 7 days practised</span><span>${nextMs ? 'Next unlock: ' + esc(nextMs[1]) : 'Every milestone unlocked'}</span></div></section>
+     <section class="card" aria-label="Skill balance"><h3>Skill balance${ib('home.balance')}</h3><div class="lvl wkopen" role="button" tabindex="0" data-act="openSkills" aria-label="${esc('Average rating ' + r + ', ' + rank(r) + '. See every skill')}"><b class="num" title="Average rating across skills">${r}</b><span>${esc(rank(r))}</span></div>${radar()}
+       <div class="zline mu wkopen" role="button" tabindex="0" data-act="info" data-v="p.zeta" aria-label="What the Zetamac estimate means"><span>Zetamac estimate <b class="tx">${zDef()}</b></span><span>× ÷ only <b class="tx">${zMD()}</b></span></div></section>
+     <section class="card" aria-label="Personal bests"><h3>Personal bests</h3>${records().map(([l, v], i) => { const g = recordGo(i); return g ? `<button type="button" class="fr frgo" data-act="${esc(g[0])}" data-v="${esc(g[1])}" aria-label="${esc(l + ': ' + v + '. ' + g[2])}"><span class="mu">${l}</span><b>${v}</b><em class="go" aria-hidden="true">${icon('chev')}</em></button>` : `<div class="fr"><span class="mu">${l}</span><b>${v}</b></div>`; }).join('')}</section>
    </aside>` : ''}
   </div>
   <p class="foot">Mental Math ${VERSION}</p>`;
@@ -155,7 +156,7 @@ A.runPreset = (d) => { const p = (S.presets || [])[+d.v]; if (!p) return; S.cfg 
 function weekStrip(D) {
   return '<div class="wk" aria-label="Last 7 days">' + [6, 5, 4, 3, 2, 1, 0].map((i) => {
     const t = new Date(dayAgo(i));
-    return `<b class="${D.has(ymd(t)) ? 'on' : ''} ${i == 0 ? 'today' : ''}" title="${ymd(t)}">${'SMTWTFS'[t.getDay()]}</b>`;
+    return `<b class="${D.has(ymd(t)) ? 'on' : ''} ${i == 0 ? 'today' : ''}" role="button" tabindex="0" data-act="weekSheet" data-v="${6 - i}" aria-haspopup="dialog" title="${ymd(t)}" aria-label="${esc(t.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }) + (D.has(ymd(t)) ? ', practised' : ', not practised'))}">${'SMTWTFS'[t.getDay()]}</b>`;
   }).join('') + '</div>';
 }
 
@@ -262,4 +263,47 @@ A.zetaEdit = async () => {
 A.zetaTable = async () => {
   const v = parseInt(await promptDlg('Times table', 'Which table? (2 to 99)', 7, { type: 'number', min: 2, max: 99, ok: 'Practise it', hint: 'Mixes × and ÷ against 2 to 12, so “7 × 8” and “56 ÷ 7” both appear.' }));
   if (v >= 2 && v <= 99) { S.cfg = Object.assign({ dur: 120 }, S.cfg, { only: 'zeta', zeta: zNorm({ ops: ['mul', 'div'], a: ZDEF.a, b: ZDEF.b, m: [v, v], n: [2, 12] }) }); save(); home(); }
+};
+
+/* ---------- tap targets on the Home side column ---------- */
+/** Where a Personal bests row leads, by its position in records(): [act, value, hint], or null when there is no record yet. */
+function recordGo(i) {
+  const S_ = S.sessions, best = (list, f) => list.reduce((b, x) => (!b || f(x) > f(b) ? x : b), null);
+  if (i == 0) { const x = best(S_.filter((s) => s.m == 'train' && s.dur == 120), (s) => s.pts); return x ? ['sessInfo', x.t, 'Open that session'] : null; }
+  if (i == 1) { const sv = S.best && S.best.survival, x = sv && S_.find((s) => s.m == 'survival' && s.pts == sv.pts); return x ? ['sessInfo', x.t, 'Open that session'] : null; }
+  if (i == 2) { const e = Object.entries(S.daily || {}).sort((a, b) => b[1] - a[1])[0]; return e ? ['daySheet', e[0], 'Open that day'] : null; }
+  if (i == 3) { const sp = S.best && S.best.sprint, x = sp && S_.find((s) => s.m == 'sprint' && s.ok >= 20 && Math.round(s.dur) == Math.round(sp.t)); return x ? ['sessInfo', x.t, 'Open that session'] : null; }
+  if (i == 4) { const x = best(S_.filter((s) => s.n >= 20), (s) => (s.ft ?? s.ok) / s.n); return x ? ['sessInfo', x.t, 'Open that session'] : null; }
+  if (i == 5) return streak() || S_.length ? ['streakCard', '', 'Open your streak'] : null;
+  return null;
+}
+A.openTrick = (d) => { setLearnFilter(d.v); go('learn'); };
+
+/** Today's goal: what counted, what is left, and a stepper to change the goal without a trip to Settings. */
+A.goalSheet = async () => {
+  const draw = () => {
+    const goal = S.goal || 2, td = todayCount(), k = ymd(), ss = S.sessions.filter((x) => ymd(x.t) == k).sort((a, b) => a.t - b.t);
+    const rows = ss.map((x) => `<li><span class="wst">${esc(new Date(x.t).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }))}</span><b>${esc(modeLabel(x.m))}</b><span class="mu">${countsToGoal(x) ? 'counted toward the goal' : 'too short to count'}</span></li>`).join('');
+    return `<div class="ws"><div class="ws-hero"><b class="num">${td}<small class="mu">/${goal}</small></b><div><span>${td == 1 ? 'session' : 'sessions'} today</span><p class="mu">${td >= goal ? 'Goal reached. Anything more is a bonus.' : (goal - td) + ' more to reach today’s goal'}</p></div></div>
+      <div class="ws-detail">${ss.length ? `<ul class="wsd-l wsd-static">${rows}</ul>` : '<p class="mu wsd-none">Nothing yet today. A session counts when it runs 2 minutes or more.</p>'}</div>
+      <div class="gstep"><span>Daily goal</span><div class="stepper"><button type="button" class="btn sm" data-g="-1" aria-label="Lower the goal"${goal <= 1 ? ' disabled' : ''}>−</button><b class="num" aria-live="polite">${goal}</b><button type="button" class="btn sm" data-g="1" aria-label="Raise the goal"${goal >= 5 ? ' disabled' : ''}>+</button></div></div>
+      <p class="mu hint">2+ minutes of practice counts. So does a finished Sprint, a Survival run of 90 s or more, and a Flash run with 3 rounds right.</p></div>`;
+  };
+  const before = S.goal || 2;
+  const v = await dialog({
+    title: 'Today’s goal', body: draw(),
+    actions: [{ label: 'Close', value: false }, { label: 'Start a session', value: 'start', primary: true }],
+    onOpen: (dl) => {
+      dl.classList.add('stksheet', 'wsheet');
+      dl.addEventListener('click', (e) => {
+        const b = e.target.closest('[data-g]'); if (!b || b.disabled) return;
+        S.goal = clamp((S.goal || 2) + +b.dataset.g, 1, 5); save();
+        const body = dl.querySelector('.body'), want = b.dataset.g;
+        body.innerHTML = draw();
+        const nb = body.querySelector('[data-g="' + want + '"]:not([disabled])') || body.querySelector('[data-g]:not([disabled])'); nb && nb.focus({ preventScroll: true });
+      });
+    },
+  });
+  if ((S.goal || 2) != before && view.scr == 'home') home();
+  if (v == 'start') start();
 };
