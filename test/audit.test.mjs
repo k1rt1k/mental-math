@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { S, migrate, replaceState, fresh, DEVICE_LOCAL, devicePrefs } from '../public/js/state.js';
+import { S, migrate, replaceState, fresh, DEVICE_LOCAL, PREF_KEYS, devicePrefs } from '../public/js/state.js';
 import { shareLine, modeLabel } from '../public/js/stats.js';
 import { qk, how } from '../public/js/engine.js';
 
@@ -37,7 +37,7 @@ test('Reset keeps every device preference and drops progress', () => {
   assert.equal(keep.pace, 'relaxed');
   assert.equal(keep.zen, true);
   assert.equal(keep.rem.on, true, 'reminders are device settings, not progress');
-  for (const k of Object.keys(keep)) assert.ok(DEVICE_LOCAL.includes(k), k + ' is not device-local');
+  for (const k of Object.keys(keep)) assert.ok(DEVICE_LOCAL.includes(k) || PREF_KEYS.includes(k) || k == 'pt', k + ' is not a device or synced setting');
   for (const k of ['onb', 'goal', 'sessions', 'sk', 'cfg']) assert.equal(keep[k], undefined);
 });
 

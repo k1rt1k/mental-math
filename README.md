@@ -1,4 +1,13 @@
-# Mental Math Trainer 14.47 – guided learning paths
+# Mental Math Trainer 14.48 – settings that follow you
+
+## v14.48
+- **Settings sync across browsers and devices.** Theme, accent, question font, text size, high contrast, colour-blind colours, larger answer text, reduce motion, focus layout, keypad (on/off and layout), pace readout, countdown, sound, vibration, auto-pause, daily goal, the current session setup and Saved setups now travel with your sync key. A new browser or phone looks and behaves like your others as soon as sync is set up; nothing is re-entered per device.
+- **Newest change wins, per setting.** Each setting has its own change time in `S.pt`, stamped in `save()` only when its value actually changes (loads, merges and imports never stamp). Changing the theme on the laptop and the keypad layout on the phone keeps both; setting the theme back to Auto is a change too. Data from before this version has no times: a device keeps its own value and a device that never set one adopts the account's, so nothing flips unexpectedly on upgrade.
+- **Repaints live.** A settings-only change from another device now repaints on the next sync (it used to be missed whenever the other device had saved more recently), and a newer local setting is pushed even if the server's session data looks identical.
+- **Stays per device (by design):** reminders (they belong to this browser's push subscription), which panels are open, and the backup-banner snooze. Reset keeps your appearance and input settings, as before; goal and saved setups are still cleared by Reset.
+- **Not synced:** AI Coach history and cached AI replies are local caches, not settings.
+- Version 14.48, cache `mm-v14-48`. Tests: `test/v1448-settings-sync.test.mjs`, plus updates to `test/audit.test.mjs` and `test/v80.test.mjs` (they asserted the old per-device rule).
+
 
 ## v14.47
 - **Guided paths for every skill.** Learn now opens with a five-stage journey for each of the ten skills: Foundation → Intermediate → Mental shortcuts → Independent practice → Mastery assessment. Each stage teaches the method in plain language, then offers a worked example before the timed drill.
@@ -250,7 +259,7 @@ Driven by the 14.14 live self-test report. Every reply was read, not just checke
 ## Current backend contract
 This section describes the deployed backend as it is today; the release notes below are historical.
 - Fixed Netlify Blobs initialization: the documented API is `getStore(storeName)`. Strong consistency remains requested on `getWithMetadata` reads.
-- Added a deployment fingerprint to `GET /api/ai`: `buildVersion: "14.47"` and response header `x-mental-math-ai-version: 14.47`.
+- Added a deployment fingerprint to `GET /api/ai`: `buildVersion: "14.48"` and response header `x-mental-math-ai-version: 14.48`.
 - Exposes the active model allow-list and exact application safety policy in the diagnostic response.
 - Keeps Gemini 3.5 Flash-Lite primary and Gemini 3.1 Flash-Lite as the only backup.
 - Keeps the shared 300-upstream-attempt Pacific-day budget and independent 12 RPM rolling windows per model.
@@ -284,7 +293,7 @@ The JSON must include:
 
 ```json
 {
-  "buildVersion": "14.47",
+  "buildVersion": "14.48",
   "defaultModel": "gemini-3.5-flash-lite",
   "models": ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite"],
   "budgetPolicy": {
@@ -294,7 +303,7 @@ The JSON must include:
 }
 ```
 
-The `budgetPolicy` object also includes the model list. If `buildVersion` is absent or not `14.47`, the new function bundle is not the one currently serving the site; redeploy the full project root to the correct linked Netlify site.
+The `budgetPolicy` object also includes the model list. If `buildVersion` is absent or not `14.48`, the new function bundle is not the one currently serving the site; redeploy the full project root to the correct linked Netlify site.
 
 ## Honest limitations
 - Automated tests use a mocked Blobs store and mocked Gemini responses; they cannot prove the user's live Netlify project, API key, Google model availability, or current provider capacity.

@@ -1,6 +1,6 @@
 // Cloud sync against /api/sync (Netlify Function + Blobs). One learner per device;
 // the device's personal sync password selects the learner's isolated cloud store.
-import { S, replaceState, mergeStates, persist, onSave, LEGACY_ACTIVE_USER } from './state.js';
+import { S, replaceState, mergeStates, migrate, persist, onSave, prefsSig, LEGACY_ACTIVE_USER } from './state.js';
 
 // One sync credential per device. The credential itself selects the person's
 // isolated server-side store (SYNC_KEY, SYNC_KEY_SISTER, etc.).
@@ -77,12 +77,14 @@ export async function pull(afterConflict = false) {
     if (ep != epoch) return;            // the key changed while we waited: this answer is for another account
     set('ok');                          // reachable and authorised; a failing push below turns this into offline/key
     if (r && r.sk && Array.isArray(r.sessions)) {
-      const before = S.sessions.length, uBefore = S.u || 0;
+      const before = S.sessions.length, uBefore = S.u || 0, prefsBefore = prefsSig();
       replaceState(mergeStates(S, r));
       persist();
       synced = true;
-      if ((r.u || 0) > uBefore || S.sessions.length != before) onChange();
-      if (!afterConflict && (S.sessions.length != r.sessions.length || S.u != r.u)) await push();
+      // A settings change from another device must repaint even when its timestamp is older than our last save.
+      if ((r.u || 0) > uBefore || S.sessions.length != before || prefsSig() != prefsBefore) onChange();
+      // Push when the server is missing anything we hold, including a newer setting of ours.
+      if (!afterConflict && (S.sessions.length != r.sessions.length || S.u != r.u || prefsSig() != prefsSig(migrate(r)))) await push();
       else if (afterConflict) await push();
     } else { synced = true; await push(); }
   } catch (e) { if (ep == epoch) fail(e); }

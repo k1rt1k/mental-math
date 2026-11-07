@@ -146,6 +146,36 @@ export const fresh = () => {
   return { v: 1, cal: CAL, sk, sessions: [], weak: {}, mastered: {}, recall: {}, paths: {}, best: {}, ms: [], lastExport: 0, pat: {}, facts: {}, errs: {}, rustFor: 0, hist: [], daily: {}, gone: {}, ctr: emptyCtr() };
 };
 
+/**
+ * Settings that follow the learner to every browser and device. Each one carries its own change time in `S.pt`
+ * (stamped in `save()` when its value actually changes), so the newest change to each setting wins independently:
+ * theme set on the laptop and keypad set on the phone both survive. Goal, the saved session setup and the saved
+ * setups sync the same way.
+ */
+export const PREF_KEYS = ['pad', 'theme', 'acc', 'font', 'zen', 'mute', 'noBlur', 'noCd', 'noHap', 'ts', 'hc', 'cb', 'bigA', 'pace', 'padFlip', 'rm'];
+export const SYNCED_PREFS = [...PREF_KEYS, 'goal', 'cfg', 'presets'];
+/** Genuinely tied to one browser: the push subscription behind reminders, which panels are open, and snoozed banners. */
+export const DEVICE_LOCAL = ['rem', 'skOpen', 'bkSnooze', 'padHint'];
+/** What Reset keeps: device-bound settings plus the synced appearance/input settings (and their change times). Progress, goal and setups go. */
+export const devicePrefs = (st = S) => {
+  const out = Object.fromEntries([...DEVICE_LOCAL, ...PREF_KEYS].filter((k) => st[k] !== undefined).map((k) => [k, st[k]]));
+  if (isObj(st.pt)) { const pt = {}; PREF_KEYS.forEach((k) => { if (st.pt[k] > 0) pt[k] = st.pt[k]; }); if (Object.keys(pt).length) out.pt = pt; }
+  return out;
+};
+
+const prefVal = (v) => (v === undefined ? '' : JSON.stringify(v));
+let prefSnap = {};
+/** Remember the current value of every synced setting, so `stampPrefs` can tell what changed since. */
+function snapPrefs(st = S) { prefSnap = Object.fromEntries(SYNCED_PREFS.map((k) => [k, prefVal(st[k])])); }
+/** Stamp every synced setting whose value changed since the last snapshot. Merges and loads re-snapshot without stamping. */
+function stampPrefs() {
+  const now = Date.now();
+  S.pt = isObj(S.pt) ? S.pt : {};
+  SYNCED_PREFS.forEach((k) => { const v = prefVal(S[k]); if (v !== prefSnap[k]) { S.pt[k] = now; prefSnap[k] = v; } });
+}
+/** Order-independent fingerprint of the synced settings and their change times; used to notice a settings-only change. */
+export const prefsSig = (st = S) => JSON.stringify(SYNCED_PREFS.map((k) => [st[k] === undefined ? null : st[k], (st.pt && st.pt[k]) || 0]));
+
 /** Make any loaded/imported/synced object safe to use. Never throws. Adds new skills with starting ratings. */
 const ONLY = ['all', 'mix', 'zeta', ...IDS];
 const fin = (x, d = 0) => (Number.isFinite(+x) && x !== null && x !== '' ? +x : d);
@@ -268,6 +298,9 @@ export function migrate(o) {
     const name = typeof p.n == 'string' ? p.n.trim().slice(0, 28) : '';
     return cfg && name ? { n: name, cfg } : null;
   }).filter(Boolean);
+  // Per-setting change times (see SYNCED_PREFS): only known settings, only real timestamps.
+  out.pt = {};
+  if (isObj(s.pt)) SYNCED_PREFS.forEach((k) => { const t = fin(s.pt[k]); if (t > 0) out.pt[k] = t; });
   out.goal = clamp(Math.round(fin(s.goal, 2)), 1, 5);   // the Settings stepper is 1..5, and plan arithmetic assumes a number
   out.cal = Number.isFinite(+s.cal) && s.cal !== null && s.cal !== '' ? +s.cal : Array.isArray(s.sessions) && s.sessions.length ? 0 : CAL;   // existing data without it predates the scoring fix
   out.ms = Array.isArray(s.ms) ? s.ms : [];
@@ -277,7 +310,7 @@ export function migrate(o) {
 
 /** The single live state object. Mutated in place so imports never go stale. */
 export const S = {};
-export const replaceState = (o) => { Object.keys(S).forEach((k) => delete S[k]); Object.assign(S, migrate(o)); };
+export const replaceState = (o) => { Object.keys(S).forEach((k) => delete S[k]); Object.assign(S, migrate(o)); snapPrefs(); };
 
 let loaded = {};
 try { loaded = JSON.parse(localStorage[activeKey()]); } catch (e) { /* first run or blocked storage */ }
@@ -313,6 +346,7 @@ export function persist() {
 /** Stamp as modified, persist, and tell the sync layer. */
 export function save() {
   S.u = Date.now();
+  stampPrefs();
   compact();
   if (!persist()) { listeners.forEach((f) => f('error')); return false; }
   listeners.forEach((f) => f('saved'));
@@ -413,10 +447,6 @@ export const cfgNow = () => Object.assign({ dur: 120, only: 'all' }, S.cfg);
 export const hasData = () => S.sessions.length > 0;
 
 /* ---------- merge two states (used by cloud sync) ---------- */
-export const DEVICE_LOCAL = ['pad', 'theme', 'acc', 'font', 'zen', 'mute', 'noBlur', 'noCd', 'noHap', 'ts', 'hc', 'cb', 'bigA', 'pace', 'rem', 'padFlip', 'rm', 'skOpen', 'bkSnooze', 'padHint'];
-/** Device preferences (sound, pad, theme, reminders…) describe the device, not the learner's progress, so Reset keeps them. */
-export const devicePrefs = (st = S) => Object.fromEntries(DEVICE_LOCAL.filter((k) => st[k] !== undefined).map((k) => [k, st[k]]));
-
 /**
  * Merge so that no device ever loses work:
  *  - sessions: union by timestamp
@@ -424,8 +454,9 @@ export const devicePrefs = (st = S) => Object.fromEntries(DEVICE_LOCAL.filter((k
  *  - missed questions: union, newer wins per key
  *  - pattern / fact / error counters: every device's own contribution is kept and summed (see `bump`), never "larger wins"
  *  - bests, daily scores: higher wins; milestones: union
+ *  - settings (appearance, keypad, sound, goal, saved setups): the newest change to each one wins, see SYNCED_PREFS
  *  - everything else: whichever state was saved last
- *  - appearance & input settings stay as they are on this device (a)
+ *  - reminders, open panels and banner snoozes stay as they are on this device (a)
  */
 /** Merge two copies of the same mastered question without losing its first mastery or a lapse. */
 function mergeMasteredEntry(x, y) {
@@ -519,6 +550,15 @@ export function mergeStates(a, b) {
   m.u = Math.max(a.u || 0, b.u || 0);
   m.cal = Math.max(a.cal || 0, b.cal || 0);
   m.onb = a.onb || b.onb;
+  // Settings: the newest change to each one wins. With no change time on either side (data from before settings
+  // synced), this device keeps its own value and an unset device adopts a set one, so nothing changes by surprise.
+  m.pt = {};
+  SYNCED_PREFS.forEach((k) => {
+    const ta = a.pt[k] || 0, tb = b.pt[k] || 0;
+    const w = ta !== tb ? (ta > tb ? a : b) : (a[k] !== undefined || b[k] === undefined ? a : b);
+    if (w[k] === undefined) delete m[k]; else m[k] = w[k];
+    if (Math.max(ta, tb)) m.pt[k] = Math.max(ta, tb);
+  });
   DEVICE_LOCAL.forEach((k) => { if (a[k] === undefined) delete m[k]; else m[k] = a[k]; });
   return m;
 }

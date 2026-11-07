@@ -33,10 +33,13 @@ test('a 1 am session counts as night, not morning', () => {
   assert.equal(hourStats().rows.find((r) => r.l == 'Night').s, 1);
 });
 
-test('keypad layout is device-local: sync never moves it', () => {
+test('keypad layout syncs like every other setting: newest change wins, unset adopts', () => {
   const a = { ...fresh(), padFlip: true, u: 1 }, b = { ...fresh(), u: 2 };
-  assert.equal(mergeStates(a, b).padFlip, true);
-  assert.equal(mergeStates(b, a).padFlip, undefined);
+  assert.equal(mergeStates(a, b).padFlip, true);        // no change times: this device keeps its own value
+  assert.equal(mergeStates(b, a).padFlip, true);        // a device that never set it adopts the other's
+  const c = { ...a, pt: { padFlip: 50 } }, d = { ...b, padFlip: false, pt: { padFlip: 90 } };
+  assert.equal(mergeStates(c, d).padFlip, false);       // the later change wins from either side
+  assert.equal(mergeStates(d, c).padFlip, false);
 });
 
 test('wiring: pagehide with a persisted page only pauses; progress has tabs; restart, notebook search, results delta exist', () => {
