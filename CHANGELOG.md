@@ -2,6 +2,14 @@
 
 Newest first. What is true of the app today is in [README.md](README.md). The release number is the `VERSION` file.
 
+## v14.61
+- **AI Coach redesigned, all four tabs.** A new header with the coach mark and the daily-allowance pill, and a segmented tab bar (icon-over-label, four equal columns on phones) replace the chip rail and 2x2 grid. Tabs are now *Analysis*, *Recommend*, *Plans* and *Tutor*.
+- **AI answers are easy to read.** Analysis, recommendation and plan replies are split at their headings into numbered section cards under a larger lead paragraph, with a quiet source line (Gemini or local fallback, and how long ago) instead of the grey block. Body text is larger with more line height; lists have accent markers; quotes are callouts; display maths sits in a tinted box. The same text styles apply to the AI sheets and chat bubbles. A skeleton shows while a reply is on its way, and the button says what it will do (*Run analysis* / *Refresh*).
+- **Analysis tab:** four stat tiles with icons, the focus skill as a callout with a one-tap *Drill it*, skill ratings and common slips as aligned bars.
+- **Recommend tab:** the suggested session is a tinted card with *Start*; spaced review shows a large due count.
+- **Tutor tab:** coach and user messages are told apart (avatar and soft bubble versus accent bubble), six starter cards in the empty state, a pill composer with a round send button that stays above the tab bar on phones.
+- No change to what the AI is asked, to quotas, storage or sync. Coach CSS moved from `style.css` to `extras.css` (the stylesheet test caps `style.css` at 1100 lines). Tests that pinned the old Coach markup were updated: `v144-mobile`, `v1441-presets-bestby`, `v1460-header-coach`.
+
 ## v14.60
 - **Phone header fits on one row.** The Home streak pill shortens to \"11d\" below 560 px (the words \"-day streak\" stay in the page for screen readers and on wider screens), and the header no longer wraps, so the streak, sync cloud and gear sit together beside the greeting at 360 and 390 px.
 - **Coach, Strengths and recurring slips.** Skill ratings are bars (weakest first, the two the coach would drill are tagged *focus*, one set of columns so the bars line up) instead of a comma-separated line, and the most frequent slips are pills with counts. The no-sync notice is one short line with a single *Set up* button. Only how things are drawn changed; the numbers come from the same data.

@@ -11,10 +11,10 @@ test('Home streak pill keeps its full words for screen readers and shortens visi
   assert.match(css, /\.streak \.ss \{ display: none; \}/);                // the short form is phone-only
 });
 
-test('Coach shows skill ratings as bars and slips as pills, and no longer prints them as a comma list', () => {
-  assert.match(coach, /const skillBars = /); assert.match(coach, /const slipPills = /);
-  assert.match(coach, /\$\{skillBars\(\)\}/); assert.match(coach, /\$\{slipPills\(\)\}/);
+test('Coach shows skill ratings as bars and slips as bars, and no longer prints them as a comma list', () => {
+  assert.match(coach, /const skillBars = /); assert.match(coach, /const slipList = /);
+  assert.match(coach, /\$\{skillBars\(\)\}/); assert.match(coach, /\$\{slipList\(\)\}/);
   assert.doesNotMatch(coach, /esc\(summary\.skillsList\)/);
-  assert.match(css, /\.cskills \{[^}]*grid-template-columns: max-content/);   // one set of columns, so bars line up
-  assert.match(css, /prefers-reduced-motion: reduce\) \{ \.csk \.bar > i \{ animation: none/);
+  assert.match(css, /\.cskills \{ grid-template-columns: max-content/);   // one set of columns, so bars line up
+  assert.match(css, /prefers-reduced-motion: reduce\) \{ \.trk > i \{ animation: none/);
 });

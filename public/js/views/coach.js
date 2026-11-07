@@ -34,16 +34,30 @@ import { drill } from './home.js';
 import { weakestSkills, ERRL } from '../stats.js';
 import { syncKey } from '../sync.js';
 
+/* ---------- small building blocks ---------- */
+const ago = (t) => {
+  if (!t) return '';
+  const m = Math.round((Date.now() - t) / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return `${m} min ago`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h} h ago`;
+  return new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+};
+const SEND = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V6m0 0-5.5 5.5M12 6l5.5 5.5"/></svg>';
+
 /** Skill ratings as bars, weakest first (the two the coach would drill are marked). Rating is level x 100 on a 12-level scale. */
 const skillBars = () => {
   const weak = new Set(weakestSkills(2));
   return `<div class="cskills" role="list">${IDS.map((k) => ({ k, v: Math.round(S.sk[k].lv * 100) })).sort((a, b) => a.v - b.v).map(({ k, v }) =>
-    `<div class="csk${weak.has(k) ? ' weak' : ''}" role="listitem" style="--sc:${COL[k]}"><span class="nm">${esc(SK[k].n)}${weak.has(k) ? '<em>focus</em>' : ''}</span><span class="bar" aria-hidden="true"><i style="width:${Math.max(3, Math.min(100, v / 12))}%"></i></span><b class="num">${v}</b></div>`).join('')}</div>`;
+    `<div class="csk${weak.has(k) ? ' weak' : ''}" role="listitem" style="--sc:${COL[k]}"><span class="nm"><i class="dot"></i>${esc(SK[k].n)}${weak.has(k) ? '<em>focus</em>' : ''}</span><span class="trk" aria-hidden="true"><i style="width:${Math.max(3, Math.min(100, v / 12))}%"></i></span><b class="num">${v}</b></div>`).join('')}</div>`;
 };
-/** The most frequent kinds of slip as small pills with their counts. */
-const slipPills = () => {
-  const top = Object.entries(S.errs || {}).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]).slice(0, 4);
-  return top.length ? `<div class="cslips">${top.map(([k, n]) => `<span class="pill">${esc(ERRL[k] ? ERRL[k][0] : k)} <b class="num">${n}</b></span>`).join('')}</div>` : '<div class="mu" style="margin-top:4px">No recurring slips recorded yet.</div>';
+/** The most frequent kinds of slip, each with a bar scaled to the most common one. */
+const slipList = () => {
+  const top = Object.entries(S.errs || {}).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  if (!top.length) return '<div class="cempty"><b>No recurring slips yet</b><span>Keep practising. Patterns show up after a few sessions.</span></div>';
+  const max = top[0][1];
+  return `<div class="cslips" role="list">${top.map(([k, n]) => `<div class="cslip" role="listitem"><span class="nm">${esc(ERRL[k] ? ERRL[k][0] : k)}</span><span class="trk" aria-hidden="true"><i style="width:${Math.max(6, Math.round((n / max) * 100))}%"></i></span><b class="num">${n}</b></div>`).join('')}</div>`;
 };
 
 let activeTab = 'coach'; // 'coach' | 'recommend' | 'plan' | 'tutor'
@@ -52,17 +66,44 @@ let trainingPlanText = '';
 let tutorInputText = '';
 let coachAnalysisSource = 'unknown', coachAnalysisMessage = '', coachAnalysisAt = 0;
 let trainingPlanSource = 'unknown', trainingPlanMessage = '', trainingPlanAt = 0;
-let recommendationText = '', recommendationSource = 'unknown', recommendationMessage = '', recommendationStructured = null;
+let recommendationText = '', recommendationSource = 'unknown', recommendationMessage = '', recommendationStructured = null, recommendationAt = 0;
 let isLoading = false;
+let loadingKind = ''; // which request is in flight: 'analysis' | 'recommend' | 'plan' | 'chat'
 // A reply can arrive after the learner has left this screen (even started a session): never paint over whatever they are on now.
 const repaint = () => { if (view.scr === 'coach') coachView(); };
 
+/** Who wrote this, when, and any note from the service. One quiet line above the text. */
 function sourceNotice(source, message = '', at = 0, cached = false) {
-  const label = source === 'gemini' ? 'Gemini-generated' : source === 'local' ? 'Local fallback · not Gemini' : 'Saved result · source unknown';
-  const when = at ? ` · ${new Date(at).toLocaleString()}` : '';
-  const cache = cached ? ' · exact-question cache' : '';
-  return `<div class="mu" style="font-size:12px;margin:8px 0 12px"><b>${esc(label)}</b>${esc(when + cache)}${message ? `<br>${esc(message)}` : ''}</div>`;
+  const gem = source === 'gemini';
+  const label = gem ? 'Gemini' : source === 'local' ? 'Local fallback · not Gemini' : 'Saved result · source unknown';
+  const meta = [at ? ago(at) : '', cached ? 'exact-question cache' : ''].filter(Boolean).join(' · ');
+  return `<div class="asrc"><span class="tag ${gem ? 'ok' : 'warn'}">${icon(gem ? 'sparkle' : 'bolt')}${esc(label)}</span>${meta ? `<span class="when">${esc(meta)}</span>` : ''}</div>${message ? `<div class="anote">${esc(message)}</div>` : ''}`;
 }
+
+/** Turn a rendered AI reply into a readable report: intro paragraph, then one numbered card per heading. */
+function report(text, source, message, at) {
+  const html = renderRich(text);
+  const parts = html.split(/(?=<h3>)/);
+  const lead = parts.length && !parts[0].startsWith('<h3>') ? parts.shift() : '';
+  const secs = parts.map((p, i) => {
+    const m = p.match(/^<h3>([\s\S]*?)<\/h3>([\s\S]*)$/);
+    if (!m) return `<section class="ai-sec"><div class="ai-prose">${p}</div></section>`;
+    const title = m[1].replace(/^\s*\d+[.)]\s+/, '');
+    return `<section class="ai-sec"><h3><span class="ai-n" aria-hidden="true">${i + 1}</span><span>${title}</span></h3><div class="ai-prose">${m[2]}</div></section>`;
+  }).join('');
+  return `<div class="areport">${sourceNotice(source, message, at)}${lead ? `<div class="ai-prose ai-lead">${lead}</div>` : ''}${secs ? `<div class="ai-secs${parts.length > 3 ? ' wide' : ''}">${secs}</div>` : ''}</div>`;
+}
+
+/** Placeholder lines while a reply is on its way. */
+const skeleton = (label) => `<div class="askel" role="status" aria-live="polite"><span class="sr">${esc(label)}</span><div class="ln w1"></div><div class="ln w2"></div><div class="ln w3"></div><div class="ln w2"></div><div class="ln w1"></div></div>`;
+
+/** A card head: icon badge, title, short line, and the action on the right. */
+const cardHead = ({ ic, title, info, sub, actions = '' }) => `
+  <div class="chead">
+    <span class="cbadge" aria-hidden="true">${icon(ic)}</span>
+    <div class="ct"><h2>${title}${info ? ib(info) : ''}</h2>${sub ? `<p>${sub}</p>` : ''}</div>
+    ${actions ? `<div class="cact">${actions}</div>` : ''}
+  </div>`;
 
 function coachView() {
   document.title = 'AI Coach · Mental Math';
@@ -92,36 +133,26 @@ function coachView() {
     ? `<span class="pill bad" title="Resets at midnight Pacific time">${icon('lock')} AI paused · resets Pacific midnight</span>`
     : `<span class="pill ok" id="ai-pill" title="Google AI Studio free tier; this is the shared daily allowance for the app">${icon('sparkle')} Gemini · ${aiBudgetLeft() == null ? 'free tier' : aiBudgetLeft() + ' left today'}</span>`;
 
+  const tabs = [['coach', 'chart', 'Analysis'], ['recommend', 'target', 'Recommend'], ['plan', 'cal', 'Plans'], ['tutor', 'bulb', 'Tutor']];
+
   main.innerHTML = `
   <div class="coach-page">
-  <div class="hd coach-header" style="align-items:flex-start">
-    <div>
-      <div class="eyebrow" style="display:flex;align-items:center;gap:8px">
-        <span>AI MATHEMATICS COACH</span>
-        ${quotaPill}
-      </div>
-      <h1 style="margin-top:4px">Personal Coach</h1>
+  <header class="ch">
+    <span class="ch-av" aria-hidden="true">${icon('sparkle')}</span>
+    <div class="ch-t">
+      <div class="eyebrow">AI Mathematics Coach</div>
+      <h1>Personal Coach</h1>
+      <p>Built from your practice on this device.</p>
     </div>
-    <div class="mu" style="font-size:12px">Your progress · This device</div>
-  </div>
+    <div class="ch-q">${quotaPill}</div>
+  </header>
 
-  <div class="chips fscroll coach-tabs" role="tablist" aria-label="AI Coach sections" style="margin-bottom:18px">
-    <button class="chip" role="tab" aria-selected="${activeTab === 'coach'}" data-act="coachTab" data-v="coach">
-      ${icon('chart')} Coach & Analysis
-    </button>
-    <button class="chip" role="tab" aria-selected="${activeTab === 'recommend'}" data-act="coachTab" data-v="recommend">
-      ${icon('target')} Recommendations
-    </button>
-    <button class="chip" role="tab" aria-selected="${activeTab === 'plan'}" data-act="coachTab" data-v="plan">
-      ${icon('cal')} Training Plans
-    </button>
-    <button class="chip" role="tab" aria-selected="${activeTab === 'tutor'}" data-act="coachTab" data-v="tutor">
-      ${icon('bulb')} Math Tutor
-    </button>
+  <div class="ctabs" role="tablist" aria-label="AI Coach sections">
+    ${tabs.map(([v, ic, t]) => `<button class="ctab" role="tab" type="button" aria-selected="${activeTab === v}" data-act="coachTab" data-v="${esc(v)}">${icon(ic)}<span>${t}</span></button>`).join('')}
   </div>
 
   ${syncKey() ? '' : `<div class="notice" style="margin-bottom:14px"><span>AI is off until sync is set up. Local summaries for now.</span><span class="btns"><button class="btn sm" data-go="settings">Set up</button></span></div>`}
-  <div id="coach-content" class="coach-content">
+  <div id="coach-content" class="coach-content" role="tabpanel">
     ${renderTabContent(summary, chat, uName)}
   </div>
   </div>
@@ -130,180 +161,161 @@ function coachView() {
 }
 
 function renderTabContent(summary, chat, uName) {
-  if (activeTab === 'coach') {
-    return renderCoachTab(summary, uName);
-  }
-  if (activeTab === 'recommend') {
-    return renderRecommendTab(summary);
-  }
-  if (activeTab === 'plan') {
-    return renderPlanTab(summary);
-  }
-  if (activeTab === 'tutor') {
-    return renderTutorTab(chat, uName);
-  }
+  if (activeTab === 'coach') return renderCoachTab(summary, uName);
+  if (activeTab === 'recommend') return renderRecommendTab(summary);
+  if (activeTab === 'plan') return renderPlanTab(summary);
+  if (activeTab === 'tutor') return renderTutorTab(chat, uName);
   return '';
 }
 
 function renderCoachTab(summary, uName) {
+  const weakKey = weakestSkills(1)[0] || '';
+  const busy = isLoading && loadingKind === 'analysis';
+  const stats = [
+    ['target', summary.avgRating, 'avg rating'],
+    ['check', `${summary.accuracy}%`, 'accuracy'],
+    ['bolt', summary.avgSpeed ? `${summary.avgSpeed}s` : '–', 'avg speed'],
+    ['flame', `${summary.streak}d`, 'streak'],
+  ];
   return `
-  <div class="coach-top">
-    <div>
-      ${summary.sessionsCount === 0 ? `
-      <div class="card" style="margin-bottom:16px;border-color:color-mix(in srgb, var(--ac) 40%, transparent)">
-        <b style="color:var(--tx)">Welcome to your Personal AI Coach, ${esc(uName)}!</b>
-        <p class="mu" style="margin:6px 0 12px">
-          You haven't played any sessions on this device yet. Complete a 2-minute session to calibrate your ratings and speed baseline, or ask your tutor questions below!
-        </p>
-        <button class="btn primary" data-act="startFirst">${icon('play')} Start First 2-Min Session</button>
-      </div>` : ''}
-      <div class="card" style="margin-bottom:16px">
-        <div class="eyebrow" style="color:var(--ac)">YOUR PERFORMANCE${ib('c.perf')}</div>
-        <div class="rstats coach-performance" style="margin-top:10px">
-          <div class="rs"><b class="num">${summary.avgRating}</b><span>avg rating</span></div>
-          <div class="rs"><b class="num">${summary.accuracy}%</b><span>accuracy</span></div>
-          <div class="rs"><b class="num">${summary.avgSpeed ? summary.avgSpeed + 's' : '–'}</b><span>avg speed</span></div>
-          <div class="rs"><b class="num">${summary.streak}d</b><span>streak</span></div>
-        </div>
-        <p class="mu" style="margin-top:12px;font-size:14px">
-          Based on <b>${summary.sessionsCount}</b> sessions (${summary.totalAnswers} total answers).
-          ${summary.weaknesses ? `<br>Key focus area: <b>${esc(summary.weaknesses)}</b>.` : ''}
-        </p>
-      </div>
-    </div>
+  ${summary.sessionsCount === 0 ? `
+  <div class="cwelcome">
+    <div><h2>Welcome, ${esc(uName)}. Let's find your baseline.</h2>
+    <p>No sessions on this device yet. A 2-minute run calibrates your ratings and speed, and then the coach has something real to work with.</p></div>
+    <button class="btn primary" data-act="startFirst">${icon('play', 'fill')} Start first 2-min session</button>
+  </div>` : ''}
 
-    <div>
-      <div class="card" style="margin-bottom:16px">
-        <div class="eyebrow" style="color:var(--ac)">STRENGTHS & RECURRING SLIPS${ib('c.slips')}</div>
-        <div style="margin:12px 0 14px">
-          <b>Common slips</b>
-          ${slipPills()}
-        </div>
-        <div>
-          <b>Skill ratings</b><span class="mu cs-sub"> weakest first</span>
-          ${skillBars()}
-        </div>
-      </div>
+  <section class="cpanel">
+    <div class="cpanel-h"><span class="eyebrow">Your performance${ib('c.perf')}</span><span class="mu">${summary.sessionsCount} sessions · ${summary.totalAnswers} answers</span></div>
+    <div class="cstats">
+      ${stats.map(([ic, v, l]) => `<div class="cstat">${icon(ic)}<b class="num">${v}</b><span>${l}</span></div>`).join('')}
     </div>
+    ${summary.weaknesses ? `<div class="cfocus"><span class="cbadge" aria-hidden="true">${icon('target')}</span><div><span class="eyebrow">Key focus area</span><b>${esc(summary.weaknesses)}</b></div>${weakKey && SK[weakKey] ? `<button class="btn sm" data-act="startAiDrill" data-v="${esc(weakKey)}">${icon('play', 'fill')} Drill it</button>` : ''}</div>` : ''}
+  </section>
+
+  <div class="cgrid">
+    <section class="cpanel">
+      <div class="cpanel-h"><span class="eyebrow">Skill ratings${ib('c.slips')}</span><span class="mu">weakest first</span></div>
+      ${skillBars()}
+    </section>
+    <section class="cpanel">
+      <div class="cpanel-h"><span class="eyebrow">Common slips</span><span class="mu">times seen</span></div>
+      ${slipList()}
+    </section>
   </div>
 
-  <div>
-      <h2>Smart Performance Analysis${ib('c.analysis')}</h2>
-      <div class="card" style="margin-bottom:16px">
-        <p class="mu" style="margin-top:0">
-          Generate a fresh analysis from your recorded performance. Results clearly distinguish live Gemini responses from local fallback summaries.
-        </p>
-        <div class="btns" style="margin:12px 0">
-          <button class="btn primary" data-act="runAnalysis" ${isLoading ? 'disabled' : ''}>
-            ${isLoading ? 'Generating fresh analysis…' : `${icon('sparkle')} Run Smart Analysis`}
-          </button>
-        </div>
-        <div id="analysis-output" class="ai-prose" style="margin-top:14px;border-top:1px solid var(--ln);padding-top:14px">
-          ${coachAnalysisText ? sourceNotice(coachAnalysisSource, coachAnalysisMessage, coachAnalysisAt) + formatMarkdown(coachAnalysisText) : '<div class="mu">Click <b>Run Smart Analysis</b> above to request a fresh analysis of your current performance.</div>'}
-        </div>
-      </div>
+  <section class="cpanel ai">
+    ${cardHead({
+      ic: 'sparkle', title: 'Smart Performance Analysis', info: 'c.analysis',
+      sub: 'A fresh read of your recorded performance: what is working, what is slipping, what to do next.',
+      actions: `<button class="btn primary" data-act="runAnalysis" ${isLoading ? 'disabled' : ''}>${busy ? 'Analysing…' : `${icon('sparkle')} ${coachAnalysisText ? 'Refresh' : 'Run analysis'}`}</button>`,
+    })}
+    <div id="analysis-output" class="cout">
+      ${busy ? skeleton('Generating analysis') : coachAnalysisText ? report(coachAnalysisText, coachAnalysisSource, coachAnalysisMessage, coachAnalysisAt) : `<div class="cempty"><span class="cbadge lg" aria-hidden="true">${icon('chart')}</span><b>No analysis yet</b><span>Tap <b>Run analysis</b> to get a plain-language review of your last sessions.</span></div>`}
     </div>
-  </div>
+  </section>
   `;
 }
 
 function renderRecommendTab(summary) {
   const weakKey = weakestSkills(1)[0] || 'all';
   const weakName = SK[weakKey] ? SK[weakKey].n : 'Arithmetic';
+  const busy = isLoading && loadingKind === 'recommend';
+  const rec = recommendationStructured && SK[recommendationStructured.skill] ? recommendationStructured : null;
   return `
-  <div class="cols">
-    <div>
-      <h2>Personalized Recommendation${ib('c.recommend')}</h2>
-      <div class="card" style="margin-bottom:16px">
-        <p class="mu" style="margin-top:0">Ask Gemini to choose a focused next session using your current ratings, accuracy, speed and review queue. This is generated on demand, not a static canned recommendation.</p>
-        <div class="btns" style="margin:12px 0">
-          <button class="btn primary" data-act="runRecommend" ${isLoading ? 'disabled' : ''}>${isLoading ? 'Generating recommendation…' : `${icon('sparkle')} Generate AI Recommendation`}</button>
-          <button class="btn" data-act="startAiDrill" data-v="${esc(weakKey)}">${icon('play')} Start local weakest-skill drill (${esc(weakName)})</button>
-        </div>
-        ${recommendationText ? sourceNotice(recommendationSource, recommendationMessage) + `<div class="ai-prose">${formatMarkdown(recommendationText)}</div>${recommendationStructured && SK[recommendationStructured.skill] ? `<div class="btns" style="margin-top:12px"><button class="btn primary" data-act="startAiRec">${icon('play', 'fill')} Start this ${recommendationStructured.durationSec / 60}-min ${esc(SK[recommendationStructured.skill].n)} drill</button></div>` : ''}` : '<div class="mu">No recommendation generated yet.</div>'}
+  <div class="cgrid wide-left">
+    <section class="cpanel ai">
+      ${cardHead({
+        ic: 'target', title: 'Personalized Recommendation', info: 'c.recommend',
+        sub: 'Gemini picks your next focused session from your ratings, accuracy, speed and review queue.',
+        actions: `<button class="btn primary" data-act="runRecommend" ${isLoading ? 'disabled' : ''}>${busy ? 'Thinking…' : `${icon('sparkle')} ${recommendationText ? 'New pick' : 'Get recommendation'}`}</button>`,
+      })}
+      <div class="cout">
+        ${busy ? skeleton('Generating recommendation') : recommendationText ? `
+          ${rec ? `<div class="cdrill" style="--sc:${COL[rec.skill]}"><span class="dot"></span><div><span class="eyebrow">Suggested session</span><b>${rec.durationSec / 60}-min ${esc(SK[rec.skill].n)} drill</b></div><button class="btn primary" data-act="startAiRec">${icon('play', 'fill')} Start</button></div>` : ''}
+          ${report(recommendationText, recommendationSource, recommendationMessage, recommendationAt)}`
+        : `<div class="cempty"><span class="cbadge lg" aria-hidden="true">${icon('target')}</span><b>No recommendation yet</b><span>Generated on demand, never a canned tip. Or skip the AI and drill your weakest skill right away.</span></div>`}
       </div>
-    </div>
-    <div>
-      <h2>Spaced Review Status${ib('c.review')}</h2>
-      <div class="card">
-        <b>${summary.dueCount} questions due for spaced review</b>
-        <p class="mu" style="margin:6px 0 14px">Review missed questions at the right time to strengthen recall.</p>
-        <button class="btn" data-act="startReview" ${summary.dueCount === 0 ? 'disabled' : ''}>${icon('book')} Review Missed Questions (${summary.dueCount})</button>
-      </div>
-    </div>
+      <div class="cfoot"><button class="btn" data-act="startAiDrill" data-v="${esc(weakKey)}">${icon('play', 'fill')} Quick drill: ${esc(weakName)}</button><span class="mu">Local, no AI needed</span></div>
+    </section>
+
+    <section class="cpanel cdue${summary.dueCount ? ' has' : ''}">
+      <div class="cpanel-h"><span class="eyebrow">Spaced review${ib('c.review')}</span></div>
+      <div class="cdue-n"><b class="num">${summary.dueCount}</b><span>${summary.dueCount === 1 ? 'question' : 'questions'} due</span></div>
+      <p>${summary.dueCount ? 'Missed questions come back at the right time so they stick.' : 'Nothing due. Missed questions will show up here when it is time to revisit them.'}</p>
+      <button class="btn ${summary.dueCount ? 'primary' : ''}" data-act="startReview" ${summary.dueCount === 0 ? 'disabled' : ''}>${icon('book')} Review now${summary.dueCount ? ` (${summary.dueCount})` : ''}</button>
+    </section>
   </div>`;
 }
 
 function renderPlanTab(summary) {
+  const busy = isLoading && loadingKind === 'plan';
   return `
-  <div>
-    <h2>AI Training Plans${ib('c.plan')}</h2>
-    <p class="mu" style="max-width:64ch;margin:-4px 0 16px">
-      Structured daily workouts and weekly progression roadmaps generated to fit your personal practice goal (${summary.goal} sessions/day).
-    </p>
-
-    <div class="btns" style="margin-bottom:16px">
-      <button class="btn primary" data-act="runPlan" ${isLoading ? 'disabled' : ''}>
-        ${isLoading ? 'Generating Plan…' : `${icon('sparkle')} Generate / Refresh Training Plan`}
-      </button>
+  <section class="cpanel ai">
+    ${cardHead({
+      ic: 'cal', title: 'AI Training Plans', info: 'c.plan',
+      sub: `Daily workouts and a weekly roadmap built around your goal of <b>${summary.goal} ${summary.goal === 1 ? 'session' : 'sessions'}/day</b>.`,
+      actions: `<button class="btn primary" data-act="runPlan" ${isLoading ? 'disabled' : ''}>${busy ? 'Building…' : `${icon('sparkle')} ${trainingPlanText ? 'Refresh plan' : 'Generate plan'}`}</button>`,
+    })}
+    <div class="cout">
+      ${busy ? skeleton('Generating plan') : trainingPlanText ? report(trainingPlanText, trainingPlanSource, trainingPlanMessage, trainingPlanAt) : `
+        <div class="cempty"><span class="cbadge lg" aria-hidden="true">${icon('cal')}</span><b>No custom plan yet</b><span>Tap <b>Generate plan</b> for a structured roadmap that fits your level and your daily goal.</span></div>`}
     </div>
-
-    <div class="card ai-prose">
-      ${trainingPlanText ? sourceNotice(trainingPlanSource, trainingPlanMessage, trainingPlanAt) + formatMarkdown(trainingPlanText) : `
-        <div class="empty" style="text-align:center;padding:20px">
-          <b>No custom plan generated yet</b>
-          <p class="mu" style="margin:8px 0 14px">Click "Generate / Refresh Training Plan" to produce a structured roadmap for your level.</p>
-        </div>
-      `}
-    </div>
-  </div>
+  </section>
   `;
 }
 
 function renderTutorTab(chat, uName) {
+  const last = chat[chat.length - 1];
   const label = (msg) => (msg.role === 'user' ? esc(uName === 'you' ? 'You' : uName)
     : msg.source === 'gemini' ? `Gemini${msg.model ? ' · ' + esc(msg.model) : ''}`
       : msg.source === 'local' ? 'Local fallback · not Gemini' : 'Saved reply · source unknown');
-  const messages = chat.map((msg) => `
-    <div class="chat-msg ${msg.role === 'user' ? 'user' : 'coach'}">
-      <div class="chat-author">${label(msg)}</div>${msg.role !== 'user' && msg.message ? `<div class="chat-note">${esc(msg.message)}</div>` : ''}
-      <div class="chat-bubble ai-prose">${msg.role === 'user' ? `<p>${esc(msg.text)}</p>` : formatMarkdown(msg.text)}</div>
-    </div>
-  `).join('');
-  const thinking = isLoading && chat.length && chat[chat.length - 1].role === 'user'
-    ? `<div class="chat-msg coach"><div class="chat-author">Gemini</div><div class="chat-bubble typing" aria-live="polite"><i></i><i></i><i></i><span class="sr">Thinking…</span></div></div>` : '';
-  const presets = [
-    ['×11 shortcut', 'How do I multiply two-digit numbers by 11 quickly?'],
-    ['93 × 97 trick', 'What is the fastest mental way to calculate 93 × 97?'],
-    ['Squaring ending in 5', 'Give me a mental trick for squaring numbers ending in 5.'],
-    ['Avoid carry slips', 'How can I stop making off-by-one errors when carrying?'],
-    ['Divide by 5 & 25', 'How do I quickly divide large numbers by 5 or 25 mentally?'],
-    ['Percentages', 'How can I calculate 15% and 20% in my head in 2 seconds?'],
-    ['Subtract from 100', 'How do I subtract numbers from 100, 1000 or round bases mentally?'],
-  ].map(([t, q]) => `<button class="chip" data-act="presetTutor" data-v="${esc(q)}" ${isLoading ? 'disabled' : ''}>${esc(t)}</button>`).join('');
+  const messages = chat.map((msg) => msg.role === 'user' ? `
+    <div class="chat-msg user">
+      <div class="chat-bubble"><p>${esc(msg.text)}</p></div>
+    </div>` : `
+    <div class="chat-msg coach">
+      <span class="cav" aria-hidden="true">${icon('sparkle')}</span>
+      <div class="cm-body">
+        <div class="chat-author${msg.source === 'local' ? ' warn' : ''}">${label(msg)}</div>${msg.message ? `<div class="chat-note">${esc(msg.message)}</div>` : ''}
+        <div class="chat-bubble ai-prose">${formatMarkdown(msg.text)}</div>
+      </div>
+    </div>`).join('');
+  const thinking = isLoading && loadingKind === 'chat' && last && last.role === 'user'
+    ? `<div class="chat-msg coach"><span class="cav" aria-hidden="true">${icon('sparkle')}</span><div class="cm-body"><div class="chat-bubble typing" aria-live="polite"><i></i><i></i><i></i><span class="sr">Thinking…</span></div></div></div>` : '';
+  const starters = [
+    ['bolt', '×11 shortcut', 'How do I multiply two-digit numbers by 11 quickly?'],
+    ['star', '93 × 97 trick', 'What is the fastest mental way to calculate 93 × 97?'],
+    ['target', 'Squaring ending in 5', 'Give me a mental trick for squaring numbers ending in 5.'],
+    ['redo', 'Avoid carry slips', 'How can I stop making off-by-one errors when carrying?'],
+    ['down', 'Divide by 5 & 25', 'How do I quickly divide large numbers by 5 or 25 mentally?'],
+    ['chart', 'Percentages', 'How can I calculate 15% and 20% in my head in 2 seconds?'],
+  ];
+  const dis = isLoading ? 'disabled' : '';
+  const empty = `
+    <div class="tutor-empty">
+      <span class="cbadge lg" aria-hidden="true">${icon('bulb')}</span>
+      <b>Ask your tutor anything</b>
+      <span>Pick a starter or type your own question below.</span>
+      <div class="starters">${starters.map(([ic, t, q]) => `<button class="starter" type="button" data-act="presetTutor" data-v="${esc(q)}" ${dis}>${icon(ic)}<span>${esc(t)}</span></button>`).join('')}</div>
+    </div>`;
+  const follow = !isLoading && last && last.role !== 'user'
+    ? `<div class="tutor-chips follow" aria-label="Follow-up suggestions">${[['Another example', 'Give me another worked example of that with different numbers.'], ['Explain simpler', 'Explain that again more simply, step by step.'], ['Quiz me', 'Quiz me with 3 short questions on that. Give the answers only after I reply.']].map(([t, q]) => `<button class="chip" type="button" data-act="presetTutor" data-v="${esc(q)}">${esc(t)}</button>`).join('')}</div>` : '';
 
   return `
-  <div class="card tutor-card">
+  <section class="tutor">
     <div class="tutor-header">
-      <div class="tutor-title">
-        <b>Math Tutor</b>
-        <div class="mu">Ask for a trick or method. Each reply says whether Gemini or the local fallback wrote it.</div>
-      </div>
+      <span class="cbadge" aria-hidden="true">${icon('bulb')}</span>
+      <div class="tutor-title"><h2>Math Tutor</h2><p>Ask for a trick or method. Every reply says whether Gemini or the local fallback wrote it.</p></div>
       ${messages ? `<button class="btn sm ghost danger" data-act="clearTutor" aria-label="Clear chat">${icon('trash')}<span>Clear</span></button>` : ''}
     </div>
-
-    <div class="tutor-chips" aria-label="Suggested questions">${presets}</div>
-
-    <div id="chat-stream" class="chat-stream" aria-live="polite">
-      ${messages || thinking ? messages + thinking : `<div class="tutor-empty"><b>Ask your tutor anything</b><span>Tap a suggestion above or type your own question below.</span></div>`}
-    </div>
-
-    ${!isLoading && chat.length && chat[chat.length - 1].role !== 'user' ? `<div class="tutor-chips follow" aria-label="Follow-up suggestions">${[['Another example', 'Give me another worked example of that with different numbers.'], ['Explain simpler', 'Explain that again more simply, step by step.'], ['Quiz me', 'Quiz me with 3 short questions on that. Give the answers only after I reply.']].map(([t, q]) => `<button class="chip" data-act="presetTutor" data-v="${esc(q)}">${esc(t)}</button>`).join('')}</div>` : ''}
+    <div id="chat-stream" class="chat-stream" aria-live="polite">${messages || thinking ? messages + thinking : empty}</div>
+    ${follow}
     <form class="chat-form" id="tutor-form" action="#">
-      <input class="inp" id="tutor-input" type="text" enterkeyhint="send" placeholder="Ask a mental math question…" value="${esc(tutorInputText)}" autocomplete="off" aria-label="Your question" ${isLoading ? 'disabled' : ''}>
-      <button class="btn primary" type="button" id="tutor-send" data-act="askTutor" ${isLoading ? 'disabled' : ''}>${isLoading ? 'Thinking…' : 'Ask'}</button>
+      <input class="inp" id="tutor-input" type="text" enterkeyhint="send" placeholder="Ask a mental math question…" value="${esc(tutorInputText)}" autocomplete="off" aria-label="Your question" ${dis}>
+      <button class="send" type="button" id="tutor-send" data-act="askTutor" aria-label="Send" ${dis}>${SEND}</button>
     </form>
-  </div>
+  </section>
   `;
 }
 
@@ -318,7 +330,7 @@ A.coachTab = (d) => {
 
 A.runAnalysis = async () => {
   if (isLoading) return;
-  isLoading = true;
+  isLoading = true; loadingKind = 'analysis';
   coachView();
   try {
     const res = await callAi({ action: 'analyze', previousResponse: coachAnalysisSource === 'gemini' ? coachAnalysisText : '', forceRefresh: true });
@@ -332,14 +344,14 @@ A.runAnalysis = async () => {
     coachAnalysisSource = 'local';
     coachAnalysisMessage = String(err.message || err);
   } finally {
-    isLoading = false;
+    isLoading = false; loadingKind = '';
     repaint();
   }
 };
 
 A.runPlan = async () => {
   if (isLoading) return;
-  isLoading = true;
+  isLoading = true; loadingKind = 'plan';
   coachView();
   try {
     const res = await callAi({ action: 'plan', previousResponse: trainingPlanSource === 'gemini' ? trainingPlanText : '', forceRefresh: true });
@@ -354,14 +366,14 @@ A.runPlan = async () => {
     trainingPlanMessage = String(err.message || err);
     trainingPlanAt = Date.now();
   } finally {
-    isLoading = false;
+    isLoading = false; loadingKind = '';
     repaint();
   }
 };
 
 A.runRecommend = async () => {
   if (isLoading) return;
-  isLoading = true;
+  isLoading = true; loadingKind = 'recommend';
   coachView();
   try {
     const res = await callAi({ action: 'recommend', previousResponse: recommendationSource === 'gemini' ? recommendationText : '', forceRefresh: true });
@@ -369,12 +381,14 @@ A.runRecommend = async () => {
     recommendationStructured = res.structured || null;
     recommendationSource = res.source || 'local';
     recommendationMessage = res.message || '';
+    recommendationAt = Date.now();
   } catch (err) {
     recommendationText = 'The recommendation request failed. Please try again.';
     recommendationSource = 'local';
     recommendationMessage = String(err.message || err);
+    recommendationAt = Date.now();
   } finally {
-    isLoading = false;
+    isLoading = false; loadingKind = '';
     repaint();
   }
 };
@@ -402,7 +416,7 @@ A.askTutor = async () => {
   saveChatHistory(history);
 
   tutorInputText = '';
-  isLoading = true;
+  isLoading = true; loadingKind = 'chat';
   coachView();
 
   scrollTutor('end');
@@ -415,7 +429,7 @@ A.askTutor = async () => {
     history.push({ role: 'model', text: 'The tutor request failed. Please try again when the AI service is available.', source: 'local', at: Date.now() });
     saveChatHistory(history);
   } finally {
-    isLoading = false;
+    isLoading = false; loadingKind = '';
     repaint();
     if (view.scr === 'coach') scrollTutor('reply');
   }

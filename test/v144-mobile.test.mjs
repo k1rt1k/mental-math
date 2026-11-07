@@ -16,15 +16,16 @@ test('mobile bottom navigation defines five non-wrapping columns', () => {
 });
 
 test('Coach has a dedicated mobile tab grid and contained chat layout', () => {
+  const extras = readFileSync(new URL('../public/css/extras.css', import.meta.url), 'utf8');
   assert.match(coach, /class="coach-page"/);
-  assert.match(coach, /class="chips fscroll coach-tabs"/);
+  assert.match(coach, /class="ctabs" role="tablist"/);
   assert.match(coach, /Math Tutor/);
-  assert.match(css, /\.coach-page \.coach-tabs\s*\{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/s);
-  assert.match(css, /\.chat-form \.inp\s*\{[^}]*min-width:\s*0/s);
-  // v14.10: the tutor no longer hides replies in a small inner scroll box; the composer sticks above the tab bar.
-  assert.match(css, /\.coach-page \.chat-stream\s*\{[^}]*max-height:\s*none/s);
-  assert.match(css, /\.coach-page \.chat-form\s*\{[^}]*position:\s*sticky/s);
-  assert.match(css, /\.coach-page \.tutor-chips\s*\{[^}]*overflow-x:\s*auto/s);
+  assert.match(extras, /\.ctabs\s*\{[^}]*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/s);
+  assert.match(extras, /\.chat-form \.inp\s*\{[^}]*min-width:\s*0/s);
+  // The tutor never hides replies in a small inner scroll box; the composer sticks above the tab bar on phones.
+  assert.doesNotMatch(extras, /\.chat-stream\s*\{[^}]*max-height/s);
+  assert.match(extras, /\.chat-form\s*\{[^}]*position:\s*sticky/s);
+  assert.match(extras, /\.tutor-chips\s*\{[^}]*overflow-x:\s*auto/s);
 });
 
 test('mobile viewport can use the new stylesheet and service-worker cache', () => {

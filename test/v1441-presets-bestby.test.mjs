@@ -18,9 +18,9 @@ test('Results report how far a new best beat the old one', () => {
   assert.match(rd('js/views/results.js'), /Beat your best by/);
 });
 
-test('Play: points roll respects Reduce motion; Coach stacks performance and slips side by side', () => {
+test('Play: points roll respects Reduce motion; Coach lays ratings and slips out in a two-column grid', () => {
   const p = rd('js/views/play.js');
   assert.match(p, /function rollPts/); assert.match(p, /if \(still\(\)/);
-  assert.match(rd('js/views/coach.js'), /class="coach-top"/);
-  assert.match(rd('css/extras.css'), /\.coach-top \{ display: grid/);
+  assert.match(rd('js/views/coach.js'), /class="cgrid"/);
+  assert.match(rd('css/extras.css'), /\.cgrid \{ display: grid; grid-template-columns: repeat\(2/);
 });
