@@ -3,6 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { VERSION as REL, CACHE } from './helpers/version.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const localStorageStore = {};
@@ -44,10 +45,10 @@ const postAi = (key, body, extraHeaders = {}) => aiHandler(new Request('https://
   body: JSON.stringify(body || {}),
 }));
 
-test('v14.51 version and service-worker cache are aligned', () => {
-  assert.equal(VERSION, '14.51');
+test('version and service-worker cache are aligned with the VERSION file', () => {
+  assert.equal(VERSION, REL);
   const sw = fs.readFileSync(new URL('../public/sw.js', import.meta.url), 'utf8');
-  assert.match(sw, /mm-v14-51/);
+  assert.ok(sw.includes(CACHE));
 });
 
 test('legacy User 2 selection migrates its state to the single canonical device slot without deleting the old data', () => {

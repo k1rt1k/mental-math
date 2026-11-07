@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { VERSION as REL, CACHE } from './helpers/version.mjs';
 
 const css = readFileSync(new URL('../public/css/style.css', import.meta.url), 'utf8');
 const coach = readFileSync(new URL('../public/js/views/coach.js', import.meta.url), 'utf8');
@@ -27,6 +28,6 @@ test('Coach has a dedicated mobile tab grid and contained chat layout', () => {
 });
 
 test('mobile viewport can use the new stylesheet and service-worker cache', () => {
-  assert.match(html, /css\/style\.css\?v=14\.51/);
-  assert.match(sw, /mm-v14-51/);
+  assert.ok(html.includes(`css/style.css?v=${REL}`));
+  assert.ok(sw.includes(CACHE));
 });

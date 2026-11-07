@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { VERSION as REL, CACHE } from './helpers/version.mjs';
 
 const pub = fileURLToPath(new URL('../public/', import.meta.url));
 const css = readFileSync(join(pub, 'css/style.css'), 'utf8');
@@ -13,9 +14,9 @@ const sw = readFileSync(join(pub, 'sw.js'), 'utf8');
 const util = readFileSync(join(pub, 'js/util.js'), 'utf8');
 const html = readFileSync(join(pub, 'index.html'), 'utf8');
 
-test('version and service-worker cache are 14.51 and bump together', () => {
-  assert.match(util, /VERSION = '14.51'/);
-  assert.match(sw, /const C = 'mm-v14-51'/);
+test('version and service-worker cache follow the VERSION file', () => {
+  assert.ok(util.includes(`VERSION = '${REL}'`));
+  assert.ok(sw.includes(`const C = '${CACHE}'`));
 });
 
 test('mode and skill grids adapt instead of forcing five columns', () => {
@@ -73,6 +74,6 @@ test('bundled fonts ship with their SIL OFL notices', () => {
 });
 
 test('the stylesheet is cache-busted from the page', () => {
-  assert.match(html, /href="css\/style\.css\?v=14.51"/);
+  assert.ok(html.includes(`href="css/style.css?v=${REL}"`));
   assert.match(html, /fonts\/jbmono\.woff2/);
 });

@@ -5,7 +5,8 @@ import { A, register, go, view } from '../nav.js';
 import { dialog, confirmDlg, typedConfirmDlg, promptDlg, choiceDlg, toast, download, icon } from '../ui.js';
 import { ib } from '../info.js';
 import { applyTheme, ACC, FONTS, padOn, isTouch } from '../theme.js';
-import { syncKey, setSyncKey, pull, syncNow, statusText, status, fetchBackup, keyProblem, isWeakKey, keysApi, MIN_KEY_LENGTH } from '../sync.js';
+import { boardHint, setBoardHint, boardWhy, loadBoard, boardHtml } from '../board.js';
+import { boardApi, syncKey, setSyncKey, pull, syncNow, statusText, status, fetchBackup, keyProblem, isWeakKey, keysApi, MIN_KEY_LENGTH } from '../sync.js';
 import { state as remState, enable as remEnable, disable as remDisable, test as remTest, rem as remGet, setRem, isStandalone, isIOS } from '../notify.js';
 
 const seg = (act, cur, opts) => `<div class="seg" role="group">${opts.map(([v, l]) => `<button aria-pressed="${cur == v}" data-act="${esc(act)}" data-v="${esc(v)}">${l}</button>`).join('')}</div>`;
@@ -14,6 +15,7 @@ const row = (t, d, key, on) => `<div class="set"><div><div class="t"><span id="l
 const INV = new Set(['noBlur', 'noCd', 'noHap', 'noGrace']);
 const get = (k) => (INV.has(k) ? !S[k] : !!S[k]);
 
+let bd = null;   // this learner's board membership as the server last said: null (unknown) | { member, name }
 let rs = null;   // reminder state, resolved asynchronously: unsupported | ios-install | denied | off | on
 const hh = (t) => String(t.h).padStart(2, '0') + ':' + String(t.m).padStart(2, '0');
 const DN = ['S', 'M', 'T', 'W', 'T', 'F', 'S'], DFULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'], ORDER = [1, 2, 3, 4, 5, 6, 0];
@@ -37,9 +39,11 @@ function remindersCard() {
 }
 const loadRem = () => remState().then((x) => { if (x !== rs) { rs = x; if (view.scr == 'settings') settings(); } });
 
+const loadBoardState = () => { bd = { member: false }; loadBoard(ymd()).then((b) => { bd = b && b.member ? b : { member: false }; if (view.scr == 'settings') settings(); }); };
 function settings() {
   document.title = 'Settings · Mental Math';
   if (rs === null) loadRem();
+  if (bd === null && syncKey()) loadBoardState();
   const goal = S.goal || 2, pad = S.pad == null ? 'auto' : S.pad ? 'on' : 'off', th = S.theme || 'auto';
   const grp = (id, title, sub, inner) => `<section class="sgrp" data-grp="${esc(id)}" aria-labelledby="g-${esc(id)}"><h2 class="sg" id="g-${esc(id)}">${title}<span class="sub">${sub}</span></h2>${inner}</section>`;
   const cols = (l, r) => `<div class="g g2" style="align-items:start"><div class="g">${l}</div><div class="g">${r}</div></div>`;
@@ -88,6 +92,7 @@ function settings() {
       <div class="set"><div><div class="t">${syncKey() ? esc(statusText()) : 'Sync is off'}</div><div class="d">${syncKey() ? 'Key set on this device' : 'No key set'}</div></div><div class="btns"><button class="btn sm" data-act="syncKey">${syncKey() ? 'Change key' : 'Set up sync'}</button>${syncKey() ? '<button class="btn sm" data-act="syncNow">Sync now</button>' : ''}</div></div>
       ${syncKey() && isWeakKey() ? `<div class="notice" role="status" style="margin:0 0 12px"><span>This sync key is shorter than ${MIN_KEY_LENGTH} characters, so it is easier to guess. Replace it with a longer one: set a new SYNC_KEY in Netlify, or ask the main account for a new key under Learners and keys.</span></div>` : ''}
       ${syncKey() ? `<div class="set"><div><div class="t">Learners and keys</div><div class="d">Make a key for another person, or turn one off. Main account only.</div></div><button class="btn sm" data-act="learners">Manage</button></div>` : ''}
+      ${syncKey() ? `<div class="set"><div><div class="t">Daily leaderboard</div><div class="d">${bd && bd.member ? `On, as <b>${esc(bd.name)}</b>. Learners who joined see each other's Daily points.` : 'Off. Compare each day\u2019s Daily score with the other learners on this server. Shares only the display name you choose, your Daily points and how many you answered; leaving deletes it.'}</div></div><div class="btns">${bd && bd.member ? `<button class="btn sm" data-act="boardView">Today</button><button class="btn sm" data-act="boardJoin">Rename</button><button class="btn sm danger" data-act="boardLeave">Leave</button>` : `<button class="btn sm" data-act="boardJoin">Join\u2026</button>`}</div></div>` : ''}
       ${syncKey() ? `<div class="set"><div><div class="t">Recover from cloud safety copy${ib('s.recover')}</div><div class="d">The server keeps a daily copy. This merges back anything missing here.</div></div><button class="btn sm" data-act="restoreCloud">Recover</button></div>` : ''}
     </section>`))}
   ${grp('data', 'Data and help', 'Backups, reset and how things work', cols(`<section class="card"><h3>Your data</h3>
@@ -181,7 +186,7 @@ A.syncKey = async () => {
     if (!problem) break;
   }
   if (o && n && o !== n && S.sessions.length && !(await confirmDlg('Switch sync account?', `This device’s progress (<b>${S.sessions.length} sessions</b>) will be merged into the cloud account selected by the new password. Only continue if that is the intended account.`, { ok: 'Switch and merge' }))) return;
-  setSyncKey(n);
+  setSyncKey(n); bd = null; setBoardHint(false);   // the board belongs to the learner the key selects
   again();
   if (n) { await pull(); again(); } else toast('Sync turned off');
 };
@@ -221,6 +226,23 @@ A.learners = async () => {
     try { d = await keysApi('DELETE', { query: '?id=' + encodeURIComponent(id) }); } catch (e) { return toast('Could not reach the server'); }
     toast(keysWhy(d) || 'Key turned off');
   }
+};
+A.boardJoin = async () => {
+  const name = await promptDlg('Daily leaderboard', 'Display name', (bd && bd.name) || '', { ok: bd && bd.member ? 'Save' : 'Join', hint: 'Other learners on this server see this name, your Daily points and how many you answered. Nothing else. You can leave at any time.' });
+  if (name === null) return;
+  const r = await boardApi('PUT', { body: { name } });
+  if (r.status !== 200) return toast(boardWhy(r), { ms: 4500 });
+  setBoardHint(true); bd = { member: true, name: r.json.name }; again(); toast('On the board as ' + r.json.name);
+};
+A.boardLeave = async () => {
+  if (!(await confirmDlg('Leave the leaderboard?', 'Your name and Daily scores are removed from the board. Your own progress is not touched. You can join again later.', { ok: 'Leave', danger: true }))) return;
+  const r = await boardApi('DELETE');
+  if (r.status !== 200) return toast(boardWhy(r), { ms: 4500 });
+  setBoardHint(false); bd = { member: false }; again(); toast('Left the leaderboard');
+};
+A.boardView = async () => {
+  const b = await loadBoard(ymd());
+  await dialog({ title: 'Today\u2019s board', body: boardHtml(b || { error: 'You are not on the board.' }), actions: [{ label: 'Done', value: true, primary: true }] });
 };
 A.aiStatus = async () => {
   let body;

@@ -3,6 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import aiHandler from '../netlify/functions/ai.mjs';
+import { VERSION as REL, CACHE } from './helpers/version.mjs';
 
 test('Netlify Blobs store is opened with the documented positional store-name argument', async () => {
   const source = await readFile(new URL('../netlify/lib/ai-quota.mjs', import.meta.url), 'utf8');
@@ -15,8 +16,8 @@ test('AI status endpoint exposes a deployment fingerprint and exact live safety 
   const response = await aiHandler(new Request('https://mentalmath.test/api/ai', { method: 'GET' }));
   const data = await response.json();
   assert.equal(response.status, 200);
-  assert.equal(data.buildVersion, '14.51');
-  assert.equal(response.headers.get('x-mental-math-ai-version'), '14.51');
+  assert.equal(data.buildVersion, REL);
+  assert.equal(response.headers.get('x-mental-math-ai-version'), REL);
   assert.equal(data.defaultModel, 'gemini-3.5-flash-lite');
   assert.deepEqual(data.models, ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite']);
   assert.deepEqual(data.budgetPolicy, {

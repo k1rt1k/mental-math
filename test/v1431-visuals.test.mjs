@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { VERSION as REL, CACHE } from './helpers/version.mjs';
 const rd = (p) => readFileSync(new URL('../public/' + p, import.meta.url), 'utf8');
 
 test('Home streak pill carries a milestone ring', () => {
@@ -9,9 +10,9 @@ test('Home streak pill carries a milestone ring', () => {
 });
 
 test('extras.css is linked, precached and versioned with the service worker', () => {
-  assert.match(rd('index.html'), /css\/extras\.css\?v=14\.51/);
+  assert.ok(rd('index.html').includes(`css/extras.css?v=${REL}`));
   assert.match(rd('sw.js'), /'css\/extras\.css'/);
-  assert.match(rd('sw.js'), /mm-v14-51/);
+  assert.ok(rd('sw.js').includes(`'${CACHE}'`));
 });
 
 test('motion additions respect reduced motion', () => {

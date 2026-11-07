@@ -178,3 +178,12 @@ export function startSync() {
   setInterval(pull, 3e5);
   pull();
 }
+
+/** The Daily leaderboard (opt-in; see netlify/lib/board.mjs). Never throws: { status, json } with status 0 when the server could not be reached. */
+export async function boardApi(method, { body, query = '' } = {}) {
+  try {
+    const r = await fetch('/api/board' + query, { method, headers: { 'x-sync-key': syncKey(), 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+    let json = {}; try { json = await r.json(); } catch (e) { /* an empty or non-JSON body */ }
+    return { status: r.status, json };
+  } catch (e) { return { status: 0, json: {} }; }
+}

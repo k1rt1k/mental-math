@@ -11,6 +11,7 @@ import { start, lastRun } from './play.js';
 import { drill } from './home.js';
 import { weakestSkills } from '../stats.js';
 import { showAiSheet } from '../ai.js';
+import { boardHint, reportDaily, boardHtml } from '../board.js';
 
 let last = null, lastCtx = null, lastCard = null;
 
@@ -76,6 +77,7 @@ export function showResults(e, out) {
     <button class="btn ghost" data-go="home">Home<kbd>Esc</kbd></button>
   </div>
   ${r.act == 'daily' || r.act == 'survival' ? `<div class="card nextup rnext"><div><div class="eyebrow">Next up</div><b>${esc(r.title)}</b><div class="mu">${esc(r.why)}</div></div><button class="btn" data-act="${esc(r.act)}">${esc(r.cta)}</button></div>` : ''}
+  ${e.kind == 'daily' && boardHint() ? `<h2>Today’s board<span class="sub">${esc(e.day)}</span></h2><div class="card" id="boardc" role="status"><p class="mu" style="margin:0">Sending your score…</p></div>` : ''}
   <div class="cols">
    <div>
     <h2>Coach</h2><div class="card">${esc(coach(e))}<div style="margin-top:10px"><button class="btn sm" data-act="aiDebrief">${icon('sparkle')} AI debrief of this session</button></div></div>
@@ -93,6 +95,7 @@ export function showResults(e, out) {
    </div>
   </div>`;
   padHint();
+  if (e.kind == 'daily' && boardHint()) reportDaily(e).then((x) => { const c = document.querySelector('#boardc'); if (c) c.innerHTML = x ? boardHtml(x) : 'You are not on the board. Join it in Settings.'; });
 }
 
 /** Once, after a few sessions on a touchscreen: the calculator-style keypad is a setting most people never find. */
