@@ -1,5 +1,5 @@
 // Service worker: precache the app shell per release and serve it cache-first; a new release waits until the person taps Update.
-const C = 'mm-v14-70';
+const C = 'mm-v14-71';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'icon-monochrome-512.png', 'apple-touch-icon.png', 'favicon-32.png', 'badge-96.png', 'css/style.css', 'css/motion.css', 'css/extras.css', 'fonts/inter.woff2', 'fonts/fraunces.woff2', 'fonts/jbmono.woff2', 'fonts/sym.woff2', 'fonts/OFL.txt',
   'js/boot.js', 'js/main.js', 'js/util.js', 'js/engine.js', 'js/state.js', 'js/stats.js', 'js/session.js', 'js/sync.js', 'js/ui.js', 'js/charts.js', 'js/motion.js', 'js/morph.js', 'js/nav.js', 'js/theme.js', 'js/tricks.js', 'js/notify.js', 'js/ai.js', 'js/aiLocal.js', 'js/skillAi.js',
   'js/paths.js','js/pathsData.js','js/views/paths.js', 'js/views/home.js', 'js/views/streak.js', 'js/views/weeksheet.js', 'js/views/play.js', 'js/views/results.js', 'js/views/progress.js', 'js/views/notebook.js', 'js/views/learn.js', 'js/views/settings.js', 'js/views/coach.js', 'js/richtext.js', 'js/board.js', 'js/boardlogic.js', 'js/rest.js', 'js/chain.js', 'js/weekly.js', 'js/weekdata.js', 'js/views/flash.js', 'js/share.js', 'js/info.js', 'js/infotext.js'];
@@ -7,8 +7,17 @@ const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon.svg', 'icon-192
 // Install fetches every shell file fresh from the network (not the HTTP cache) into this release's own cache.
 // There is no skipWaiting: a new worker waits until the page asks for it (message 'skipWaiting', sent when the person taps "Update available"),
 // so the page never runs old code against a half-new cache and the swap never happens silently.
-self.addEventListener('install', (e) => e.waitUntil(caches.open(C).then((c) => c.addAll(SHELL.map((u) => new Request(u, { cache: 'reload' }))))));
-self.addEventListener('activate', (e) => e.waitUntil(caches.keys().then((k) => Promise.all(k.filter((x) => x !== C).map((x) => caches.delete(x)))).then(() => clients.claim())));
+// RECOVERY (14.70 only): 14.69 crashed on launch for anyone with saved Learn-path progress, and the only code that could ask a waiting worker
+// to take over (main.js) was the code that crashed, so the fix could never install. While RECOVER is true the worker takes over as soon as its
+// shell is cached, and reloads the open tabs once so a blank page repairs itself. Set it back to false in a later release.
+const RECOVER = true;
+self.addEventListener('install', (e) => e.waitUntil(caches.open(C).then((c) => c.addAll(SHELL.map((u) => new Request(u, { cache: 'reload' })))).then(() => RECOVER && self.skipWaiting())));
+self.addEventListener('activate', (e) => e.waitUntil((async () => {
+  const keys = await caches.keys(), older = keys.filter((x) => x !== C);
+  await Promise.all(older.map((x) => caches.delete(x)));
+  await clients.claim();
+  if (RECOVER && older.length) (await clients.matchAll({ type: 'window' })).forEach((c) => { try { c.navigate(c.url); } catch (err) { /* ignore */ } });   // an update, not a first install: reload once onto the fixed files
+})()));
 self.addEventListener('message', (e) => { if (e.data && e.data.type === 'skipWaiting') self.skipWaiting(); });
 
 // Cache-first. The cache name changes with every release and the shell is precached whole, so a hit is always the right version

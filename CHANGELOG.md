@@ -2,6 +2,11 @@
 
 Newest first. What is true of the app today is in [README.md](README.md). The release number is the `VERSION` file.
 
+## 14.71
+
+- **Fixed: devices that already had the app installed stayed blank even after the 14.70 fix.** A new release only takes over when `main.js` asks it to, and `main.js` was the file crashing, so the fixed worker downloaded and then waited forever (incognito worked because it has no old worker or saved data). For this release the worker now takes over on its own and reloads open tabs once (`RECOVER = true` in `sw.js`; turn it off in a later release).
+- **Blank-screen watchdog** in `boot.js`: if nothing has drawn four seconds after load, the site's service workers and caches are cleared and the page reloads once per tab session. Progress lives in localStorage, which is not touched.
+
 ## 14.70
 
 - **Fixed: blank screen on launch for anyone with saved Learn-path progress.** The saved state is read the moment `state.js` loads, but the path-cleaning helpers it needs (`cleanStage`, `cleanRet`, `fromLegacy`, `betterStage`, `betterRet`) were `const`s declared further down the file, so loading threw `Cannot access 'cleanStage' before initialization` and nothing rendered. Fresh installs were not affected, which is why it slipped through. They are now hoisted function declarations. The version is bumped so the service worker replaces the cached broken file.

@@ -23,10 +23,10 @@ function boot({ net }) {
 }
 const get = (path, mode = 'cors') => ({ method: 'GET', url: 'https://x.test' + path, mode });
 
-test('a new worker waits: install does not skipWaiting, and the shell is fetched fresh', async () => {
+test('install fetches the shell fresh; it skips waiting only while the one-release RECOVER switch is on (14.70)', async () => {
   const w = boot({ net: async () => ({ ok: true }) });
   const e = w.ev({}); w.handlers.install(e); await Promise.all(e._w);
-  assert.equal(w.calls.skip, 0);
+  assert.equal(w.calls.skip, /const RECOVER = true;/.test(swSrc) ? 1 : 0);
   assert.ok(w.calls.installReqs.length > 40 && w.calls.installReqs.every((r) => r.cache === 'reload'));
 });
 
@@ -69,6 +69,6 @@ test('the page offers the update, defers it while playing, and reloads only when
   assert.match(main, /postMessage\(\{ type: 'skipWaiting' \}\)/);
   assert.match(main, /controllerchange', \(\) => \{ if \(reloading\) location\.reload\(\)/);
   assert.match(main, /reg\.waiting/); assert.match(main, /updatefound/); assert.match(main, /reg\.update\(\)/);
-  assert.doesNotMatch(swSrc, /self\.skipWaiting\(\); e\.waitUntil/);
+  assert.doesNotMatch(swSrc, /self\.skipWaiting\(\); e\.waitUntil/);   // never an unconditional skip
   assert.doesNotMatch(swSrc, /AbortController|2500/);
 });
