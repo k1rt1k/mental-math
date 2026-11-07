@@ -8,7 +8,7 @@ import { weakestSkills, streak, learnToday } from '../stats.js';
 import { shareCard } from '../share.js';
 import { A, register, go, view, mark } from '../nav.js';
 import { icon, toast, burst, dialogOpen } from '../ui.js';
-import { PATHS, KINDS, PHASES, RET, RULES, PATH_STAGES, progress, donePhase, recordCheck, checkMode, PathSession, nextUp, logPathRun, masteryInfo, dueChecks } from '../paths.js';
+import { PATHS, KINDS, PHASES, RET, RULES, PATH_STAGES, progress, donePhase, recordCheck, checkMode, PathSession, PlaceSession, PLACE, canPlace, applyPlacement, nextUp, logPathRun, masteryInfo, dueChecks } from '../paths.js';
 
 const $ = (s) => document.querySelector(s);
 const main = () => $('#main');
@@ -75,8 +75,15 @@ function map() {
   <div class="hd"><div><button class="btn sm ghost" data-act="pathExit">${icon('chev', 'flip')} Learn</button><h1 style="margin-top:8px">${esc(SK[k].n)} path</h1><p class="lede">${esc(P.blurb)}</p></div>
     <div class="pprog"><b class="num">${p.done}</b><span class="mu"> of ${p.total} milestones</span>${bar(p.pct, k)}</div></div>
   ${p.mastered ? `<div class="card nextup pcard pmbanner" style="--sc:${COL[k]}"><div><b>${esc(SK[k].n)} is mastered</b><div class="mu">Every check passed. Show it off.</div></div><button class="btn primary" data-act="pathShare">Share mastery card</button></div>` : ''}
+  ${canPlace(k) ? placeCard(p) : ''}
   <div class="pstages">${p.stages.map(stage).join('')}</div><h2>Does it stick?</h2><div class="prets">${ret}</div>
   <p class="mu" style="margin-top:18px;max-width:62ch">${sk(k)} Prefer to browse? The <button class="lnk2" data-act="pathLib" data-v="${esc(k)}">trick library</button> has every shortcut as a stand-alone card.</p>`;
+}
+
+/** The offer to skip ahead: a short quiz that opens the path at the right stage. */
+function placeCard(p) {
+  const left = PLACE.last + 1 - p.cur, most = left * PLACE.per;
+  return `<div class="card nextup pcard pplace" style="--sc:${COL[ctx.k]};margin-bottom:14px"><div><div class="eyebrow">Already know this?</div><b>Find your starting stage</b><div class="mu">Up to ${most} questions, no hints, ${PLACE.per} per stage. Every stage you clear is marked passed. The mastery test and retention checks always stay.</div></div><button class="btn" data-act="placeStart">Find my level</button></div>`;
 }
 
 function stepper(k, si) {
@@ -144,11 +151,11 @@ function focusPrimary() { const b = $('[data-primary]'); if (b && b.tagName == '
 
 /* ----- run (practise / check / test / retain) ----- */
 function startRun(mode, ret) {
-  run = { s: new PathSession(ctx.k, ctx.si, mode), mode, ret, hint: false };
+  run = { s: mode == 'place' ? new PlaceSession(ctx.k, progress(ctx.k).cur) : new PathSession(ctx.k, ctx.si, mode), mode, ret, hint: false };
   run.s.begin();
   ctx.scr = 'run'; locked = false;
   const R = run.s.rule, st = run.s.stg;
-  const label = { practise: 'Practise', check: 'Check', test: 'Mastery test', retain: ret == 0 ? 'Next-day check' : 'One-week check' }[mode];
+  const label = { place: 'Level check', practise: 'Practise', check: 'Check', test: 'Mastery test', retain: ret == 0 ? 'Next-day check' : 'One-week check' }[mode];
   mark('path');
   main().innerHTML = `<div class="prun" style="--sc:${COL[ctx.k]}">
     <div class="phead"><button class="btn sm ghost" data-act="runLeave">${icon('chev', 'flip')} Leave</button><div class="mu">${esc(SK[ctx.k].n)} · ${esc(label)}</div><div class="mu num" id="pcount" style="margin-left:auto"></div></div>
@@ -158,7 +165,7 @@ function startRun(mode, ret) {
       <input class="inp pin" id="pin" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Your answer">
       <div class="pmsg" id="pfb" role="status" aria-live="polite"></div>
       <div class="btns"><button class="btn" data-act="runHint" id="phint" ${R.hints ? '' : 'hidden'}>${icon('bulb')} Hint</button><button class="btn primary" data-act="runNext" id="pnext" data-primary hidden>Next</button></div></div>
-    <p class="mu" style="text-align:center;margin-top:12px">${mode == 'practise' ? 'Hints are free here. Wrong twice and the answer is shown.' : mode == 'test' || mode == 'retain' ? 'No hints. One try per question. Pace counts.' : 'No hints. One try per question.'}</p></div>`;
+    <p class="mu" style="text-align:center;margin-top:12px">${mode == 'place' ? 'No hints. One try per question. A miss ends the quiz and you start at that stage.' : mode == 'practise' ? 'Hints are free here. Wrong twice and the answer is shown.' : mode == 'test' || mode == 'retain' ? 'No hints. One try per question. Pace counts.' : 'No hints. One try per question.'}</p></div>`;
   $('#pin').addEventListener('input', onType);
   showQ();
 }
@@ -167,8 +174,8 @@ function showQ() {
   if (!s.next()) return;
   locked = false;
   const R = s.rule, p = s.cur;
-  $('#pq').textContent = p.q; $('#pcount').textContent = (s.n + 1) + ' of ' + R.n;
-  $('#pprog').style.width = (100 * s.n / R.n) + '%';
+  $('#pq').textContent = p.q; $('#pcount').textContent = run.mode == 'place' ? 'Stage ' + (s.probe + 1) + ' · question ' + (s.pn + 1) + ' of ' + PLACE.per : (s.n + 1) + ' of ' + R.n;
+  $('#pprog').style.width = (run.mode == 'place' ? 100 * ((s.probe - s.from) * PLACE.per + s.pn) / s.cap : 100 * s.n / R.n) + '%';
   const par = Math.round(10 * T(p.sk, p.d, p.a)) / 10;
   $('#ppar').textContent = run.mode == 'test' || run.mode == 'retain' ? 'par ' + par.toFixed(1) + ' s' : '';
   const g = $('#pguide'); g.hidden = !(run.mode == 'practise' && s.n < R.guided); g.innerHTML = g.hidden ? '' : '<b>Method:</b> ' + esc(s.stg.key);
@@ -215,9 +222,29 @@ A.runHint = () => {
   fb(`${h.tip ? `<div class="tip">${esc(h.tip)}</div>` : ''}<div class="tip">${esc(h.how)}</div>`);
   const i = $('#pin'); i && i.focus({ preventScroll: true });
 };
-A.runLeave = () => { if (!run) return; const n = run.s.n, lg = logPathRun(run.s, false); run = null; locked = false; save(); if (n) toast(lg ? 'Saved to today’s practice. Your answers are in your notebook too' : 'Your answers so far are kept in your notebook and stats'); lg && lg.unlocked.forEach((m) => toast('Milestone: ' + m[1])); ctx.scr = 'lesson'; mark('path'); lesson(); };
+A.runLeave = () => {
+  if (!run) return;
+  const s = run.s, place = run.mode == 'place', n = s.n, cleared = place ? applyPlacement(ctx.k, s.from, s.probe) : 0, lg = logPathRun(s, false);
+  run = null; locked = false; save();
+  if (n) toast(lg ? 'Saved to today’s practice. Your answers are in your notebook too' : 'Your answers so far are kept in your notebook and stats');
+  if (cleared) toast(cleared == 1 ? 'Stage ' + (s.from + 1) + ' marked passed' : 'Stages ' + (s.from + 1) + ' to ' + s.probe + ' marked passed');
+  lg && lg.unlocked.forEach((m) => toast('Milestone: ' + m[1]));
+  ctx.scr = place ? 'map' : 'lesson'; mark('path'); place ? map() : lesson();
+};
+
+function finishPlace() {
+  const { s } = run, k = ctx.k, from = s.from, to = s.probe, cleared = applyPlacement(k, from, to), lg = logPathRun(s, true);
+  run = null; locked = false; save();
+  ctx.si = Math.min(to, PATH_STAGES - 1);
+  ctx.res = { place: true, from, to, cleared, rows: s.rows, si: ctx.si, k, logged: !!lg };
+  lg && lg.unlocked.forEach((m) => toast('Milestone: ' + m[1]));
+  ctx.scr = 'result';
+  if (cleared) burst(cleared > 1 ? 50 : 30);
+  result();
+}
 
 function finishRun() {
+  if (run.mode == 'place') return finishPlace();
   const { s, mode, ret } = run, v = s.verdict();
   run = null; locked = false;
   const si = ctx.si, k = ctx.k;
@@ -233,7 +260,20 @@ function finishRun() {
   result();
 }
 
+/** The placement verdict: which stages were marked passed and where to start. */
+function placeResult() {
+  const { from, to, cleared, rows, k } = ctx.res, top = to > PLACE.last, at = Math.min(to, PATH_STAGES - 1);
+  const title = top ? 'Straight to the mastery test' : cleared ? 'Start at stage ' + (at + 1) : 'Stage ' + (at + 1) + ' is the right place to start';
+  const body = cleared ? `${cleared == 1 ? 'Stage ' + (from + 1) + ' is' : 'Stages ' + (from + 1) + ' to ' + to + ' are'} marked passed. ${top ? 'The timed mastery test is next, and the retention checks follow it.' : 'Stage ' + (at + 1) + ' is where the path opens now.'}` : 'Nothing was skipped. A missed answer in a quiz this short is not a verdict: you can still take the check on any stage you know.';
+  const go2 = top ? 'Open the mastery test' : cleared ? 'Open stage ' + (at + 1) : 'Start stage ' + (at + 1);
+  main().innerHTML = `<div class="card pres ${cleared ? 'pass' : ''}" style="--sc:${COL[k]}"><div class="eyebrow">${esc(SK[k].n)} · Level check</div><h1>${esc(title)}</h1>
+    <p>${esc(body)}</p>${ctx.res.logged ? learnLine() : ''}<div class="btns pnav"><button class="btn primary" data-act="pathStage" data-v="${esc(at)}" data-primary>${esc(go2)}</button><button class="btn ghost" data-act="pathMap">Path map</button></div></div>
+    <h2>Every answer</h2><div class="card"><div class="plist">${rows.map((x) => `<div class="prow"><span>${esc(x.q)} = <b>${esc(x.a)}</b>${x.ok ? '' : `<br><span class="mu">${esc(howTo({ q: x.q, a: x.a, sk: k }))}</span>`}</span><span><span class="mu num">${x.tm.toFixed(1)}s</span> <span class="${x.ok ? 'ok' : 'bad'}">${x.ok ? '✓' : '✗'}</span></span></div>`).join('')}</div></div>`;
+  scrollTo({ top: 0, behavior: 'instant' });
+}
+
 function result() {
+  if (ctx.res.place) return placeResult();
   const { v, rows, mode, ret, si, k } = ctx.res, st = PATHS[k].stages[si], last = si == PATH_STAGES - 1;
   const R = RULES[mode](st), P = progress(k);
   const title = mode == 'practise' ? 'Practice complete' : v.pass ? (mode == 'retain' ? 'Retained ✓' : last ? 'Mastery assessment passed' : 'Stage ' + (si + 1) + ' passed') : 'Not this time';
@@ -297,6 +337,7 @@ A.pathPhase = (d) => {
 };
 A.pathNext = () => { donePhase(ctx.k, ctx.si, ctx.ph); save(); ctx.ph = Math.min(3, ctx.ph + 1); if (ctx.ph == 1) ctx.dm = newDemo(); lesson(); scrollTo({ top: 0, behavior: 'instant' }); };
 A.runStart = (d) => { if (run) return; if (d.v == 'practise' || d.v == 'check' || d.v == 'test') { if (ctx.scr == 'result' && ctx.res) ctx.si = ctx.res.si; startRun(d.v); } };
+A.placeStart = () => { if (run || !canPlace(ctx.k)) return; ctx.scr = 'map'; startRun('place'); };
 A.retStart = (d) => { const i = +d.v; if (run || !RET[i] || progress(ctx.k).ret[i].state == 'locked') return; ctx.si = PATH_STAGES - 1; startRun('retain', i); };
 
 register('path', () => {

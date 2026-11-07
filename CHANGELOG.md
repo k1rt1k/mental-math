@@ -2,6 +2,13 @@
 
 Newest first. What is true of the app today is in [README.md](README.md). The release number is the `VERSION` file.
 
+## 14.74
+
+- **Placement quiz: skip what you already know.** An unfinished Learn path now opens with an *Already know this? Find your starting stage* card. The quiz starts at the first stage you have not passed and climbs: 3 questions per stage, no hints, every one right first try to clear a stage, stages 1 to 4 only (at most 12 questions). One miss ends it and the path opens at that stage. Each stage cleared is marked passed, so Stage 2, 3, 4 or the mastery test opens straight away. It never skips the timed mastery test or the two retention checks, never lowers a score or an earlier pass time, and leaving halfway keeps the stages already cleared. Answers feed the notebook like any other path run, and the quiz counts for the streak and Learn minutes like a practice run (ratings stay frozen). The stage checks work as before for anyone who prefers them.
+- **`RECOVER` is off.** The one-release switch in `sw.js` (on since 14.71) is `false` again, so an app update waits for the *Update* tap and no longer reloads open tabs, which would have wiped a path run in progress. The switch and its comment stay in place as a lever for a future launch crash.
+- Not in this release: any change to the pace limits (10 of 12 at 1.25× par, 1.4× for retention checks). Those still need real learners to watch.
+- Tests: `test/v1474-placement-and-recover-off.test.mjs`.
+
 ## 14.73
 
 - **Learn-path practice now counts.** A path run (practise, check, timed test, retention check) is saved as a lightweight session, like Flash. It keeps the streak going and shows in history and the week. Its minutes add up toward the daily goal: every 2 minutes of Learn practice on a day is one goal session, so 15 minutes in Learn is no longer invisible. Ratings stay frozen, and path runs are kept out of pace charts, weekly pace and best-session stats. Leaving a run after 5+ answers still saves it; a run with nothing right, or fewer than 5 answers when abandoned, does not. Time per run is capped at 90 s per answer so a forgotten tab cannot buy goal minutes. The goal sheet and result screens say how Learn time is counted.

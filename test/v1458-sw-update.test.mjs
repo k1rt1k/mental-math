@@ -23,7 +23,7 @@ function boot({ net }) {
 }
 const get = (path, mode = 'cors') => ({ method: 'GET', url: 'https://x.test' + path, mode });
 
-test('install fetches the shell fresh; it skips waiting only while the one-release RECOVER switch is on (14.70)', async () => {
+test('install fetches the shell fresh; it skips waiting only while the RECOVER switch is on (off since 14.74)', async () => {
   const w = boot({ net: async () => ({ ok: true }) });
   const e = w.ev({}); w.handlers.install(e); await Promise.all(e._w);
   assert.equal(w.calls.skip, /const RECOVER = true;/.test(swSrc) ? 1 : 0);

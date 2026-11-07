@@ -13,12 +13,16 @@ export const RET = [{ label: 'Next-day check', gap: DAY }, { label: 'One-week ch
 /** A failed retention check can be retaken a day later, after a refresher. */
 export const RETRY_GAP = DAY;
 
+/** The placement quiz: up to PLACE.per questions at each of stages 1 to 4, no hints, every one right first try to clear a stage. The mastery test and the retention checks are never skipped. */
+export const PLACE = { per: 3, last: PATH_STAGES - 2 };
+
 /** How each kind of run is judged. n questions; need = correct first-try answers; pace = mean time ÷ par over correct answers (null = not judged). */
 export const RULES = {
   practise: (st) => ({ n: 8, need: 0, pace: null, hints: true, guided: 2 }),
   check: (st) => ({ n: 5, need: 4, pace: null, hints: false }),
   test: (st) => ({ n: 12, need: 10, pace: 1.25, hints: false }),
   retain: (st) => ({ n: 6, need: 5, pace: 1.4, hints: false }),
+  place: (st) => ({ n: PLACE.per * (PLACE.last + 1), need: PLACE.per, pace: null, hints: false }),
 };
 /** Which run the stage's final Check phase is: the last stage is the timed mastery test. */
 export const checkMode = (si) => (si == PATH_STAGES - 1 ? 'test' : 'check');
@@ -163,6 +167,37 @@ export class PathSession extends Session {
     return res;
   }
   verdict() { return judge(this.pmode, this.rows, this.stg); }
+}
+
+/** Can the placement quiz help here? Only while a stage before the mastery test is still to pass. */
+export const canPlace = (k) => { const c = progress(k).cur; return c >= 0 && c <= PLACE.last; };
+
+/**
+ * The placement quiz: one run, one session. It starts at the first stage not yet passed and climbs, three questions per stage. One miss ends it
+ * and the learner starts at that stage; clearing stage 4 opens the mastery test. `probe` is the first stage not cleared.
+ */
+export class PlaceSession extends PathSession {
+  constructor(skill, from, deps = {}) {
+    super(skill, from, 'place', deps);
+    this.from = from; this.probe = from; this.pn = 0; this.over = false;
+    this.cap = (PLACE.last - from + 1) * PLACE.per;
+  }
+  get finished() { return this.over; }
+  record(ok) {
+    const res = super.record(ok), row = this.rows[this.rows.length - 1];
+    if (!(row.ok && row.first && !row.hinted)) { this.over = true; return res; }
+    if (++this.pn >= PLACE.per) {
+      this.pn = 0; this.probe++; this.si = this.probe;
+      if (this.probe > PLACE.last) this.over = true; else this.stg = stagesOf(this.skill)[this.probe];
+    }
+    return res;
+  }
+}
+/** Mark the stages a placement cleared (from up to, not including, upTo) as passed, so the path opens at the right stage. Never touches a score and never passes the mastery test. */
+export function applyPlacement(k, from, upTo, now = Date.now()) {
+  const e = ensure(k); let n = 0;
+  for (let i = Math.max(0, from); i < Math.min(upTo, PATH_STAGES - 1); i++) { const s = e.st[i]; if (!s.pass) n++; s.pass = s.pass || now; s.ph = 3; s.at = s.at || now; }
+  return n;
 }
 
 /**
