@@ -20,7 +20,7 @@ export const PERSONAS = {
   advanced: { label: 'Advanced', latent: uniform(8.2), pace: 0.75 },
   uneven: {
     label: 'Uneven',
-    latent: { add: 8.4, sub: 7.8, mul: 8.6, div: 7.2, sq: 8.2, pw: 6.4, pct: 7.4, ops: 4.8, mod: 6.2, dec: 5.4 },
+    latent: { add: 8.4, sub: 7.8, mul: 8.6, div: 7.2, sq: 8.2, pw: 6.4, pct: 7.4, ops: 4.8, mod: 6.2, dec: 5.4, neg: 6.6, frac: 6.0, life: 6.2 },
     pace: 0.9,
   },
 };

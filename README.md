@@ -1,4 +1,15 @@
-# Mental Math Trainer 14.49 – a reset that sticks, answers that forgive
+# Mental Math Trainer 14.50 – fractions, negatives, real-life maths, and lighter sync
+
+## v14.50
+- **Three new skills, so the content is no longer only whole non-negative numbers.** *Negatives* (crossing zero, subtracting a negative, signed × and ÷, chains), *Fractions* (a fraction of a number, simplifying, same and unlike denominators, ×, ÷; answers in lowest terms) and *Real-life* (tips, sale price, tax, successive discounts, unit conversion, clock gaps, recipe scaling, ratios, speed, unit price, splitting a bill). Each has twelve difficulty levels, tips, worked methods, guided five-stage Learn paths with shortcut drills, and its own rating on the skill radar. Existing data gains them at their starting level on load.
+- **One extra key, only when needed.** Answers can now contain `−`, `/` or `.`. The pad's empty corner becomes that skill's key (minus for Negatives, slash for Fractions, point for Real-life) and is invisible on every other question, so the keypad does not give away which sign an answer has. The keyboard `-`, `/` and `.` work too, and the touch-keyboard fallback switches to a text keyboard for those questions. A symbol the question does not use is ignored.
+- **Matching.** `ansMatch` (engine.js) is exact text, plus the same value for decimals (`.5` for `0.5`) and an equal fraction of the same length (`6/8` for `3/4`). Auto-submit, near-miss forgiveness, Enter-to-submit, the Learn dialogs, review and the notebook all use it. Par time counts a minus, point and slash as keystrokes.
+- **The Daily challenge is unchanged**: it still draws only from the original ten skills (`CORE`), so its questions stay the same for everyone and need no symbol key.
+- **Delta sync.** A save now sends only the sessions newer than a per-device cursor, plus a count-and-sum fingerprint of the whole history. The server unions them and refuses (409) on a mismatch, in which case the client sends a full save, exactly what every save used to be. Full saves are still used for the first save, after an erase, with a new sync key, and whenever the delta would be more than half the history. With 3,000 sessions a save is about 50× smaller.
+- **gzip.** Bodies over 2 KB are gzip-compressed by the browser (`CompressionStream`). The server recognises gzip by its first bytes, caps the decompressed size, and answers 400 on corrupt input and 413 on a bomb. A server that rejects gzip makes the client send plain JSON from then on.
+- **Conditional pulls.** The server returns the state's ETag; a client that already holds it gets `{unchanged:true}` instead of the whole state. A save that failed offline is still retried because a pull that decides to push marks the state dirty first.
+- Not included yet: **estimation** (answers within a tolerance), mixed numbers, and fraction-to-decimal conversion. Tests: `test/v1449-new-content.test.mjs`, `test/v1449-delta-sync.test.mjs`. The calibration test now runs 30 sessions (13 skills get the per-skill exposure 24 gave 10).
+
 
 ## v14.49
 - **Reset and Replace now work while sync is on.** Both used to be undone by the next sync, because the merge simply re-added everything from the cloud. A Reset or an Import → Replace now stamps `S.wipe` (the time of the newest erase). The server accepts a save with a newer `wipe` as the one kind of save allowed to drop sessions, and refuses (409) a device that has not heard about the erase, which then merges and adopts the erased state instead of pushing its old data back. `mergeStates` follows the same rule: when the two sides disagree about `wipe`, the newer one wins outright, and only settings still merge. Backups and safety copies are merged back as a union (`asCurrent`), so Recover and Import → Merge are unaffected.
@@ -268,7 +279,7 @@ Driven by the 14.14 live self-test report. Every reply was read, not just checke
 ## Current backend contract
 This section describes the deployed backend as it is today; the release notes below are historical.
 - Fixed Netlify Blobs initialization: the documented API is `getStore(storeName)`. Strong consistency remains requested on `getWithMetadata` reads.
-- Added a deployment fingerprint to `GET /api/ai`: `buildVersion: "14.49"` and response header `x-mental-math-ai-version: 14.49`.
+- Added a deployment fingerprint to `GET /api/ai`: `buildVersion: "14.50"` and response header `x-mental-math-ai-version: 14.50`.
 - Exposes the active model allow-list and exact application safety policy in the diagnostic response.
 - Keeps Gemini 3.5 Flash-Lite primary and Gemini 3.1 Flash-Lite as the only backup.
 - Keeps the shared 300-upstream-attempt Pacific-day budget and independent 12 RPM rolling windows per model.
@@ -302,7 +313,7 @@ The JSON must include:
 
 ```json
 {
-  "buildVersion": "14.49",
+  "buildVersion": "14.50",
   "defaultModel": "gemini-3.5-flash-lite",
   "models": ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite"],
   "budgetPolicy": {
@@ -312,7 +323,7 @@ The JSON must include:
 }
 ```
 
-The `budgetPolicy` object also includes the model list. If `buildVersion` is absent or not `14.49`, the new function bundle is not the one currently serving the site; redeploy the full project root to the correct linked Netlify site.
+The `budgetPolicy` object also includes the model list. If `buildVersion` is absent or not `14.50`, the new function bundle is not the one currently serving the site; redeploy the full project root to the correct linked Netlify site.
 
 ## Honest limitations
 - Automated tests use a mocked Blobs store and mocked Gemini responses; they cannot prove the user's live Netlify project, API key, Google model availability, or current provider capacity.

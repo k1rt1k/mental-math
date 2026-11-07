@@ -2,7 +2,7 @@
 import { S, save } from '../state.js';
 import { buzz, nudge, bump, pulse } from '../motion.js';
 import { patchInto } from '../morph.js';
-import { SK, COL, IDS, T, how as howTo } from '../engine.js';
+import { SK, COL, IDS, T, how as howTo, symFor, showAns } from '../engine.js';
 import { Session, applyRust, LIVES, SPRINT } from '../session.js';
 import { $, esc, mmss } from '../util.js';
 import { toast, icon } from '../ui.js';
@@ -34,7 +34,7 @@ function sound(ok) {
 }
 
 const padKeys = () => (S.padFlip ? [7, 8, 9, 4, 5, 6, 1, 2, 3, '', 0, '⌫'] : [1, 2, 3, 4, 5, 6, 7, 8, 9, '', 0, '⌫']);
-const padHtml = () => '<div class="pad" role="group" aria-label="Number pad">' + padKeys().map((k) => k === '' ? '<span aria-hidden="true"></span>' : `<button type="button" class="${k === '⌫' ? 'fn' : ''}" data-act="key" data-v="${esc(k === '⌫' ? 'Backspace' : k)}" aria-label="${esc(k === '⌫' ? 'Backspace' : k)}">${k === '⌫' ? icon('back') : k}</button>`).join('') + '</div>'
+const padHtml = () => '<div class="pad" role="group" aria-label="Number pad">' + padKeys().map((k) => k === '' ? '<button type="button" class="fn sym off" id="symk" data-act="key" data-v="" tabindex="-1" aria-hidden="true"></button>' : `<button type="button" class="${k === '⌫' ? 'fn' : ''}" data-act="key" data-v="${esc(k === '⌫' ? 'Backspace' : k)}" aria-label="${esc(k === '⌫' ? 'Backspace' : k)}">${k === '⌫' ? icon('back') : k}</button>`).join('') + '</div>'
   + `<div class="padact"><button type="button" class="btn" data-act="key" data-v="h" aria-label="Show the method (half points)">${icon('bulb')} Hint</button>${S.ent ? '<button type="button" class="btn primary" data-act="key" data-v="Enter" aria-label="Submit answer">Submit</button>' : ''}<button type="button" class="btn" data-act="key" data-v="Skip" aria-label="Skip question">Skip</button></div>`;
 const PAD = () => padHtml();
 
@@ -91,7 +91,7 @@ function softKeys() {
     const v = k.value;
     k.value = ' ';                                        // a sentinel space lets us see Backspace on an "empty" field
     if (v.length < 1) playKey('Backspace');
-    else for (const ch of v.replace(/\s/g, '')) if (/\d/.test(ch)) playKey(ch);
+    else for (const ch of v.replace(/\s/g, '')) if (/[\d./−-]/.test(ch)) playKey(ch);
   });
   k.addEventListener('keydown', (e) => { if (e.key == 'Enter') { e.preventDefault(); playKey('Enter'); } });
   setTimeout(focus, 0);
@@ -138,12 +138,15 @@ function nextQ() {
   $('#qc').style.setProperty('--cc', c);
   $('#qc').style.borderColor = c + '88';
   $('#bf').innerHTML = '<span class="cur"></span>'; bl = 0;
+  const sym = symFor(p.sk), sk = $('#symk'), kin = $('#kin');
+  if (sk) { sk.classList.toggle('off', !sym); sk.dataset.v = sym; sk.textContent = showAns(sym); sk.tabIndex = sym ? 0 : -1; sk.setAttribute('aria-hidden', sym ? 'false' : 'true'); sk.setAttribute('aria-label', { '-': 'Minus sign', '/': 'Fraction slash', '.': 'Decimal point' }[sym] || ''); }
+  if (kin) kin.inputMode = sym ? 'text' : 'numeric';   // the number keyboard has no minus or slash
   const q = $('#q'); q.classList.remove('in'); void q.offsetWidth; q.classList.add('in');
 }
 
 let bl = 0;   // length of the answer buffer at the last paint: only a digit that was just added pops
-const digits = (b, grew) => (grew && b ? esc(b.slice(0, -1)) + '<span class="dg">' + esc(b.slice(-1)) + '</span>' : esc(b));
-const renderBuf = () => { const b = sess.buf, grew = b.length > bl; bl = b.length; const off = b && !String(sess.cur.a).startsWith(sess.buf); $('#bf').innerHTML = (off ? '<span class="bad">' + digits(b, grew) + '</span>' : digits(b, grew)) + '<span class="cur"></span>'; };   // red as soon as a digit can no longer lead to the answer; Backspace still fixes it before it counts
+const digits = (b, grew) => (grew && b ? esc(showAns(b.slice(0, -1))) + '<span class="dg">' + esc(showAns(b.slice(-1))) + '</span>' : esc(showAns(b)));
+const renderBuf = () => { const b = sess.buf, grew = b.length > bl; bl = b.length; const A = String(sess.cur.a), off = b && !A.startsWith(sess.buf) && !A.replace(/^(-?)0\./, '$1.').startsWith(sess.buf); $('#bf').innerHTML = (off ? '<span class="bad">' + digits(b, grew) + '</span>' : digits(b, grew)) + '<span class="cur"></span>'; };   // red as soon as a digit can no longer lead to the answer; Backspace still fixes it before it counts
 function flash(ok) { buzz(ok ? 4 : [14, 36, 14]); const c = $('#qc'); if (!c) return; c.classList.remove('okf', 'badf'); void c.offsetWidth; c.classList.add(ok ? 'okf' : 'badf'); if (ok) bump($('#cc')); else nudge($('#q')); }
 
 function side(r) {
@@ -170,7 +173,7 @@ function feedback(r) {
 
 /** A correct answer: score it and move on. */
 function solved() {
-  $('#bf').innerHTML = `<span class="ok">${esc(sess.buf)}</span>`;
+  $('#bf').innerHTML = `<span class="ok">${esc(showAns(sess.buf))}</span>`;
   feedback(sess.answer(true));
   if (sess.n % 10 == 0) sess.checkpoint();
   if (sess.kind == 'sprint' && sess.n >= sess.target) { locked = true; return setTimeout(() => sess && end(), 250); }
@@ -178,7 +181,7 @@ function solved() {
 }
 /** A wrong answer that has already been counted as a slip. */
 function slipped() {
-  const bf = $('#bf'); bf.innerHTML = `<span class="bad">${esc(sess.buf)}</span>`;
+  const bf = $('#bf'); bf.innerHTML = `<span class="bad">${esc(showAns(sess.buf))}</span>`;
   sound(false); flash(false); side(false);
   if (sess.kind == 'survival') { $('#t').innerHTML = hearts(); lifeLost(); }
   bf.classList.remove('shake'); void bf.offsetWidth; bf.classList.add('shake');
@@ -189,7 +192,7 @@ function slipped() {
 const GRACE_MS = 1500;
 /** Right length, last digit one key off: nothing is counted yet. Backspace or another digit fixes it; otherwise it becomes a slip. */
 function near() {
-  $('#bf').innerHTML = `<span class="near">${esc(sess.buf)}</span><span class="cur"></span>`;
+  $('#bf').innerHTML = `<span class="near">${esc(showAns(sess.buf))}</span><span class="cur"></span>`;
   $('#ms').innerHTML = '<span class="mu">Close. Fix the last digit.</span>';
   const cur = sess.cur, t0 = Date.now();
   const settle = () => {
@@ -326,6 +329,7 @@ export function playKey(k) {
   if (counting) { if (k == 'Escape') { clearInterval(cdId); counting = false; sess = null; wake(false); go('home'); } else if (k == 'Enter' || k == ' ') sess.go(); return true; }
   if (sess.paused) { if (k == 'Enter' || k == ' ') resume(); else if (k == 'Escape') resume(); return true; }
   if (/^\d$/.test(k)) { try { !S.noHap && navigator.vibrate && matchMedia('(pointer:coarse)').matches && navigator.vibrate(5); } catch (e) { /* none */ } press(k); }
+  else if (/^[-−./]$/.test(k)) press(k == '−' ? '-' : k);   // minus, fraction slash, decimal point: only a question that uses it accepts it
   else if (k == 'Backspace') { sess.back(); renderBuf(); }
   else if (k == 'Enter' && S.ent) submit();   // Enter-to-submit: Enter never skips; Space and the Skip button do
   else if (k == 'Enter' || k == ' ' || k == 'Skip') skip();

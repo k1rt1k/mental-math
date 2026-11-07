@@ -13,10 +13,20 @@ export const SK = {
   ops: { n: 'Multi-step', m: 1.5, s: 4 },
   mod: { n: 'Remainders', m: 1.1, s: 4 },
   dec: { n: 'Decimals', m: 1.2, s: 4 },
+  neg: { n: 'Negatives', m: 1.1, s: 4 },
+  frac: { n: 'Fractions', m: 1.2, s: 4 },
+  life: { n: 'Real-life', m: 1.2, s: 4 },
 };
 export const IDS = Object.keys(SK);
-export const COL = { add: '#6ea8ff', sub: '#8e9bff', mul: '#ff9f5a', div: '#ffcf5c', sq: '#4cd98a', pw: '#4fd1c5', pct: '#ff6b9a', ops: '#b48cff', mod: '#f08a7a', dec: '#a6d65c' };
-export const SH = { add: 'Add', sub: 'Sub', mul: 'Mul', div: 'Div', sq: 'Sq', pw: 'Pow', pct: '%', ops: 'Multi', mod: 'Mod', dec: 'Dec' };
+/** The original ten skills: whole, non-negative answers typed with digits only. The Daily challenge still draws from these so its questions stay the same for everyone. */
+export const CORE = ['add', 'sub', 'mul', 'div', 'sq', 'pw', 'pct', 'ops', 'mod', 'dec'];
+/** Skills whose answers need one more key than the digits: a minus sign, a fraction slash or a decimal point. */
+export const SYM = { neg: '-', frac: '/', life: '.' };
+export const symFor = (sk) => SYM[sk] || '';
+/** Show a typed or stored answer with a real minus sign. */
+export const showAns = (a) => String(a ?? '').replace(/-/g, '−');
+export const COL = { add: '#6ea8ff', sub: '#8e9bff', mul: '#ff9f5a', div: '#ffcf5c', sq: '#4cd98a', pw: '#4fd1c5', pct: '#ff6b9a', ops: '#b48cff', mod: '#f08a7a', dec: '#a6d65c', neg: '#7fb8ff', frac: '#f2a65a', life: '#5fd0b5' };
+export const SH = { add: 'Add', sub: 'Sub', mul: 'Mul', div: 'Div', sq: 'Sq', pw: 'Pow', pct: '%', ops: 'Multi', mod: 'Mod', dec: 'Dec', neg: 'Neg', frac: 'Frac', life: 'Life' };
 export const MAXLV = 12;
 
 /**
@@ -27,7 +37,10 @@ export const MAXLV = 12;
  * so a perfectly accurate player at a normal pace was marked "too slow" on every answer and rated down.
  */
 export const PAR = { base: 1.3, digit: 0.3, think: 1.25, lin: 0.3, quad: 0.025 };
-export const digitsOf = (a) => String(Math.abs(Math.round(+a || 0))).length;
+export const digitsOf = (a) => {
+  const t = String(a ?? '');
+  return /^-?\d+$/.test(t) || typeof a == 'number' && Number.isInteger(a) ? String(Math.abs(Math.round(+a || 0))).length + (+a < 0 ? 1 : 0) : Math.max(1, t.length);   // a point, a slash and a minus sign are keystrokes too
+};
 export const T = (k, d, a) => PAR.base + PAR.digit * (a == null ? 2 : digitsOf(a)) + PAR.think * SK[k].m * (PAR.lin * d + PAR.quad * d * d);
 
 /** Points an answer is worth before the speed bonus: grows with difficulty. (This is the old target formula, kept so past scores and ghosts stay comparable.) */
@@ -142,6 +155,140 @@ export function gen(k, d, R = Math.random) {
       q = ds(X * 10 ** (2 - p)) + ' × ' + 10 ** e; a = (X * 10 ** e) / 10 ** p; pt = 'move the point';
       tip = '× 10 moves the point one place right, × 100 two places, × 1000 three';
     }
+  } else if (k == 'neg') {
+    const Mx = Math.round(lerp([9, 12, 15, 20, 30, 40, 60, 80, 99, 150, 250, 400], d));
+    const sm = Math.round(lerp([5, 6, 7, 9, 9, 12, 12, 13, 15, 20, 25, 30], d));      // factor size for × and ÷
+    const f = (v) => (v < 0 ? '−' + -v : String(v)), g = (v) => (v < 0 ? '(−' + -v + ')' : String(v));
+    const kinds = d < 3 ? ['cross', 'cross', 'both'] : d < 5 ? ['cross', 'both', 'dbl', 'mul'] : d < 7 ? ['cross', 'dbl', 'mul', 'mul', 'div'] : ['cross', 'dbl', 'mul', 'div', 'chain', 'chain'];
+    const kd = kinds[Math.floor(R() * kinds.length)], sg2 = () => (R() < 0.5 ? -1 : 1);
+    const SG = [[-1, 1], [1, -1], [-1, -1]], [sa, sb] = SG[Math.floor(R() * SG.length)];   // never both positive: there is always a minus to handle
+    if (kd == 'cross') {
+      const p = ri(2, Mx, R); let r = ri(2, Mx, R); if (r == p) r++;
+      q = R() < 0.5 ? '−' + p + ' + ' + r : r + ' − ' + p; a = r - p; pt = 'cross zero';
+      tip = 'Different signs: take the smaller size from the bigger, and keep the sign of the bigger one';
+    } else if (kd == 'both') {
+      const p = ri(2, Mx, R), r = ri(2, Mx, R);
+      q = '−' + p + ' − ' + r; a = -(p + r); pt = 'both negative';
+      tip = 'Two negatives add up in size and the answer stays negative';
+    } else if (kd == 'dbl') {
+      let x = sg2() * ri(2, Mx, R); const y = ri(2, Mx, R);
+      if (x + y == 0) x += x < 0 ? -1 : 1;
+      q = f(x) + ' − (−' + y + ')'; a = x + y; pt = 'subtract a negative';
+      tip = 'Subtracting a negative is the same as adding';
+    } else if (kd == 'mul') {
+      const x = ri(2, sm, R), y = ri(2, sm, R);
+      q = f(sa * x) + ' × ' + g(sb * y); a = sa * sb * x * y; pt = sa * sb > 0 ? 'negative × negative' : 'signed product';
+      tip = 'Same signs give a positive, different signs give a negative';
+    } else if (kd == 'div') {
+      const x = ri(2, sm, R), y = ri(2, sm, R);
+      q = f(sa * x * y) + ' ÷ ' + g(sb * y); a = sa * sb * x; pt = 'signed quotient';
+      tip = 'Divide the sizes, then same signs give a positive and different signs a negative';
+    } else {
+      const v = sg2() * ri(2, Mx, R), m2 = ri(2, Mx, R); let m3 = ri(2, Mx, R);
+      const o2 = R() < 0.5 ? '+' : '−', o3 = R() < 0.5 ? '+' : '−', tot = (m) => v + (o2 == '+' ? m2 : -m2) + (o3 == '+' ? m : -m);
+      if (tot(m3) == 0) m3++;
+      q = f(v) + ' ' + o2 + ' ' + m2 + ' ' + o3 + ' ' + m3; a = tot(m3); pt = 'chain';
+      tip = 'Work left to right and keep track of the sign as you go';
+    }
+  } else if (k == 'frac') {
+    const DN = d < 3 ? [2, 3, 4, 5, 10] : d < 6 ? [2, 3, 4, 5, 6, 8, 10] : d < 9 ? [2, 3, 4, 5, 6, 8, 10, 12] : [3, 4, 5, 6, 7, 8, 9, 10, 12, 15];
+    const pick = (arr) => arr[Math.floor(R() * arr.length)];
+    const fr = (n, m) => { const c = gcd(n, m); n /= c; m /= c; return m == 1 ? n : n + '/' + m; };   // lowest terms; a whole number comes back as a number
+    const kinds = d < 2 ? ['of'] : d < 3 ? ['of', 'of', 'simp'] : d < 5 ? ['of', 'simp', 'same'] : d < 7 ? ['of', 'simp', 'same', 'mul', 'diff'] : ['of', 'simp', 'same', 'mul', 'diff', 'div'];
+    const kd = kinds[Math.floor(R() * kinds.length)], top = Math.round(lerp([6, 8, 10, 12, 15, 20, 25, 30, 40, 50, 60, 80], d));
+    tip = 'Give the answer in lowest terms';
+    if (kd == 'of') {
+      const den = pick(DN), num = ri(1, den - 1, R), w = den * ri(2, Math.max(3, top), R);
+      q = num + '/' + den + ' of ' + w; a = (num * w) / den; pt = num == 1 ? 'unit fraction' : 'fraction of';
+      tip = num == 1 ? 'Divide by ' + den : 'Divide by ' + den + ' first, then multiply by ' + num;
+    } else if (kd == 'simp') {
+      const m = ri(2, Math.round(lerp([5, 6, 8, 9, 10, 12, 12, 15, 15, 16, 18, 20], d)), R); let r = 1;
+      for (let i = 0; i < 20; i++) { const c = ri(1, m - 1, R); if (gcd(c, m) == 1) { r = c; break; } }
+      const kk = ri(2, Math.round(lerp([3, 4, 5, 6, 6, 8, 8, 9, 10, 10, 12, 12], d)), R);
+      q = 'Simplify ' + r * kk + '/' + m * kk; a = r + '/' + m; pt = 'simplify';
+      tip = 'Divide the top and bottom by the biggest number that goes into both';
+    } else if (kd == 'same') {
+      const den = pick(DN.filter((x) => x > 2)); let n1 = ri(1, den - 1, R), n2 = ri(1, den - 1, R);
+      const plus = R() < 0.65; if (!plus && n1 == n2) { n1 = Math.min(den - 1, n2 + 1); if (n1 == n2) n2--; }
+      if (!plus && n1 < n2) [n1, n2] = [n2, n1];
+      q = n1 + '/' + den + (plus ? ' + ' : ' − ') + n2 + '/' + den; a = fr(plus ? n1 + n2 : n1 - n2, den); pt = 'same denominator';
+      tip = 'Same bottom: add or subtract the tops, keep the bottom, then simplify';
+    } else if (kd == 'diff') {
+      const D = d < 9 ? [2, 3, 4, 5, 6, 8] : [2, 3, 4, 5, 6, 7, 8, 9, 10, 12]; let d1 = pick(D), d2 = pick(D), tries = 0;
+      while ((d1 == d2 || d1 % d2 == 0 || d2 % d1 == 0) && tries++ < 40) { d1 = pick(D); d2 = pick(D); }
+      if (d1 == d2) d2 = d1 == 2 ? 3 : 2;
+      let n1 = ri(1, d1 - 1, R), n2 = ri(1, d2 - 1, R); const plus = R() < 0.65;
+      if (!plus && n1 * d2 <= n2 * d1) { [d1, d2] = [d2, d1]; [n1, n2] = [n2, n1]; }
+      if (!plus && n1 * d2 == n2 * d1) n1 = Math.min(d1 - 1, n1 + 1);
+      if (!plus && n1 * d2 <= n2 * d1) { q = n2 + '/' + d2 + ' + ' + n1 + '/' + d1; a = fr(n1 * d2 + n2 * d1, d1 * d2); }   // no clean subtraction found: add instead
+      else { q = n1 + '/' + d1 + (plus ? ' + ' : ' − ') + n2 + '/' + d2; a = fr(plus ? n1 * d2 + n2 * d1 : n1 * d2 - n2 * d1, d1 * d2); }
+      pt = 'unlike denominators';
+      tip = 'Make the bottoms match first (multiply them), then add or subtract the tops';
+    } else if (kd == 'mul') {
+      const d1 = pick(DN), d2 = pick(DN), n1 = ri(1, d1 - 1, R), n2 = ri(1, d2 - 1, R);
+      q = n1 + '/' + d1 + ' × ' + n2 + '/' + d2; a = fr(n1 * n2, d1 * d2); pt = 'multiply fractions';
+      tip = 'Multiply the tops, multiply the bottoms, then simplify';
+    } else {
+      const d1 = pick(DN), d2 = pick(DN), n1 = ri(1, d1 - 1, R), n2 = ri(1, d2 - 1, R);
+      q = n1 + '/' + d1 + ' ÷ ' + n2 + '/' + d2; a = fr(n1 * d2, d1 * n2); pt = 'divide fractions';
+      tip = 'Flip the second fraction and multiply, then simplify';
+    }
+  } else if (k == 'life') {
+    const hi = Math.round(lerp([40, 60, 80, 100, 120, 160, 200, 250, 300, 400, 500, 800], d));
+    const pick = (arr) => arr[Math.floor(R() * arr.length)], r2 = (v) => +v.toFixed(2);
+    const kinds = d < 2 ? ['tip', 'sale'] : d < 3 ? ['tip', 'sale', 'unit'] : d < 4 ? ['tip', 'sale', 'unit', 'time'] : d < 6 ? ['sale', 'unit', 'time', 'recipe', 'rate'] : d < 8 ? ['tip', 'sale', 'unit', 'time', 'recipe', 'rate', 'split', 'tax'] : ['tip', 'sale', 'time', 'recipe', 'ratio', 'rate', 'split', 'tax', 'twice', 'unit'];
+    const kd = kinds[Math.floor(R() * kinds.length)];
+    if (kd == 'tip') {
+      const p = pick(d < 3 ? [10, 20] : d < 6 ? [10, 15, 20, 25] : [10, 12, 15, 18, 20]), bill = ri(4, Math.max(5, Math.floor(hi / 2)), R) * 2;
+      q = p + '% tip on $' + bill; a = r2((bill * p) / 100); pt = p == 10 || p == 20 ? 'friendly tip' : 'awkward tip';
+      tip = '10% is the number with the point moved one place left; build the rest from that';
+    } else if (kd == 'sale') {
+      const p = pick(d < 4 ? [10, 20, 25, 50] : [10, 15, 20, 25, 30, 40, 60, 75]), price = 10 * ri(2, Math.max(3, Math.floor(hi / 5)), R);
+      q = p + '% off $' + price; a = r2(price - (price * p) / 100); pt = 'sale price';
+      tip = (100 - p) + '% of the price is what you pay';
+    } else if (kd == 'unit') {
+      const U = [['km', 'm', 1000], ['h', 'min', 60], ['kg', 'g', 1000], ['m', 'cm', 100], ['L', 'mL', 1000]], [big, small, fct] = pick(U);
+      const x = d < 5 || big == 'h' ? ri(1, 9, R) + (R() < 0.5 ? 0.5 : 0) : ri(11, 99, R) / 10;
+      if (R() < 0.5) { q = x + ' ' + big + ' in ' + small; a = r2(x * fct); } else { q = r2(x * fct) + ' ' + small + ' in ' + big; a = x; }
+      pt = 'unit conversion'; tip = '1 ' + big + ' = ' + fct + ' ' + small + '; bigger unit to smaller, multiply; the other way, divide';
+    } else if (kd == 'time') {
+      const sh = ri(1, 11, R), sm = d < 6 ? pick([0, 15, 30, 45]) : ri(0, 59, R), gap = ri(25, Math.round(lerp([80, 100, 130, 160, 200, 240, 260, 300, 320, 360, 400, 480], d)), R), e = sh * 60 + sm + gap;
+      const h12 = (m) => ((Math.floor(m / 60) + 11) % 12) + 1, clock = (m) => h12(m) + ':' + String(m % 60).padStart(2, '0');
+      q = 'Minutes from ' + clock(sh * 60 + sm) + ' to ' + clock(e); a = gap; pt = 'clock time';
+      tip = 'Go up to the next whole hour first, then add the rest';
+    } else if (kd == 'recipe') {
+      const s0 = pick([2, 3, 4, 5, 6]); let s1 = pick([2, 3, 4, 5, 6, 8, 10, 12]); if (s1 == s0) s1 += 2;
+      const m = ri(2, Math.max(3, Math.floor(hi / 12)), R) * (d >= 6 ? 5 : 1), qty = s0 * m;
+      q = 'Recipe: ' + qty + ' g for ' + s0 + '. For ' + s1 + '?'; a = m * s1; pt = 'scale a recipe';
+      tip = 'Find the amount for one, then multiply';
+    } else if (kd == 'ratio') {
+      const r1 = ri(2, 7, R); let r2n = ri(2, 9, R); if (r2n == r1) r2n++;
+      const kk = ri(2, Math.max(3, Math.floor(hi / 20)), R);
+      q = 'Ratio ' + r1 + ':' + r2n + '. First is ' + r1 * kk + '. Second?'; a = r2n * kk; pt = 'ratio';
+      tip = 'Find what one part is worth, then multiply';
+    } else if (kd == 'rate') {
+      if (R() < 0.5) {
+        const t = pick([1.5, 2, 2.5, 3, 4]), sp = (t % 1 ? 2 : 1) * ri(3, Math.max(5, Math.floor(hi / 6)), R) * (d >= 6 ? 2 : 1);
+        q = r2(sp * t) + ' km in ' + t + ' h. km/h?'; a = sp; pt = 'speed';
+        tip = 'Distance ÷ time';
+      } else {
+        const n = pick([2, 3, 4, 5, 6]), c = 5 * ri(2, Math.max(4, Math.floor(hi / 8)), R);
+        q = n + ' for $' + r2((n * c) / 100) + '. Price of one?'; a = r2(c / 100); pt = 'unit price';
+        tip = 'Total ÷ number of items';
+      }
+    } else if (kd == 'split') {
+      const n = pick([2, 4, 5, 10]), total = n * ri(3, Math.max(5, Math.floor(hi / 6)), R) + pick([0, 0, n / 2 == Math.floor(n / 2) ? n / 2 : 0]);
+      q = 'Split $' + total + ' between ' + n; a = r2(total / n); pt = 'split the bill';
+      tip = 'Divide the total by the number of people';
+    } else if (kd == 'tax') {
+      const p = pick([5, 8, 10]), price = 10 * ri(2, Math.max(3, Math.floor(hi / 5)), R);
+      q = '$' + price + ' plus ' + p + '% tax'; a = r2(price + (price * p) / 100); pt = 'add tax';
+      tip = 'Find ' + p + '% of the price, then add it on';
+    } else {
+      const P = [10, 20, 25, 50], p1 = pick(P), p2 = pick(P.filter((x) => x != p1)), price = 100 * ri(1, Math.max(2, Math.floor(hi / 60)), R);
+      q = p1 + '% off, then ' + p2 + '% off $' + price; a = r2((price * (100 - p1) * (100 - p2)) / 10000); pt = 'successive discounts';
+      tip = 'Each discount multiplies: ' + (100 - p1) + '% of the price, then ' + (100 - p2) + '% of that';
+    }
   } else {
     const s1 = Math.round(lerp([9, 12, 20, 30, 50, 80, 99, 150, 250, 400, 600, 999], d));
     const s2 = Math.round(lerp([5, 6, 8, 9, 12, 12, 15, 20, 25, 30, 40, 50], d));
@@ -166,6 +313,45 @@ export function how(p) {
   const q = String(p.q ?? '');
   const n = (q.match(/\d+/g) || []).map(Number), a = p.a;
   let m, t;
+  if (p.sk == 'neg') {
+    const e = q.replace(/−/g, '-'), sz = (e.match(/\d+/g) || []).map(Number), A = String(a).replace('-', '−');
+    if (p.pt == 'cross zero') { const hi = Math.max(sz[0], sz[1]), lo = Math.min(sz[0], sz[1]); return 'Different signs: ' + hi + ' − ' + lo + ' = ' + (hi - lo) + '. The bigger number is ' + ((a < 0) ? 'the negative one' : 'the positive one') + ', so the answer is ' + A; }
+    if (p.pt == 'both negative') return 'Two negatives add up in size: ' + sz[0] + ' + ' + sz[1] + ' = ' + (sz[0] + sz[1]) + ', and it stays negative: ' + A;
+    if (p.pt == 'subtract a negative') { const x = e.trim().startsWith('-') ? -sz[0] : sz[0]; return 'Subtracting a negative adds: ' + String(x).replace('-', '−') + ' + ' + sz[1] + ' = ' + A; }
+    if (p.pt == 'chain') {
+      const tk = e.match(/^-?\d+|[+-] \d+/g) || []; let t = 0, out = [];
+      tk.forEach((x, i) => { t += i ? (x[0] == '-' ? -sz[i] : sz[i]) : +x; out.push(i ? x.replace('-', '−') + ' → ' + String(t).replace('-', '−') : String(+x).replace('-', '−')); });
+      return 'Left to right: ' + out.join(', ') + '. The answer is ' + A;
+    }
+    const mu = p.pt != 'signed quotient', neg = a < 0, ans = mu ? sz[0] + ' × ' + sz[1] + ' = ' + sz[0] * sz[1] : sz[0] + ' ÷ ' + sz[1] + ' = ' + Math.abs(a);
+    return 'Sizes first: ' + ans + '. ' + (neg ? 'Different signs, so the answer is negative' : 'Same signs, so the answer is positive') + ': ' + A;
+  }
+  if (p.sk == 'frac') {
+    const nums = (q.match(/\d+/g) || []).map(Number), gc = (x, y) => (y ? gc(y, x % y) : x), A = String(a);
+    const lw = (n, m) => { const c = gc(n, m); return c > 1 ? n + '/' + m + ' = ' + n / c + '/' + m / c : ''; };
+    if (p.pt == 'unit fraction' || p.pt == 'fraction of') return nums[2] + ' ÷ ' + nums[1] + ' = ' + nums[2] / nums[1] + (nums[0] > 1 ? ', × ' + nums[0] + ' = ' + A : '');
+    if (p.pt == 'simplify') { const c = gc(nums[0], nums[1]); return 'Both ' + nums[0] + ' and ' + nums[1] + ' divide by ' + c + ', so ' + nums[0] + '/' + nums[1] + ' = ' + A; }
+    const [n1, d1, n2, d2] = nums;
+    if (p.pt == 'same denominator') { const t = q.includes('+') ? n1 + n2 : n1 - n2; return 'Same bottom: ' + n1 + (q.includes('+') ? ' + ' : ' − ') + n2 + ' = ' + t + ', so ' + t + '/' + d1 + (t + '/' + d1 == A ? '' : (lw(t, d1) ? ' = ' + lw(t, d1).split(' = ')[1] : '') + ' = ' + A); }
+    if (p.pt == 'unlike denominators') { const pl = q.includes('+'), t = pl ? n1 * d2 + n2 * d1 : n1 * d2 - n2 * d1; return 'Common bottom ' + d1 * d2 + ': ' + n1 * d2 + '/' + d1 * d2 + (pl ? ' + ' : ' − ') + n2 * d1 + '/' + d1 * d2 + ' = ' + t + '/' + d1 * d2 + ', in lowest terms ' + A; }
+    if (p.pt == 'multiply fractions') return 'Tops: ' + n1 + ' × ' + n2 + ' = ' + n1 * n2 + '. Bottoms: ' + d1 + ' × ' + d2 + ' = ' + d1 * d2 + '. In lowest terms ' + A;
+    return 'Flip the second and multiply: ' + n1 + '/' + d1 + ' × ' + d2 + '/' + n2 + ' = ' + n1 * d2 + '/' + d1 * n2 + ', in lowest terms ' + A;
+  }
+  if (p.sk == 'life') {
+    const v = (q.match(/\d+(?:\.\d+)?/g) || []).map(Number), A = String(a);
+    if (p.pt == 'friendly tip' || p.pt == 'awkward tip') return '10% of ' + v[1] + ' = ' + +(v[1] / 10).toFixed(2) + '. ' + v[0] + '% is ' + v[0] / 10 + ' of those: ' + A;
+    if (p.pt == 'sale price') return (100 - v[0]) + '% is what you pay: ' + (100 - v[0]) + '% of ' + v[1] + ' = ' + A;
+    if (p.pt == 'unit conversion') { const f = { km: 1000, h: 60, kg: 1000, m: 100, L: 1000 }, big = Object.keys(f).find((u) => new RegExp('(^|\\d )' + u + ' in ').test(q) || new RegExp(' in ' + u + '$').test(q)), fc = f[big]; return q.includes(' in ' + big) ? v[0] + ' ÷ ' + fc + ' = ' + A : v[0] + ' × ' + fc + ' = ' + A; }
+    if (p.pt == 'clock time') { const m = q.match(/(\d+):(\d+) to (\d+):(\d+)/); const s = +m[1] * 60 + +m[2]; let e = (+m[3]) * 60 + +m[4]; while (e < s) e += 720; return 'Start ' + m[1] + ':' + m[2] + ', end ' + m[3] + ':' + m[4] + '. Up to the next hour, then the rest: ' + (e - s) + ' minutes' + (String(e - s) == A ? '' : ' = ' + A); }
+    if (p.pt == 'scale a recipe') return v[0] + ' ÷ ' + v[1] + ' = ' + v[0] / v[1] + ' for one. × ' + v[2] + ' = ' + A;
+    if (p.pt == 'ratio') return 'First part: ' + v[2] + ' ÷ ' + v[0] + ' = ' + v[2] / v[0] + ' per part. Second: ' + v[2] / v[0] + ' × ' + v[1] + ' = ' + A;
+    if (p.pt == 'speed') return v[0] + ' ÷ ' + v[1] + ' = ' + A + ' km/h';
+    if (p.pt == 'unit price') return '$' + v[1] + ' ÷ ' + v[0] + ' = $' + A;
+    if (p.pt == 'split the bill') return v[0] + ' ÷ ' + v[1] + ' = ' + A;
+    if (p.pt == 'add tax') { const tx = +((v[0] * v[1]) / 100).toFixed(2); return v[1] + '% of ' + v[0] + ' = ' + tx + '. ' + v[0] + ' + ' + tx + ' = ' + A; }
+    if (p.pt == 'successive discounts') return 'Multiply what is left each time: ' + v[2] + ' × ' + (100 - v[0]) / 100 + ' × ' + (100 - v[1]) / 100 + ' = ' + A;
+    return '';
+  }
   if (p.sk == 'add') { t = n[0]; return n[0] + parts(n[1]).map((v) => ' + ' + v + ' → ' + (t += v)).join(''); }
   if (p.sk == 'sub') { t = n[0]; return n[0] + parts(n[1]).map((v) => ' − ' + v + ' → ' + (t -= v)).join(''); }
   if (p.sk == 'mul') {
@@ -226,6 +412,22 @@ export function how(p) {
   if ((m = q.match(/^(\d+) \+ (\d+) × (\d+)$/))) return m[2] + ' × ' + m[3] + ' = ' + m[2] * m[3] + ' first, then + ' + m[1] + ' = ' + a;
   if ((m = q.match(/^(\d+) × (\d+) − (\d+)$/))) return m[1] + ' × ' + m[2] + ' = ' + m[1] * m[2] + ', then − ' + m[3] + ' = ' + a;
   return '';
+}
+
+/**
+ * Is what was typed the answer? Exact text always counts. A decimal answer also accepts the same value written another way
+ * (.5 for 0.5), and a fraction answer accepts an equal fraction of the same length (6/8 for 3/4).
+ */
+export function ansMatch(buf, ans) {
+  buf = String(buf ?? ''); ans = String(ans ?? '');
+  if (buf === ans) return true;
+  if (!buf || /[./-]$/.test(buf)) return false;
+  if (ans.includes('.') && /^-?\d*\.?\d+$/.test(buf)) return +buf === +ans;
+  if (ans.includes('/') && buf.length == ans.length) {
+    const f = (t) => /^(-?\d+)\/(\d+)$/.exec(t), x = f(buf), y = f(ans);
+    return !!(x && y && +x[2] && +y[2] && +x[1] * +y[2] === +y[1] * +x[2]);
+  }
+  return false;
 }
 
 /**

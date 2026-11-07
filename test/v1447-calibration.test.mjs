@@ -6,13 +6,13 @@ import assert from 'node:assert/strict';
 import { IDS } from '../public/js/engine.js';
 import { PERSONAS, simulate, spearman } from '../tools/sim.mjs';
 
-const SESSIONS = 24, SEED = 7;
+const SESSIONS = 30, SEED = 7;   // 13 skills now, so 30 sessions gives each skill the exposure 24 gave when there were 10
 const runs = Object.values(PERSONAS).map((p) => simulate(p, { sessions: SESSIONS, seed: SEED }));
 const byName = Object.fromEntries(runs.map((r) => [r.persona, r]));
 
-test('every persona is exposed to all ten skills and no single pattern swallows the drill', () => {
+test('every persona is exposed to every skill and no single pattern swallows the drill', () => {
   for (const r of runs) {
-    assert.equal(r.skillsSeen, 10, `${r.persona}: only ${r.skillsSeen}/10 skills were served`);
+    assert.equal(r.skillsSeen, IDS.length, `${r.persona}: only ${r.skillsSeen}/${IDS.length} skills were served`);
     assert.ok(r.minSkill >= 4, `${r.persona}: one skill got only ${r.minSkill} questions`);
     assert.ok(r.patterns >= 8, `${r.persona}: only ${r.patterns} distinct patterns`);
     assert.ok(r.topShare <= 0.35, `${r.persona}: "${r.topPattern}" is ${Math.round(r.topShare * 100)}% of questions`);

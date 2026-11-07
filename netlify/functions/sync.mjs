@@ -8,7 +8,33 @@ const J = (o, status = 200) => Response.json(o, { status, headers: { "cache-cont
 const T = (msg, status) => new Response(msg, { status, headers: { "cache-control": "no-store" } });
 /** Time of the newest Reset/Replace that produced this state. A save carrying a newer one is allowed to drop sessions. */
 const wipeOf = (x) => (x && Number.isFinite(+x.wipe) && +x.wipe > 0 ? +x.wipe : 0);
+/** Cheap integrity check over a set of sessions: count and a sum of timestamps, so a delta save can prove the client and server agree. */
+const sessionsChk = (rows) => rows.reduce((a, x) => a + (+x.t % 1e9), 0);
 const validRow = (x) => x && Number.isFinite(+x.t) && x.dur > 0 && x.n >= 0;
+
+/**
+ * Read the request body as text, gunzipping it when the client compressed it (detected by the gzip magic bytes, so it works
+ * whether or not a proxy touched the headers). The size cap applies to the decompressed bytes, so a small bomb cannot expand.
+ */
+async function readBody(req) {
+  const reader = req.body ? req.body.getReader() : null;
+  const chunks = []; let total = 0;
+  const cap = MAX_BYTES, raw = 6e6;   // compressed input is capped too; Netlify rejects larger requests anyway
+  while (reader) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.length; chunks.push(value);
+    if (total > raw) return null;
+  }
+  const buf = Buffer.concat(chunks);
+  if (buf.length > 2 && buf[0] === 0x1f && buf[1] === 0x8b) {
+    const { gunzip } = await import("node:zlib");
+    try {
+      return await new Promise((res, rej) => gunzip(buf, { maxOutputLength: cap + 1 }, (e, out) => (e ? rej(e) : res(out.toString("utf8")))));
+    } catch { return undefined; }   // corrupt, or it would expand past the cap
+  }
+  return buf.toString("utf8");
+}
 
 /** Read the current state and its ETag. The ETag is what makes the write below a compare-and-swap. */
 async function readState(store) {
@@ -20,20 +46,16 @@ async function readState(store) {
   return { old: await store.get("state", { type: "json" }), etag: undefined };
 }
 
-/** Write only if the state still matches the ETag we validated. Returns true when it landed. */
+/** Write only if the state still matches the ETag we validated. Returns { etag } when it landed, otherwise null. */
+const landed = (r) => (!r || r.modified !== false ? { etag: r && r.etag } : null);
 async function writeState(store, body, old, etag) {
   if (!old || !etag) {
     // No existing row: create only if another writer has not created it first.
-    if (!old && typeof store.setJSON === "function") {
-      const r = await store.setJSON("state", body, { onlyIfNew: true });
-      return !r || r.modified !== false;
-    }
+    if (!old && typeof store.setJSON === "function") return landed(await store.setJSON("state", body, { onlyIfNew: true }));
     // A metadata-less store: last writer wins, just as before (the caller still validated sessions).
-    const r = await store.setJSON("state", body);
-    return !r || r.modified !== false;
+    return landed(await store.setJSON("state", body));
   }
-  const r = await store.setJSON("state", body, { onlyIfMatch: etag });
-  return !r || r.modified !== false;
+  return landed(await store.setJSON("state", body, { onlyIfMatch: etag }));
 }
 
 /** One daily safety copy of the state from before the successful write. Best effort: never fail a save. */
@@ -70,16 +92,23 @@ export default async (req) => {
       const l = await store.list({ prefix: "backup-" }).catch(() => ({ blobs: [] }));
       return J({ keys: l.blobs.map((b) => b.key).sort() });
     }
-    return J({ data: await store.get("state", { type: "json" }) });
+    // Conditional pull: a client that already holds this exact version gets a few bytes instead of the whole state.
+    const { old, etag } = await readState(store);
+    const have = q.get("etag");
+    if (have && etag && have === etag) return J({ unchanged: true, etag });
+    return J({ data: old, etag });
   }
 
   if (req.method === "PUT") {
-    const text = await req.text();
-    if (text.length > MAX_BYTES) return T("too large", 413);
+    const text = await readBody(req);
+    if (text === null || (text && text.length > MAX_BYTES)) return T("too large", 413);
     let body;
     try { body = JSON.parse(text); } catch { body = null; }
-    if (!body || typeof body !== "object" || !body.sk || typeof body.sk !== "object" || !Array.isArray(body.sessions)) return T("bad data", 400);
-    if (body.sessions.length > 50000) return T("too many sessions", 413);
+    // Two shapes: a full save carries `sessions`; a delta save carries `add` (sessions new since the client's cursor) plus `n`
+    // and `chk`, which prove the client's whole history matches what the server will hold after adding them.
+    const isDelta = !!body && typeof body === "object" && Array.isArray(body.add) && !("sessions" in body);
+    if (!body || typeof body !== "object" || !body.sk || typeof body.sk !== "object" || !(isDelta || Array.isArray(body.sessions))) return T("bad data", 400);
+    if ((isDelta ? body.add : body.sessions).length > 50000) return T("too many sessions", 413);
     const bw = wipeOf(body);
     if (bw > Date.now() + 864e5) return T("bad data", 400);   // a wipe time from the far future would lock every other device out
 
@@ -96,13 +125,29 @@ export default async (req) => {
       // has not heard about the erase yet, is refused so it merges the new state instead of bringing the old data back.
       const ow = wipeOf(old), erasing = bw > ow;
       if (bw < ow) return T("stale", 409);
-      if (!erasing && old && Array.isArray(old.sessions)) {
+      let next = body;
+      if (isDelta) {
+        // A delta can only add. It needs an existing history to add to, the same erase epoch, and a matching fingerprint;
+        // anything else is a 409 and the client answers with a full save (which has all the older safeguards).
+        if (!old || !Array.isArray(old.sessions) || erasing) return T("need full", 409);
+        const byT = new Map();
+        for (const x of old.sessions) if (validRow(x) && !byT.has(+x.t)) byT.set(+x.t, x);
+        for (const x of body.add) if (validRow(x) && !byT.has(+x.t)) byT.set(+x.t, x);
+        const merged = [...byT.values()].sort((x, y) => +x.t - +y.t);
+        if (merged.length > 50000) return T("too many sessions", 413);
+        if (merged.length !== body.n || sessionsChk(merged) !== body.chk) return T("out of sync", 409);
+        const { add: _a, n: _n, chk: _c, ...rest } = body;
+        next = { ...rest, sessions: merged };
+        if (JSON.stringify(next).length > MAX_BYTES) return T("too large", 413);
+      }
+      if (!isDelta && !erasing && old && Array.isArray(old.sessions)) {
         const have = new Set(body.sessions.map((x) => x && +x.t));
         if (old.sessions.some((x) => validRow(x) && !have.has(+x.t))) return T("would lose sessions", 409);
       }
-      if (await writeState(store, body, old, etag)) {
+      const done = await writeState(store, next, old, etag);
+      if (done) {
         await saveBackup(store, old, erasing);
-        return J({ ok: true });
+        return J({ ok: true, etag: done.etag });
       }
     }
     return T("conflict", 409);

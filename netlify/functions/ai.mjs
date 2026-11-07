@@ -20,7 +20,7 @@ import {
 } from '../lib/ailogic.mjs';
 import { resolveSyncUser } from '../lib/auth.mjs';
 
-const AI_BUILD_VERSION = '14.49';
+const AI_BUILD_VERSION = '14.50';
 
 const J = (o, status = 200) =>
   Response.json(o, {

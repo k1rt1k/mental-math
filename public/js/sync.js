@@ -24,12 +24,39 @@ export const syncStorageKey = () => 'mmTrainer.sync';
 export const syncKey = () => { try { return localStorage[syncStorageKey()] || ''; } catch (e) { return ''; } };
 export function setSyncKey(k) {
   try { k ? (localStorage[syncStorageKey()] = k) : localStorage.removeItem(syncStorageKey()); } catch (e) { /* storage blocked */ }
-  epoch++; busy = false; conflicts = 0;      // anything still in flight belongs to the old key and must not touch this account
+  epoch++; busy = false; conflicts = 0; writeCursor(null); fullNext = false; etag = ''; dirty = true;      // anything still in flight belongs to the old key and must not touch this account
   synced = false; status = { kind: k ? 'busy' : 'off', msg: '', at: 0 };
   emit();
 }
 
-let synced = false, busy = false, epoch = 0, conflicts = 0, pushT, guard = () => false, onChange = () => {};
+/**
+ * Delta saves. The cursor says "every session of mine with t <= cursor.t is on the server (in erase epoch cursor.w)".
+ * A save then sends only the newer sessions plus a count/sum fingerprint of the whole history. The server unions them and
+ * answers 409 if the fingerprint disagrees, in which case the next save is a full one. Anything unusual (no cursor, a new
+ * erase, a new key) is simply a full save, which is what every save used to be.
+ */
+const CURSOR = 'mmTrainer.sync.cursor';
+const readCursor = () => { try { const c = JSON.parse(localStorage[CURSOR]); return c && Number.isFinite(c.t) ? c : null; } catch (e) { return null; } };
+const writeCursor = (c) => { try { c ? (localStorage[CURSOR] = JSON.stringify(c)) : localStorage.removeItem(CURSOR); } catch (e) { /* storage blocked: every save is full */ } };
+export const chkOf = (rows) => rows.reduce((a, x) => a + (+x.t % 1e9), 0);
+export const maxT = (rows) => rows.reduce((m, x) => Math.max(m, +x.t || 0), 0);
+/** The body to PUT: a delta when the cursor allows it and it is actually smaller, otherwise the whole state. */
+export function pushBody(st, cursor, full = false) {
+  const w = st.wipe || 0;
+  if (full || !cursor || cursor.w !== w || !st.sessions.length) return { body: st, delta: false };
+  const add = st.sessions.filter((x) => +x.t > cursor.t);
+  if (add.length * 2 > st.sessions.length) return { body: st, delta: false };
+  const { sessions, ...rest } = st;
+  return { body: { ...rest, add, n: sessions.length, chk: chkOf(sessions) }, delta: true };
+}
+/** gzip a body when the browser can and it is big enough to matter. The server recognises gzip by its first bytes. */
+export async function packBody(json, can = typeof CompressionStream != 'undefined') {
+  if (!can || json.length < 2048) return { body: json, gz: false };
+  try { return { body: await new Response(new Blob([json]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer(), gz: true }; }
+  catch (e) { return { body: json, gz: false }; }
+}
+
+let synced = false, busy = false, epoch = 0, conflicts = 0, pushT, fullNext = false, etag = '', gzipOk = true, dirty = true, saves = 0, guard = () => false, onChange = () => {};
 export let status = { kind: syncKey() ? 'busy' : 'off', msg: '', at: 0 };   // kind: off | busy | ok | offline | key
 const subs = new Set();
 const emit = () => subs.forEach((f) => f(status));
@@ -46,7 +73,11 @@ class HttpError extends Error { constructor(code) { super('http' + code); this.c
 async function api(method, body, query = '') {
   const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 15000);
   try {
-    const r = await fetch('/api/sync' + query, { method, headers: { 'x-sync-key': syncKey(), 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined, signal: ctl.signal });
+    const json = body ? JSON.stringify(body) : undefined;
+    let pk = json ? await packBody(json, gzipOk && typeof CompressionStream != 'undefined') : { body: undefined, gz: false };
+    const go = () => fetch('/api/sync' + query, { method, headers: { 'x-sync-key': syncKey(), 'content-type': 'application/json', ...(pk.gz ? { 'x-sync-encoding': 'gzip' } : {}) }, body: pk.body, signal: ctl.signal });
+    let r = await go();
+    if (r.status == 400 && pk.gz) { gzipOk = false; pk = { body: json, gz: false }; r = await go(); }   // a server that does not understand gzip: send plain from now on
     if (!r.ok) throw new HttpError(r.status);
     return await r.json();
   } finally { clearTimeout(to); }
@@ -55,12 +86,20 @@ const fail = (e) => set(e instanceof HttpError && e.code == 401 ? 'key' : 'offli
 
 export async function push() {
   if (!syncKey() || !synced || guard()) return;
-  const ep = epoch;
-  try { await api('PUT', S); if (ep != epoch) return; conflicts = 0; set('ok'); }
-  catch (e) {
+  const ep = epoch, sv = saves, sentMax = maxT(S.sessions), sentWipe = S.wipe || 0;
+  const { body, delta } = pushBody(S, readCursor(), fullNext);
+  try {
+    const r = await api('PUT', body);
     if (ep != epoch) return;
-    // Server has newer sessions: merge first, then push again. Allowed even from inside a pull (busy), twice at most.
-    if (e instanceof HttpError && e.code == 409 && conflicts < 2) { conflicts++; synced = true; await pull(true); return; }
+    conflicts = 0; fullNext = false; if (saves == sv) dirty = false;
+    if (r && r.etag) etag = r.etag; else etag = '';
+    writeCursor({ t: sentMax, w: sentWipe });
+    set('ok');
+  } catch (e) {
+    if (ep != epoch) return;
+    // Server has newer sessions (or, for a delta, a different history): merge first, then push again. Allowed even from
+    // inside a pull (busy), twice at most. After a refused delta the retry is a full save.
+    if (e instanceof HttpError && e.code == 409 && conflicts < 2) { conflicts++; synced = true; if (delta) fullNext = true; await pull(true); return; }
     conflicts = 0;
     fail(e);
   }
@@ -73,9 +112,12 @@ export async function pull(afterConflict = false) {
   busy = true;
   if (!status.at) set('busy');
   try {
-    const r = (await api('GET')).data;
+    // Ask only for what changed: with the version we already hold, an idle poll costs a few bytes.
+    const res = await api('GET', null, etag && !afterConflict ? '?etag=' + encodeURIComponent(etag) : '');
     if (ep != epoch) return;            // the key changed while we waited: this answer is for another account
     set('ok');                          // reachable and authorised; a failing push below turns this into offline/key
+    if (res.unchanged) { if (dirty) await push(); if (ep == epoch) busy = false; return; }
+    const r = res.data; etag = res.etag || '';
     if (r && r.sk && Array.isArray(r.sessions)) {
       const before = S.sessions.length, uBefore = S.u || 0, prefsBefore = prefsSig();
       replaceState(mergeStates(S, r));
@@ -84,9 +126,10 @@ export async function pull(afterConflict = false) {
       // A settings change from another device must repaint even when its timestamp is older than our last save.
       if ((r.u || 0) > uBefore || S.sessions.length != before || prefsSig() != prefsBefore) onChange();
       // Push when the server is missing anything we hold, including a newer setting of ours.
-      if (!afterConflict && (S.sessions.length != r.sessions.length || S.u != r.u || prefsSig() != prefsSig(migrate(r)))) await push();
-      else if (afterConflict) await push();
-    } else { synced = true; await push(); }
+      // dirty first: if this push fails (offline), the next "unchanged" poll must still retry it.
+      if (!afterConflict && (S.sessions.length != r.sessions.length || S.u != r.u || prefsSig() != prefsSig(migrate(r)))) { dirty = true; await push(); }
+      else if (afterConflict) { dirty = true; await push(); }
+    } else { synced = true; dirty = true; await push(); }
   } catch (e) { if (ep == epoch) fail(e); }
   if (ep == epoch) busy = false;
 }
@@ -106,7 +149,7 @@ export async function fetchBackup() {
   return r && r.state && Array.isArray(r.state.sessions) ? r : null;
 }
 
-onSave((ev) => { if (ev == 'saved') pushSoon(); });
+onSave((ev) => { if (ev == 'saved') { saves++; dirty = true; pushSoon(); } });
 export function startSync() {
   addEventListener('focus', () => pull());
   addEventListener('online', () => pull());

@@ -217,7 +217,7 @@ test('fuzz: every session mode survives random answers, slips, skips, hints and 
       const x = R();
       if (x < 0.05) { s.pause(); c.adv(60000); s.resume(); }
       if (x > 0.93) s.hint();
-      if (x < 0.12) { const w = String(s.cur.a).split('').map((d) => (+d + 1 + Math.floor(R() * 8)) % 10).join(''); for (const d of w) s.type(d); if (s.over) break; s.back(); }
+      if (x < 0.12) { const w = String(s.cur.a).split('').map((d) => (/\d/.test(d) ? (+d + 1 + Math.floor(R() * 8)) % 10 : d)).join(''); for (const d of w) s.type(d); if (s.over) break; s.back(); }
       if (x > 0.85 && x <= 0.93) s.answer(false); else solve(s);
       assert.ok(Number.isInteger(s.pts) && s.pts >= last, 'points are whole and never go down'); last = s.pts;
       for (const k of IDS) { const o = S.sk[k]; assert.ok(Number.isFinite(o.lv) && o.lv >= 1 && o.lv <= 12, `${k} lv ${o.lv}`); assert.ok(o.acc >= 0 && o.acc <= 1, 'acc'); assert.ok(Number.isFinite(o.spd) && o.spd > 0, 'spd'); }

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { IDS, gen, how, SK, T, perfScore, nextRating, qk } from '../public/js/engine.js';
+import { IDS, CORE, gen, how, SK, T, perfScore, nextRating, qk, showAns } from '../public/js/engine.js';
 import { seeded } from '../public/js/util.js';
 
 // Independent evaluator for the question strings (does not share code with the generators).
@@ -18,7 +18,7 @@ const evalQ = (q) => {
 };
 
 test('every generated question has the right integer answer', () => {
-  for (const k of IDS) for (let d = 1; d <= 12; d += 0.5) for (let i = 0; i < 200; i++) {
+  for (const k of CORE) for (let d = 1; d <= 12; d += 0.5) for (let i = 0; i < 200; i++) {
     const p = gen(k, d);
     assert.equal(evalQ(p.q), p.a, `${k} d=${d}: ${p.q}`);
     assert.ok(Number.isInteger(p.a) && p.a > 0, `${p.q} = ${p.a}`);
@@ -29,7 +29,7 @@ test('every generated question has the right integer answer', () => {
 test('worked methods mention the answer', () => {
   for (const k of IDS) for (let d = 1; d <= 12; d += 1.5) for (let i = 0; i < 100; i++) {
     const p = gen(k, d), h = how(p);
-    assert.ok(h.includes(String(p.a)), `${p.q} → "${h}"`);
+    assert.ok(h.includes(String(p.a)) || h.includes(showAns(p.a)), `${p.q} → "${h}"`);
   }
 });
 

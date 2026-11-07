@@ -156,6 +156,42 @@ const SPEC = {
     },
     tricks: ['decf', 'decd', 'decs', 'dect'],
   },
+  neg: {
+    title: 'Negatives mastery',
+    blurb: 'Signs, crossing zero, subtracting negatives and signed products.',
+    teach: {
+      foundation: 'A negative number is below zero. Adding a negative moves left on the number line; adding a positive moves right. Start with sums that cross zero, like −7 + 12.',
+      intermediate: 'When the signs differ, subtract the smaller size from the bigger and keep the sign of the bigger one. When both are negative, add the sizes and keep the minus.',
+      shortcuts: 'Subtracting a negative is adding. In × and ÷, the same signs give a positive and different signs give a negative, so do the sizes first.',
+      independent: 'Mixed signed questions with no hint. Decide first whether the answer is positive or negative, then find its size.',
+      mastery: 'A timed mixed negatives test, then a delayed retention check on the questions you answer cleanly.',
+    },
+    tricks: ['negx', 'negd', 'negm'],
+  },
+  frac: {
+    title: 'Fractions mastery',
+    blurb: 'Fractions of a number, simplifying, and adding, multiplying and dividing fractions.',
+    teach: {
+      foundation: 'A fraction of a number: divide by the bottom, then multiply by the top. 3/4 of 36 is 36 ÷ 4 = 9, then 9 × 3 = 27. Type a fraction answer with the / key.',
+      intermediate: 'Simplify by dividing the top and bottom by the same number. With the same bottom, add or subtract the tops and keep the bottom.',
+      shortcuts: 'Unlike bottoms: cross-multiply, a/b + c/d = (ad + cb)/bd. To multiply, multiply across. To divide, flip the second fraction and multiply.',
+      independent: 'Mixed fractions with no hint. Answer in lowest terms: a whole number if it divides out, otherwise a/b.',
+      mastery: 'A timed mixed fractions test, then a delayed retention check on the questions you answer cleanly.',
+    },
+    tricks: ['fraco', 'fracs', 'fracd', 'fracm'],
+  },
+  life: {
+    title: 'Real-life maths mastery',
+    blurb: 'Tips, discounts, tax, unit conversion, clock gaps, recipes and rates.',
+    teach: {
+      foundation: 'Everyday sums. A 10% tip is the bill with the point moved one place left. A discount of p% means you pay (100 − p)%. Use the . key for answers like 7.2.',
+      intermediate: 'Convert units by thinking which is bigger: big unit to small, multiply; small to big, divide. For clock gaps, count up to the next whole hour first.',
+      shortcuts: 'Build any percentage from 10%: 20% is double, 15% is 10% plus half of it, 25% off is three quarters. Scale a recipe by finding the amount for one.',
+      independent: 'Mixed real-life questions with no hint. Work out which operation the story is asking for before you calculate.',
+      mastery: 'A timed mixed real-life test, then a delayed retention check on the questions you answer cleanly.',
+    },
+    tricks: ['lifet', 'lifes', 'lifeu', 'lifec'],
+  },
 };
 
 const trick = (id) => TRICKS.find((t) => t.id === id);

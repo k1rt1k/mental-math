@@ -1,5 +1,5 @@
 import { S, save } from '../state.js';
-import { IDS, SK, COL, gen, how } from '../engine.js';
+import { IDS, SK, COL, gen, how, symFor, ansMatch } from '../engine.js';
 import { TRICKS } from '../tricks.js';
 import { esc } from '../util.js';
 import { weakestSkills } from '../stats.js';
@@ -107,14 +107,14 @@ A.pathDemo = async (d) => {
     actions: [{ label: 'Done', value: false }, { label: 'Practise this stage', value: 'practise', primary: true }],
     onOpen: (dlg) => {
       const q = dlg.querySelector('#pq'), inp = dlg.querySelector('#pi'), res = dlg.querySelector('#prr');
-      const show = () => { q.textContent = p.q; inp.value = ''; res.innerHTML = ''; inp.focus(); };
+      const show = () => { q.textContent = p.q; inp.inputMode = symFor(p.sk) ? 'text' : 'numeric'; inp.value = ''; res.innerHTML = ''; inp.focus(); };
       const reveal = () => {
         mark();
         res.innerHTML = `<span class="ok">${esc(p.q)} = ${esc(p.a)}</span>${p.tip ? `<div class="tip">${esc(p.tip)}</div>` : ''}<div class="tip">${esc(how(p))}</div>`;
       };
       const check = () => {
         if (!inp.value.trim()) return;
-        if (inp.value.trim() == String(p.a)) { mark(); res.innerHTML = '<span class="ok">✓ Correct. The method is below.</span>'; }
+        if (ansMatch(inp.value.trim().replace(/−/g, '-'), p.a)) { mark(); res.innerHTML = '<span class="ok">✓ Correct. The method is below.</span>'; }
         else { res.innerHTML = '<span class="bad">Not quite.</span> <span class="mu">Try again, or show the method.</span>'; inp.select(); return; }
         res.insertAdjacentHTML('beforeend', `<div class="tip">${esc(how(p))}</div>`);
       };
@@ -156,12 +156,12 @@ A.tryTrick = async (d) => {
     actions: [{ label: 'Done', value: true, primary: true }],
     onOpen: (dlg) => {
       const q = dlg.querySelector('#tq'), inp = dlg.querySelector('#ti'), res = dlg.querySelector('#tr');
-      const show = () => { q.textContent = p.q; inp.value = ''; res.innerHTML = ''; solved = false; inp.focus(); };
+      const show = () => { q.textContent = p.q; inp.inputMode = symFor(p.sk) ? 'text' : 'numeric'; inp.value = ''; res.innerHTML = ''; solved = false; inp.focus(); };
       const reveal = () => { res.innerHTML = `<span class="ok">${esc(p.q)} = ${esc(p.a)}</span>${p.tip ? `<div class="tip">${esc(p.tip)}</div>` : ''}<div class="tip">${esc(how(p))}</div>`; };
       const check = () => {
         if (solved) { p = sample(t); return show(); }
         if (!inp.value.trim()) return;
-        if (inp.value.trim() == String(p.a)) { solved = true; res.innerHTML = '<span class="ok">✓ Correct.</span> <span class="mu">Press Enter for another.</span>'; }
+        if (ansMatch(inp.value.trim().replace(/−/g, '-'), p.a)) { solved = true; res.innerHTML = '<span class="ok">✓ Correct.</span> <span class="mu">Press Enter for another.</span>'; }
         else { res.innerHTML = '<span class="bad">Not quite.</span> <span class="mu">Try again, or show the method.</span>'; inp.select(); }
       };
       dlg.querySelector('#tc').onclick = check;

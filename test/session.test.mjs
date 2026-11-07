@@ -13,7 +13,7 @@ function play(opt, { n = 30, cfg, ms = 2000, wrongEvery = 0 } = {}) {
   s.begin(); s.next();
   for (let i = 0; i < n && !s.over; i++) {
     c.adv(ms); s.tick();
-    if (wrongEvery && (i + 1) % wrongEvery == 0) { const w = String(s.cur.a).split('').map((d) => (+d + 1) % 10).join(''); for (const d of w) s.type(d); if (s.over) break; s.back(); }
+    if (wrongEvery && (i + 1) % wrongEvery == 0) { const w = String(s.cur.a).split('').map((d) => (/\d/.test(d) ? (+d + 1) % 10 : d)).join(''); for (const d of w) s.type(d); if (s.over) break; s.back(); }
     for (const d of solve(s)) { if (s.type(d) == 'ok') { s.answer(true); break; } }
     if (!s.next()) break;
   }
@@ -126,7 +126,7 @@ test('a wrong try followed by the right answer still lands in the notebook for l
   replaceState(fresh()); S.cfg = { dur: 0, only: 'add' };
   const c = clock(), s = new Session(undefined, { now: c.now, rand: seeded(5) });
   s.begin(); s.next();
-  const q = s.cur.q, wrong = String(s.cur.a).split('').map((d) => (+d + 1) % 10).join('');
+  const q = s.cur.q, wrong = String(s.cur.a).split('').map((d) => (/\d/.test(d) ? (+d + 1) % 10 : d)).join('');
   c.adv(1500);
   for (const d of wrong) s.type(d);
   assert.equal(s.wrong, 1);

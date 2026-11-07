@@ -102,7 +102,7 @@ test('misses in the results screen keep their pattern, so their worked method ma
 test('sessions record first-try answers, and the coach, perfect-session and best-accuracy use them', () => {
   replaceState({ noGrace: true });   // this test is about real slips; the near-miss grace window has its own tests
   const c = clock(), s = new Session(undefined, { now: c.now, rand: seeded(29) }); s.begin();
-  for (let i = 0; i < 30; i++) { s.next(); c.adv(2000); s.tick(); if (i % 2) s.type(String(s.cur.a).replace(/./g, (x) => (+x + 1) % 10)); solve(s); }
+  for (let i = 0; i < 30; i++) { s.next(); c.adv(2000); s.tick(); if (i % 2) s.type(String(s.cur.a).replace(/\d/g, (x) => (+x + 1) % 10)); solve(s); }
   assert.equal(s.ok, 30); assert.equal(s.ft, 15);
   const out = s.finish(); assert.equal(out.rec.ft, 15);
   assert.equal(ctx().perf, false, '30 answers with 15 slips is not a perfect session');

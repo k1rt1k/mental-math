@@ -327,3 +327,7 @@ a { background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px no-re
 /* Results: the page itself arrives (results used to appear with no entrance because only navigation turned it on) */
 #main.enter .rnext, #main.enter .rbtns > * { animation: settle .55s var(--ease) both; animation-delay: calc(.3s + var(--k, 0) * .05s); }
 #main.enter .rbtns > :nth-child(2) { --k: 1; } #main.enter .rbtns > :nth-child(3) { --k: 2; } #main.enter .rbtns > :nth-child(4) { --k: 3; } #main.enter .rbtns > :nth-child(n+5) { --k: 4; }
+
+/* the one extra key (minus, slash or point) lives in the pad's empty corner and only shows on questions that use it */
+.pad .sym.off { visibility: hidden; pointer-events: none; }
+.pad .sym { font-weight: 700; }

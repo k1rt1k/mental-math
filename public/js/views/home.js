@@ -21,7 +21,7 @@ const LENS = [30, 60, 120, 300, 600, 0];
 const greeting = () => { const h = new Date().getHours(); const d = new Date(), f = (o) => d.toLocaleDateString(undefined, o);
   return [h < 5 ? 'Late night' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening', `<span class="dl">${esc(f({ weekday: 'long', month: 'long', day: 'numeric' }))}</span><span class="ds">${esc(f({ weekday: 'short', month: 'short', day: 'numeric' }))}</span>`]; };
 const kc = (k, t) => `<span class="kc" style="--sc:${COL[k]}">${esc(t)}</span>`;
-const SL = { add: 'Add', sub: 'Subtract', mul: 'Multiply', div: 'Divide', sq: 'Squares', pw: 'Roots & cubes', pct: 'Percent', ops: 'Multi-step', mod: 'Remainders', dec: 'Decimals' };
+const SL = { add: 'Add', sub: 'Subtract', mul: 'Multiply', div: 'Divide', sq: 'Squares', pw: 'Roots & cubes', pct: 'Percent', ops: 'Multi-step', mod: 'Remainders', dec: 'Decimals', neg: 'Negatives', frac: 'Fractions', life: 'Real-life' };
 const onLabel = (c) => (c.only == 'all' ? 'all skills' : c.only == 'mix' ? 'custom mix' : c.only == 'zeta' ? zLabel(c.zeta) : SL[c.only]);
 const STEP_IC = { train: 'target', review: 'redo', daily: 'cal' };
 const DIFF = [[-1.5, 'Easier'], [0, 'Auto'], [1.5, 'Harder'], [3, 'Brutal']];

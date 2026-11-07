@@ -1,7 +1,7 @@
 // A practice session: question selection, answer handling, adaptive ratings, spaced review, results.
 // DOM-free so it can be tested in Node. The views in js/views/play.js drive it.
 import { S, save, persist, cfgNow, master, recordLapse, recordRecall, bump, reviewPlan, forget } from './state.js';
-import { IDS, SK, T, factOf, errKind, timeCap, worth, speedMult, gen, how, qk, perfScore, nextRating, weakness, INTERVALS, MASTER_BOX, genZeta, zNorm, zKey } from './engine.js';
+import { IDS, CORE, SK, symFor, ansMatch, T, factOf, errKind, timeCap, worth, speedMult, gen, how, qk, perfScore, nextRating, weakness, INTERVALS, MASTER_BOX, genZeta, zNorm, zKey } from './engine.js';
 import { clamp, ymd, seeded } from './util.js';
 import { ctx, MS, weakFacts } from './stats.js';
 import { recordPathRun } from './paths.js';
@@ -118,7 +118,7 @@ export class Session {
   }
 
   nextQ() {
-    if (this.kind == 'daily') { const R = this.rng; return gen(IDS[Math.floor(R() * IDS.length)], 6, R); }
+    if (this.kind == 'daily') { const R = this.rng; return gen(CORE[Math.floor(R() * CORE.length)], 6, R); }   // the original ten: the Daily stays the same for everyone
     if (this.kind == 'review') return this.nextQ0();
     const hist = (S.hist = S.hist || []);
     let best = null, bi = 1e9;
@@ -199,6 +199,7 @@ export class Session {
   /* ---- input ---- */
   /** Type one digit. Returns 'more' | 'ok' | 'bad' | 'near'. 'near' is a grace period, not a slip yet: see `commit`. */
   type(dg) {
+    if (![...String(dg)].every((c) => /\d/.test(c) || c === symFor(this.cur.sk))) return 'more';   // a symbol key only works on questions that use it
     if (this.wrong) { this.wrong = 0; this.buf = ''; }
     if (this.grace) { this.grace = 0; this.buf = this.buf.slice(0, -1); }   // typing during the grace window replaces the last digit
     const ans = String(this.cur.a);
@@ -207,7 +208,7 @@ export class Session {
       return 'more';
     }
     this.buf += dg;
-    if (this.buf == ans) return 'ok';
+    if (ansMatch(this.buf, ans)) return 'ok';
     if (this.buf.length >= ans.length) {
       if (!S.noGrace && !this.cur.graced && nearMiss(ans, this.buf)) { this.grace = 1; this.cur.graced = 1; return 'near'; }
       return this.slip();
@@ -218,7 +219,7 @@ export class Session {
   submit() {
     if (!this.buf || this.wrong) return 'none';
     this.grace = 0;
-    return this.buf == String(this.cur.a) ? 'ok' : this.slip();
+    return ansMatch(this.buf, this.cur.a) ? 'ok' : this.slip();
   }
   /** The grace window ran out without a fix: the near-miss now counts as the slip it was. */
   commit() { if (!this.grace) return 'more'; this.grace = 0; return this.slip(); }

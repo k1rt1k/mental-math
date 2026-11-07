@@ -15,7 +15,7 @@ function sprint({ slips = 0, skips = 0, stop = SPRINT } = {}) {
   s.begin(); s.next();
   for (let i = 0; i < stop; i++) {
     c.adv(2000); s.tick();
-    if (i < slips) { const w = String(s.cur.a).split('').map((d) => (+d + 1) % 10).join(''); for (const d of w) s.type(d); s.back(); }
+    if (i < slips) { const w = String(s.cur.a).split('').map((d) => (/\d/.test(d) ? (+d + 1) % 10 : d)).join(''); for (const d of w) s.type(d); s.back(); }
     if (i >= slips && i < slips + skips) s.answer(false);
     else for (const d of String(s.cur.a)) if (s.type(d) == 'ok') { s.answer(true); break; }
     if (s.n >= s.target) break;
