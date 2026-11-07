@@ -30,7 +30,7 @@ function guide() {
       ? `<span class="${ret.met ? 'ok' : 'mu'}">${ret.met ? '✓' : '○'} Delayed retention${ret.cohort ? ` · ${ret.cohort} pair${ret.cohort == 1 ? '' : 's'}${ret.met ? ` · ${Math.round(ret.retentionRate * 100)}% kept` : ''}` : ` · 0 of ${ret.min} pairs`}${ret.pending && !ret.met ? ` · ${ret.pending} waiting` : ''}</span>`
       : '';
     const tricks = st.id == 'shortcuts' && st.tricks.length
-      ? `<div class="stage-tricks"><span class="mu">Shortcuts in this stage:</span> ${st.tricks.map((t) => `<button class="lnk2" data-act="tryTrick" data-v="${esc(t.id)}">${esc(t.title)}</button>`).join(' · ')}</div>`
+      ? `<div class="stage-tricks"><span class="mu">Shortcuts in this stage:</span> ${st.tricks.map((t) => `<button class="lnk2" data-act="tryTrick" data-v="${esc(t.id)}">${esc(t.title)}</button>`).join('')}</div>`
       : '';
     const last = st.row && st.row.n
       ? `Last run: ${st.row.ft}/${st.row.n} first try · ${st.row.spd.toFixed(2)}× par`

@@ -817,7 +817,7 @@ body.playing #toast { bottom: auto; top: 20px; transform: translate(-50%, -12px)
   .play .board, .padon .play .board { flex: 1 1 140px; min-height: 140px; max-height: 440px; margin: 12px 0 4px; padding-top: 46px; }
   .play .msg { flex: none; min-height: 44px; padding-top: 4px; }
   .play .pad { margin: auto auto 0; width: 100%; } .play .padact { width: 100%; }
-  .play .q { font-size: clamp(40px, min(12.5vw, 9vh), 96px); } .play .bf { height: 56px; font-size: clamp(30px, 6.4vw, 44px); margin-bottom: 14px; }
+  .play .q { font-size: clamp(40px, min(12.5vw, 9vh), 96px); } .play .bf { height: 66px; font-size: clamp(36px, 9.8vw, 46px); margin-bottom: 14px; }
   [data-ts=xl] .modes, [data-ts=xl] .modes.m3 { grid-template-columns: minmax(0, 1fr); } [data-ts=xl] .skills { grid-template-columns: minmax(0, 1fr); }
 }
 /* Smallest phones (320–360 px): give the headline room, keep the eyebrow on one line, shrink the goal ring. */

@@ -125,7 +125,12 @@ test('retention stats count mastered questions that slipped since', () => {
 test('Notebook and Progress expose the five steps and retained mastery', () => {
   const nb = readFileSync(new URL('../public/js/views/notebook.js', import.meta.url), 'utf8');
   const pg = readFileSync(new URL('../public/js/views/progress.js', import.meta.url), 'utf8');
-  for (const s of ['10 minutes', '1 day', '3 days', '7 days', 'MASTER_BOX', 'nbRelearn', 'Mastered']) assert.match(nb, new RegExp(s.replace(' ', '\\s+')));
+  // The stage explanation sits behind the Notebook's "i" button (n.intro), so the view must carry that button and infotext.js must hold the intervals.
+  const info = readFileSync(new URL('../public/js/infotext.js', import.meta.url), 'utf8');
+  assert.match(nb, /ib\('n\.intro'\)/);
+  const intro = (info.match(/'n\.intro':\s*\[(.*)\],?\s*$/m) || [])[1] || '';
+  for (const s of ['10 minutes', '1 day', '3 days', '7 days']) assert.match(intro, new RegExp(s.replace(' ', '\\s+')));
+  for (const s of ['MASTER_BOX', 'nbRelearn', 'Mastered']) assert.match(nb, new RegExp(s));
   assert.match(pg, /masteryStats\(\)/);
   assert.match(pg, /statB\('retention'\)/);
 });
