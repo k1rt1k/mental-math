@@ -278,3 +278,35 @@ h2.sg { margin: 28px 0 12px; scroll-margin-top: 16px; }
 @keyframes bglow { from { background: color-mix(in srgb, var(--ok) 38%, transparent); } to { background: color-mix(in srgb, var(--ac) 12%, transparent); } }
 @media (prefers-reduced-motion: reduce) { .bmove, .bmi, #main .tbl tr.you.climb, #main .tbl tr.you.climb td { animation: none; } }
 [data-motion=reduce] .bmove, [data-motion=reduce] .bmi, [data-motion=reduce] #main .tbl tr.you.climb, [data-motion=reduce] #main .tbl tr.you.climb td { animation: none; }
+
+/* ---------- 14.59: rest chip sits under the date; settings jump chips scroll on phones ---------- */
+.hrest { margin-top: 6px; }
+@media (max-width: 700px) {
+  .sjump { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-inline: -2px; padding: 2px; }
+  .sjump::-webkit-scrollbar { display: none; }
+  .sjump .chip { flex: none; }
+}
+
+/* ---------- 14.60: phone header on one row; Coach skill bars and slip pills ---------- */
+.streak .ss { display: none; }
+@media (max-width: 560px) {
+  .home-hd > div:first-child { min-width: 0; flex: 1 1 auto; }
+  .home-hd .meta { flex-wrap: nowrap; flex: none; gap: 2px; }
+  .home-hd .streak .ss { display: inline; margin-left: -6px; }   /* "11d": the full words stay in the page for screen readers */
+  .home-hd .streak .sl { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
+.cslips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.cslips .pill b { color: var(--tx); }
+.cs-sub { font-size: var(--t-xs); font-weight: 500; }
+.cskills { display: grid; grid-template-columns: max-content minmax(60px, 1fr) 36px; align-items: center; gap: 7px 10px; margin-top: 10px; }   /* rows share the columns, so every bar starts at the same x */
+.csk { display: contents; font-size: var(--t-sm); }
+.csk .nm { display: flex; align-items: center; gap: 7px; min-width: 0; color: var(--mu); font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.csk .nm::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--sc); }
+.csk .nm em { flex: none; font-style: normal; font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; padding: 1px 6px; border-radius: 999px; background: color-mix(in srgb, var(--gd) 18%, transparent); color: var(--gd); }
+.csk .bar { height: 7px; }
+.csk .bar > i { background: var(--sc); transform-origin: left; animation: csgrow .7s var(--ease, ease-out) both; }
+.csk .num { text-align: right; color: var(--tx); font-variant-numeric: tabular-nums; }
+.csk.weak .nm { color: var(--tx); }
+@keyframes csgrow { from { transform: scaleX(0); } to { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .csk .bar > i { animation: none; } }
+[data-motion=reduce] .csk .bar > i { animation: none; }

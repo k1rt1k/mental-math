@@ -2,6 +2,15 @@
 
 Newest first. What is true of the app today is in [README.md](README.md). The release number is the `VERSION` file.
 
+## v14.60
+- **Phone header fits on one row.** The Home streak pill shortens to \"11d\" below 560 px (the words \"-day streak\" stay in the page for screen readers and on wider screens), and the header no longer wraps, so the streak, sync cloud and gear sit together beside the greeting at 360 and 390 px.
+- **Coach, Strengths and recurring slips.** Skill ratings are bars (weakest first, the two the coach would drill are tagged *focus*, one set of columns so the bars line up) instead of a comma-separated line, and the most frequent slips are pills with counts. The no-sync notice is one short line with a single *Set up* button. Only how things are drawn changed; the numbers come from the same data.
+- Tests: `test/v1460-header-coach.test.mjs`.
+
+## v14.59
+- **Fixed (14.57): on phones the rest-day chip made the Home header ragged.** It wrapped onto a second row beside the cloud and gear icons. It now sits under the date on every screen size.
+- **Settings jump chips scroll sideways on phones** instead of wrapping to two rows with one chip alone.
+
 ## v14.58
 - **Faster loads: the service worker is cache-first.** It used to try the network first on every request and wait up to 2.5 s (8 s with no copy) before falling back to the cache, so each file could stall on a weak connection. The shell is precached whole into a cache named for the release, so a cache hit is always the right version and is served at once with no network call (`?v=` is ignored on purpose). Only a miss goes to the network. Install now fetches the shell fresh (`cache: 'reload'`) so a new cache never holds stale HTTP-cached files. `/api/` is still never intercepted.
 - **Updates are announced, not swapped silently.** (14.57 and earlier swapped the worker at once with `skipWaiting` and showed a short \"A new version is ready\" toast afterwards.) A new worker now waits. The page shows *Update available, tap to reload*; tapping tells the waiting worker to take over and the page reloads once it has. It is held back while a session is playing or a dialog is open, shows again when the app returns to the front if still waiting (at most every 10 minutes), and the app looks for a new release when it comes to the front and hourly. Nothing reloads unless the person taps.

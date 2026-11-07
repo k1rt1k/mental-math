@@ -65,8 +65,8 @@ function home() {
   const heroAct = conf ? 'start' : rec.act, heroCta = conf && !dflt ? 'Start' : rec.cta, heroTitle = conf && !dflt ? fmtLen(cf.dur) + ' · ' + onLabel(cf) + diffL : rec.title;
   const t = trickOfDay();
   $app().innerHTML = `
-  <div class="hd home-hd"><div><h1>${esc(hello).replace(/^Good /, '<span class="gw">Good </span>')}</h1><div class="greet">${dateStr}</div></div>
-    <div class="meta"><span class="pill streak ${warnStreak ? 'warn' : ''}" ${warnStreak ? `title="${esc(rest && rest.state == 'using' ? 'Your rest day is in use: play today to keep the streak' : 'Play a session today to keep it')}"` : ''}><span class="sring ${rest && rest.state == 'ready' ? 'rest' : ''}" style="--p:${esc(stRing.toFixed(3))}" ${st ? `title="${esc(stRingTip + restTip)}"` : ''}>${icon('flame', 'fill')}</span> ${st ? st + '-day streak' + (warnStreak ? '<span class="pt"> · play today</span>' : '') : 'No streak yet'}</span>${restChip(rest, icon, esc)}${syncChip()}<button class="hd-gear" data-go="settings" aria-label="Settings">${icon('gear')}</button></div></div>
+  <div class="hd home-hd"><div><h1>${esc(hello).replace(/^Good /, '<span class="gw">Good </span>')}</h1><div class="greet">${dateStr}</div>${restChip(rest, icon, esc) ? `<div class="hrest">${restChip(rest, icon, esc)}</div>` : ''}</div>
+    <div class="meta"><span class="pill streak ${warnStreak ? 'warn' : ''}" ${warnStreak ? `title="${esc(rest && rest.state == 'using' ? 'Your rest day is in use: play today to keep the streak' : 'Play a session today to keep it')}"` : ''}><span class="sring ${rest && rest.state == 'ready' ? 'rest' : ''}" style="--p:${esc(stRing.toFixed(3))}" ${st ? `title="${esc(stRingTip + restTip)}"` : ''}>${icon('flame', 'fill')}</span> ${st ? st + '<span class="sl">-day streak</span><span class="ss" aria-hidden="true">d</span>' + (warnStreak ? '<span class="pt"> · play today</span>' : '') : 'No streak yet'}</span>${syncChip()}<button class="hd-gear" data-go="settings" aria-label="Settings">${icon('gear')}</button></div></div>
   ${notices.join('')}
   <div class="home${has ? '' : ' solo'}">
    <div class="home-main">

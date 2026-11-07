@@ -2,7 +2,7 @@
 // ABSOLUTE REQUIREMENT: EVERYTHING MUST REMAIN COMPLETELY FREE. ₹0 SPENDING.
 
 import { S } from '../state.js';
-import { SK } from '../engine.js';
+import { SK, IDS, COL } from '../engine.js';
 import { esc } from '../util.js';
 import { renderRich } from '../richtext.js';
 import { A, register, view, go } from '../nav.js';
@@ -31,8 +31,20 @@ import {
 } from '../ai.js';
 import { start } from './play.js';
 import { drill } from './home.js';
-import { weakestSkills } from '../stats.js';
+import { weakestSkills, ERRL } from '../stats.js';
 import { syncKey } from '../sync.js';
+
+/** Skill ratings as bars, weakest first (the two the coach would drill are marked). Rating is level x 100 on a 12-level scale. */
+const skillBars = () => {
+  const weak = new Set(weakestSkills(2));
+  return `<div class="cskills" role="list">${IDS.map((k) => ({ k, v: Math.round(S.sk[k].lv * 100) })).sort((a, b) => a.v - b.v).map(({ k, v }) =>
+    `<div class="csk${weak.has(k) ? ' weak' : ''}" role="listitem" style="--sc:${COL[k]}"><span class="nm">${esc(SK[k].n)}${weak.has(k) ? '<em>focus</em>' : ''}</span><span class="bar" aria-hidden="true"><i style="width:${Math.max(3, Math.min(100, v / 12))}%"></i></span><b class="num">${v}</b></div>`).join('')}</div>`;
+};
+/** The most frequent kinds of slip as small pills with their counts. */
+const slipPills = () => {
+  const top = Object.entries(S.errs || {}).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]).slice(0, 4);
+  return top.length ? `<div class="cslips">${top.map(([k, n]) => `<span class="pill">${esc(ERRL[k] ? ERRL[k][0] : k)} <b class="num">${n}</b></span>`).join('')}</div>` : '<div class="mu" style="margin-top:4px">No recurring slips recorded yet.</div>';
+};
 
 let activeTab = 'coach'; // 'coach' | 'recommend' | 'plan' | 'tutor'
 let coachAnalysisText = '';
@@ -108,7 +120,7 @@ function coachView() {
     </button>
   </div>
 
-  ${syncKey() ? '' : `<div class="notice" style="margin-bottom:14px"><span>The AI needs this device's sync password. Until it's set you only get local summaries.</span><span class="btns"><button class="btn sm" data-go="settings">Open Settings</button></span></div>`}
+  ${syncKey() ? '' : `<div class="notice" style="margin-bottom:14px"><span>AI is off until sync is set up. Local summaries for now.</span><span class="btns"><button class="btn sm" data-go="settings">Set up</button></span></div>`}
   <div id="coach-content" class="coach-content">
     ${renderTabContent(summary, chat, uName)}
   </div>
@@ -163,13 +175,13 @@ function renderCoachTab(summary, uName) {
     <div>
       <div class="card" style="margin-bottom:16px">
         <div class="eyebrow" style="color:var(--ac)">STRENGTHS & RECURRING SLIPS${ib('c.slips')}</div>
-        <div style="margin:10px 0 12px">
-          <b>Common Mistakes Identified:</b>
-          <div class="mu" style="margin-top:4px">${esc(!summary.commonErrors || summary.commonErrors == 'None logged' ? 'No recurring slips recorded yet.' : summary.commonErrors)}</div>
+        <div style="margin:12px 0 14px">
+          <b>Common slips</b>
+          ${slipPills()}
         </div>
         <div>
-          <b>Skill Ratings:</b>
-          <div class="mu" style="margin-top:4px">${esc(summary.skillsList)}</div>
+          <b>Skill ratings</b><span class="mu cs-sub"> weakest first</span>
+          ${skillBars()}
         </div>
       </div>
     </div>
