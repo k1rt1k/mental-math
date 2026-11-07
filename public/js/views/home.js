@@ -3,7 +3,7 @@ import { IDS, SK, COL, rank, ZDEF, zNorm, zLabel } from '../engine.js';
 import { esc, ymd, fmtLen, VERSION, dayAgo, dueIn } from '../util.js';
 import { streak, restInfo, days, plan, todayCount, trickOfDay, weakestSkills, MS, week, zDef, zMD, recommend, lvAgo, records } from '../stats.js';
 import { radar, ring } from '../charts.js';
-import { icon, promptDlg, dialog } from '../ui.js';
+import { icon, promptDlg, dialog, toast } from '../ui.js';
 import { ib } from '../info.js';
 import { spark, sessLabel } from '../charts.js';
 import { setLearnFilter } from './learn.js';
@@ -50,7 +50,6 @@ function home() {
 
   const rec = recommend(), open = S.customOpen === true;
   const diffL = cf.off ? ' · ' + (DIFF.find((d) => d[0] == cf.off) || [0, 'custom'])[1].toLowerCase() : '';
-  const skillsNow = cf.only == 'all' && has ? weakestSkills(2).map((k) => kc(k, SK[k].n)).join(' and ') : '';
   const [hello, dateStr] = greeting(), warnStreak = st && !D.has(ymd());
   const modes = [
     `<button class="mode" data-act="daily"><span class="mi">${icon('cal')}</span><b>Daily</b><span class="mdesc">${dly ? 'Today ' + dly + ' pts' : '60\u00a0s · same for everyone'}</span></button>`,
@@ -184,7 +183,15 @@ A.dismissBk = () => { S.bkSnooze = Date.now() + 7 * 864e5; save(); home(); };
 /* ---------- actions ---------- */
 export const setCfg = (k, v) => { S.cfg = Object.assign({ dur: 120, only: 'all' }, S.cfg); S.cfg[k] = v; if (k == 'only') { delete S.cfg.patt; if (v == 'zeta' && !S.cfg.zeta) S.cfg.zeta = zNorm(ZDEF); if (v == 'mix' && !(S.cfg.mix || []).length) S.cfg.mix = ['mul', 'div']; } save(); home(); };
 A.cfg = (d) => { const [k, v] = d.v.split(':'); setCfg(k, k == 'only' ? v : +v); };
-A.mix = (d) => { S.cfg = Object.assign({ dur: 120, only: 'mix' }, S.cfg); const m = new Set(S.cfg.mix || []); m.has(d.v) ? m.delete(d.v) : m.add(d.v); S.cfg.mix = [...m]; save(); home(); };
+A.mix = (d) => {
+  S.cfg = Object.assign({ dur: 120, only: 'mix' }, S.cfg);
+  const m = new Set(S.cfg.mix || []);
+  if (m.has(d.v)) {
+    if (m.size <= 1) return toast('Keep at least one skill in the mix.');   // an empty mix would silently become "all skills"
+    m.delete(d.v);
+  } else m.add(d.v);
+  S.cfg.mix = [...m]; save(); home();
+};
 A.customLen = async () => { const v = parseInt(await promptDlg('Custom length', 'Session length in seconds (10 to 3600)', (S.cfg && S.cfg.dur) || 120, { type: 'number', min: 10, max: 3600, ok: 'Use this length' })); if (v >= 10 && v <= 3600) setCfg('dur', v); };
 A.start = () => start();
 A.daily = () => start('daily');

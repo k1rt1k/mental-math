@@ -1,4 +1,4 @@
-import { S, save, replaceState, mergeStates, fresh, avgLv, migrate } from '../state.js';
+import { S, save, replaceState, mergeStates, fresh, avgLv, migrate, devicePrefs } from '../state.js';
 import { IDS, SK } from '../engine.js';
 import { esc, ymd, clamp, ago } from '../util.js';
 import { A, register, go, view } from '../nav.js';
@@ -240,7 +240,7 @@ A.reset = async () => {
   ]);
   if (!c) return;
   if (c == 'backup') exportBackup();
-  const snap = JSON.parse(JSON.stringify(S)), keep = { theme: S.theme, acc: S.acc, font: S.font, ts: S.ts, hc: S.hc, cb: S.cb, bigA: S.bigA, rm: S.rm };
+  const snap = JSON.parse(JSON.stringify(S)), keep = devicePrefs();   // sound, pad, reminders and every other device setting survive; only progress is erased
   replaceState(Object.assign(fresh(), keep)); S.onb = 1; save(); applyTheme(); go('home');
   toast('Everything reset', { label: 'Undo', onClick: () => { replaceState(snap); save(); applyTheme(); go('home'); toast('Restored'); } });
 };

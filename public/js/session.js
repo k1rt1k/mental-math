@@ -223,7 +223,7 @@ export class Session {
     b[0]++; this.n++;
     if (ok) {
       b[1]++; b[2] += tm; this.ok++; this.rs += r;
-      if (!p.tries) this.ft++;
+      if (!p.tries && !p.hinted) this.ft++;   // a hint is not a first-try answer; first-try stats and path goals must stay honest
       this.tsum += tm;
       this.pts += Math.round(worth(p.sk, p.d) * speedMult(r) * (p.hinted ? 0.5 : 1) * (p.tries ? 0.7 : 1)) * (p.bonus ? 2 : 1);
       this.g.push([+this.el.toFixed(1), this.pts]);

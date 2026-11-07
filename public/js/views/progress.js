@@ -2,7 +2,7 @@ import { S } from '../state.js';
 import { IDS, SK, COL, rank } from '../engine.js';
 import { avgLv } from '../state.js';
 import { esc, ymd, pct, dayAgo } from '../util.js';
-import { factClass, restInfo, weakFacts, ERRL, ctx, streak, week, lvAgo, weakestSkills, MS, zDef, zMD, msProgress, hourStats, masteryStats, retentionStats, RETENTION_MIN } from '../stats.js';
+import { factClass, restInfo, weakFacts, ERRL, ctx, streak, week, lvAgo, weakestSkills, MS, zDef, zMD, msProgress, hourStats, masteryStats, retentionStats, RETENTION_MIN, modeLabel } from '../stats.js';
 import { spark, bars, heatmap, heatWeeks, sessLabel } from '../charts.js';
 import { register, A } from '../nav.js';
 import { drill } from './home.js';
@@ -42,7 +42,6 @@ function progress() {
   const tr = S.sessions.filter((s) => s.m == 'train' && s.dur == 120);
   const wk = weakestSkills(2), dl7 = IDS.map((k) => [k, (S.sk[k].lv - lvAgo(k, 7)) * 100]).sort((x, y) => y[1] - x[1]);
   const cnt = {}; S.sessions.forEach((s) => (cnt[ymd(s.t)] = (cnt[ymd(s.t)] || 0) + 1));
-  let bp = 0; S.sessions.forEach((x) => { if (x.dur >= 120) bp = Math.max(bp, x.pts); });
   const P = Object.entries(S.pat).filter(([, o]) => o.n >= 8).map(([k, o]) => ({ k, n: o.n, acc: (100 * o.ok) / o.n, sp: o.ok ? o.r / o.ok : 0 }));
   const prow = (x) => `<tr><td>${esc(x.k)}<td class="r">${x.n}<td class="r">${Math.round(x.acc)}%<td class="r">${x.sp.toFixed(2)}×<td class="r"><button class="btn sm" data-act="drillPat" data-v="${esc(x.k)}">Drill</button></tr>`;
 
@@ -89,7 +88,7 @@ function progress() {
     history: `
   <h2>Recent sessions${ib('p.hist')}</h2>
   <div class="card tbl"><table><tr><th>When<th class="hide-m">Mode<th class="r">Pts<th class="r hide-m">✓<th class="r">Acc<th class="r hide-m">Avg<th class="r" title="Points per minute vs your previous session of the same type and length">vs last same</tr>
-  ${S.sessions.slice(-more).reverse().map((x) => { const pv = prevOf(x), d = pv ? (x.pts * 60) / x.dur - (pv.pts * 60) / pv.dur : 0; return `<tr><td><button class="lnk" data-act="sessInfo" data-v="${esc(x.t)}" aria-label="Details of the session on ${ymd(x.t)}">${ymd(x.t).slice(5)} ${new Date(x.t).toTimeString().slice(0, 5)}</button><td class="hide-m">${esc(x.m || 'train')}<td class="r">${x.pts}${x.pts == bp && x.dur >= 120 ? '' : ''}<td class="r hide-m">${x.ok}<td class="r">${pct(x.ok, Math.max(1, x.n))}%<td class="r hide-m">${x.tm}s<td class="r ${d >= 0 ? 'ok' : 'bad'}">${pv ? (d >= 0 ? '+' : '') + Math.round(d) + '/min' : '–'}</tr>`; }).join('')}</table></div>${S.sessions.length > more ? `<div class="btns" style="margin-top:10px"><button class="btn sm" data-act="moreSess">Show ${Math.min(20, S.sessions.length - more)} more</button></div>` : ''}
+  ${S.sessions.slice(-more).reverse().map((x) => { const pv = prevOf(x), d = pv ? (x.pts * 60) / x.dur - (pv.pts * 60) / pv.dur : 0; return `<tr><td><button class="lnk" data-act="sessInfo" data-v="${esc(x.t)}" aria-label="Details of the session on ${ymd(x.t)}">${ymd(x.t).slice(5)} ${new Date(x.t).toTimeString().slice(0, 5)}</button><td class="hide-m">${esc(modeLabel(x.m))}<td class="r">${x.pts}<td class="r hide-m">${x.ok}<td class="r">${pct(x.ok, Math.max(1, x.n))}%<td class="r hide-m">${x.tm}s<td class="r ${d >= 0 ? 'ok' : 'bad'}">${pv ? (d >= 0 ? '+' : '') + Math.round(d) + '/min' : '–'}</tr>`; }).join('')}</table></div>${S.sessions.length > more ? `<div class="btns" style="margin-top:10px"><button class="btn sm" data-act="moreSess">Show ${Math.min(20, S.sessions.length - more)} more</button></div>` : ''}
   <h2>Last ${heatWeeks()} weeks</h2><div class="card">${heatmap()}</div>
   <h2>Milestones<span class="sub">${S.ms.length} of ${MS.length}</span></h2>
   <div class="ms">${MS.map((m) => { const got = S.ms.includes(m[0]), pr = !got && msProgress(m[0], c); return `<span class="chip ${got ? 'on' : ''}" ${pr ? `title="${pr.cur} of ${pr.goal}"` : ''}>${icon(got ? 'trophy' : 'lock')} ${esc(m[1])}${pr ? ` <span class="mu">${Math.round((100 * pr.cur) / pr.goal)}%</span>` : ''}</span>`; }).join('')}</div>`,
@@ -144,13 +143,13 @@ A.factInfo = async (d) => {
 A.sessInfo = async (d) => {
   const i = S.sessions.findIndex((x) => x.t == d.v), x = S.sessions[i];
   if (!x) return;
-  const pv = S.sessions[i - 1], names = { train: 'Train', focus: 'Focus', zeta: 'Custom ranges', daily: 'Daily challenge', survival: 'Survival', review: 'Review' };
+  const pv = S.sessions[i - 1];
   const by = x.by ? IDS.filter((k) => x.by[k]).map((k) => { const b = x.by[k], mv = x.lv && pv && pv.lv ? Math.round((x.lv[k] - pv.lv[k]) * 100) : 0; return `<div class="fr"><span class="kc" style="--sc:${COL[k]}">${esc(SK[k].n)}</span><span>${b[1]}/${b[0]} · ${b[1] ? (b[2] / b[1]).toFixed(1) + 's' : '–'}${mv ? ` <span class="${mv > 0 ? 'ok' : 'bad'}">${mv > 0 ? '▲' : '▼'}${Math.abs(mv)}</span>` : ''}</span></div>`; }).join('') : '<div class="mu">The per-skill breakdown is only kept for your most recent sessions.</div>';
-  const choice = await dialog({ title: (names[x.m] || 'Session') + ' · ' + ymd(x.t), body: `<div class="sg"><div><div class="mu">Points</div><b>${x.pts}</b></div><div><div class="mu">Correct</div><b>${x.ok}/${x.n}</b></div><div><div class="mu">Accuracy</div><b>${pct(x.ok, Math.max(1, x.n))}%</b></div><div><div class="mu">Length</div><b>${x.dur >= 120 ? Math.round(x.dur / 60) + ' min' : x.dur + ' s'}</b></div><div><div class="mu">Avg answer</div><b>${x.tm}s</b></div><div><div class="mu">Pace</div><b>${Math.round((x.pts * 60) / x.dur)}/min</b></div></div>${by}`, actions: [{ label: 'AI read of this session', value: 'ai' }, { label: 'Close', value: true, primary: true }] });
+  const choice = await dialog({ title: modeLabel(x.m) + ' · ' + ymd(x.t), body: `<div class="sg"><div><div class="mu">Points</div><b>${x.pts}</b></div><div><div class="mu">Correct</div><b>${x.ok}/${x.n}</b></div><div><div class="mu">Accuracy</div><b>${pct(x.ok, Math.max(1, x.n))}%</b></div><div><div class="mu">Length</div><b>${x.dur >= 120 ? Math.round(x.dur / 60) + ' min' : x.dur + ' s'}</b></div><div><div class="mu">Avg answer</div><b>${x.tm}s</b></div><div><div class="mu">Pace</div><b>${Math.round((x.pts * 60) / x.dur)}/min</b></div></div>${by}`, actions: [{ label: 'AI read of this session', value: 'ai' }, { label: 'Close', value: true, primary: true }] });
   if (choice !== 'ai') return;
   const perSkill = x.by ? IDS.filter((k) => x.by[k]).map((k) => { const b = x.by[k]; return { skill: SK[k].n, tried: b[0], correct: b[1], avgSec: b[1] ? +(b[2] / b[1]).toFixed(1) : null, ratingChange: x.lv && pv && pv.lv ? Math.round((x.lv[k] - pv.lv[k]) * 100) : 0 }; }) : [];
   const same = prevOf(x);
-  showAiSheet({ title: (names[x.m] || 'Session') + ' · ' + ymd(x.t), action: 'session', context: { mode: x.m || 'train', daysAgo: Math.round((Date.now() - x.t) / 864e5), seconds: x.dur, answers: x.n, correct: x.ok, accuracyPct: pct(x.ok, Math.max(1, x.n)), avgSec: x.tm || null, points: x.pts, ptsPerMin: Math.round((x.pts * 60) / x.dur), vsPrevSameKind: same ? Math.round((x.pts * 60) / x.dur - (same.pts * 60) / same.dur) : null, perSkill }, extra: () => [{ label: 'Drill my weakest skill', run: () => drill(weakestSkills(1)[0]) }] });
+  showAiSheet({ title: modeLabel(x.m) + ' · ' + ymd(x.t), action: 'session', context: { mode: x.m || 'train', daysAgo: Math.round((Date.now() - x.t) / 864e5), seconds: x.dur, answers: x.n, correct: x.ok, accuracyPct: pct(x.ok, Math.max(1, x.n)), avgSec: x.tm || null, points: x.pts, ptsPerMin: Math.round((x.pts * 60) / x.dur), vsPrevSameKind: same ? Math.round((x.pts * 60) / x.dur - (same.pts * 60) / same.dur) : null, perSkill }, extra: () => [{ label: 'Drill my weakest skill', run: () => drill(weakestSkills(1)[0]) }] });
 };
 A.aiSkill = (d) => askSkillAi(d.v);
 A.aiFacts = () => {

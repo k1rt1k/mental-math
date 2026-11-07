@@ -146,8 +146,16 @@ export function coach(e) {
   return lo && lo[1] < 0.9 ? 'Solid pace. Your weakest area this session was ' + SK[lo[0]].n + ' (' + Math.round(lo[1] * 100) + '% right).' : 'Balanced session. Keep hitting the daily goal and your ratings will climb.';
 }
 
+/** Human-readable name for a saved session's mode id (history table, detail dialog, AI context). */
+const MODE_LABEL = { train: 'Train', focus: 'Focus', zeta: 'Custom ranges', daily: 'Daily challenge', survival: 'Survival', review: 'Review', sprint: 'Sprint' };
+export const modeLabel = (m) => MODE_LABEL[m] || 'Train';
+
 export const shareLine = (r) => {
-  const nm = r.m == 'review' ? 'Review' : r.m == 'daily' ? 'Daily challenge' : r.m == 'survival' ? 'Survival' : r.m == 'sprint' ? 'Sprint 20' : r.m == 'zeta' ? 'Custom ranges' : (r.m == 'focus' ? (SK[(S.cfg || {}).only] || { n: 'Focus' }).n : 'Train') + ' ' + r.dur + 's';
+  // A focus run is a per-run drill: the saved config may still say "all skills", so prefer the one
+  // skill that actually appears in the saved run before falling back to it.
+  const by = r.by && Object.keys(r.by).filter((k) => r.by[k] && r.by[k][0]);
+  const focus = r.m == 'focus' && by && by.length == 1 ? by[0] : (S.cfg || {}).only;
+  const nm = r.m == 'review' ? 'Review' : r.m == 'daily' ? 'Daily challenge' : r.m == 'survival' ? 'Survival' : r.m == 'sprint' ? 'Sprint 20' : r.m == 'zeta' ? 'Custom ranges' : (r.m == 'focus' ? (SK[focus] || { n: 'Focus' }).n : 'Train') + ' ' + r.dur + 's';
   return `Mental Math ${ymd(r.t)} · ${nm} · ${r.ok} correct · ${Math.round((100 * r.ok) / Math.max(1, r.n))}% · ${r.pts} pts · ${r.tm}s avg · ${streak()}-day streak`;
 };
 export { SH };

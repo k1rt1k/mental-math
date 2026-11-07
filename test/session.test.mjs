@@ -41,6 +41,19 @@ test('ending a timed session early with < 5 answers saves nothing', () => {
   assert.equal(s.finish(), null); assert.equal(S.sessions.length, 0);
 });
 
+test('a hinted correct answer is not counted as first-try', () => {
+  replaceState(fresh()); S.cfg = { dur: 0, only: 'add' };
+  const c = clock(), s = new Session(undefined, { now: c.now, rand: seeded(11) });
+  s.begin(); s.next(); c.adv(1000);
+  s.hint();
+  for (const d of solve(s)) if (s.type(d) == 'ok') break;
+  const r = s.answer(true);
+  assert.equal(r.ok, true);
+  assert.equal(s.ok, 1);
+  assert.equal(s.ft, 0, 'hinted answers must not satisfy first-try goals');
+  assert.equal(s.log[0].hinted, true);
+});
+
 test('a miss goes into the notebook and comes back as a retry', () => {
   replaceState(fresh()); S.cfg = { dur: 0, only: 'add' };
   const c = clock(), s = new Session(undefined, { now: c.now, rand: seeded(7) });

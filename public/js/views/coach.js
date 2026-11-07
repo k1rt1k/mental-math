@@ -338,6 +338,9 @@ A.runPlan = async () => {
     setSavedPlan(res.text, trainingPlanSource, trainingPlanMessage);
   } catch (err) {
     trainingPlanText = 'Could not generate plan right now. Please try again.';
+    trainingPlanSource = 'local';
+    trainingPlanMessage = String(err.message || err);
+    trainingPlanAt = Date.now();
   } finally {
     isLoading = false;
     repaint();

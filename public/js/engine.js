@@ -163,7 +163,8 @@ const sg = (v) => (v < 0 ? '−' : '+');
 
 /** Human-readable worked solution for a question object ({q,a,sk}). */
 export function how(p) {
-  const n = (p.q.match(/\d+/g) || []).map(Number), a = p.a;
+  const q = String(p.q ?? '');
+  const n = (q.match(/\d+/g) || []).map(Number), a = p.a;
   let m, t;
   if (p.sk == 'add') { t = n[0]; return n[0] + parts(n[1]).map((v) => ' + ' + v + ' → ' + (t += v)).join(''); }
   if (p.sk == 'sub') { t = n[0]; return n[0] + parts(n[1]).map((v) => ' − ' + v + ' → ' + (t -= v)).join(''); }
@@ -177,8 +178,8 @@ export function how(p) {
     return e && c ? n[0] + '² = (' + c + sg(e) + Math.abs(e) + ')² = ' + c * c + ' ' + sg(2 * c * e) + ' ' + Math.abs(2 * c * e) + ' + ' + e * e + ' = ' + a : n[0] + '² = ' + a;
   }
   if (p.sk == 'pw') {
-    if (p.q[0] == '√') return a + '² = ' + n[0] + ', so √' + n[0] + ' = ' + a;
-    if (p.q[0] == '∛') return a + '³ = ' + a + '² × ' + a + ' = ' + a * a + ' × ' + a + ' = ' + n[0] + ', so ∛' + n[0] + ' = ' + a;
+    if (q[0] == '√') return a + '² = ' + n[0] + ', so √' + n[0] + ' = ' + a;
+    if (q[0] == '∛') return a + '³ = ' + a + '² × ' + a + ' = ' + a * a + ' × ' + a + ' = ' + n[0] + ', so ∛' + n[0] + ' = ' + a;
     return n[0] + '³ = ' + n[0] + '² × ' + n[0] + ' = ' + n[0] * n[0] + ' × ' + n[0] + ' = ' + a;
   }
   if (p.sk == 'mod') {
@@ -188,9 +189,9 @@ export function how(p) {
       + (m == 9 || m == 3 ? '. Digit sum: ' + String(x).split('').join(' + ') + ' = ' + ds + ' → ' + ds + ' mod ' + m + ' = ' + (ds % m) : '');
   }
   if (p.sk == 'dec') {
-    const v = (p.q.match(/\d+(?:\.\d+)?/g) || []).map(Number), f = (x) => String(+x.toFixed(4));
-    if (p.q.includes('+')) { const [x, y] = v, wx = Math.floor(x), wy = Math.floor(y); return wx + ' + ' + wy + ' = ' + (wx + wy) + ', and the decimal parts ' + f(x - wx) + ' + ' + f(y - wy) + ' = 1, so ' + a; }
-    if (p.q.includes('÷')) {
+    const v = (q.match(/\d+(?:\.\d+)?/g) || []).map(Number), f = (x) => String(+x.toFixed(4));
+    if (q.includes('+')) { const [x, y] = v, wx = Math.floor(x), wy = Math.floor(y); return wx + ' + ' + wy + ' = ' + (wx + wy) + ', and the decimal parts ' + f(x - wx) + ' + ' + f(y - wy) + ' = 1, so ' + a; }
+    if (q.includes('÷')) {
       const [w, d0] = v, W = (x) => f(x), M = {
         0.1: '÷ 0.1 is × 10 (ten tenths make 1): ' + w + ' × 10', 0.2: '÷ 0.2 is × 5 (five fifths make 1): ' + w + ' × 5',
         0.25: '÷ 0.25 is × 4 (four quarters make 1): ' + w + ' × 4', 0.5: '÷ 0.5 is × 2 (two halves make 1): ' + w + ' × 2',
@@ -221,9 +222,9 @@ export function how(p) {
       + (r == 5 ? '5% is half of that = ' + f(lo) + '. ' : r ? '1% × ' + r + ' = ' + f(lo) + '. ' : '')
       + (t && r ? f(hi) + ' + ' + f(lo) + ' = ' + a : '');
   }
-  if ((m = p.q.match(/^\((\d+) ([+−]) (\d+)\) × (\d+)$/))) { const i = m[2] == '+' ? +m[1] + +m[3] : m[1] - m[3]; return '(' + m[1] + ' ' + m[2] + ' ' + m[3] + ') = ' + i + ', then × ' + m[4] + ' = ' + a; }
-  if ((m = p.q.match(/^(\d+) \+ (\d+) × (\d+)$/))) return m[2] + ' × ' + m[3] + ' = ' + m[2] * m[3] + ' first, then + ' + m[1] + ' = ' + a;
-  if ((m = p.q.match(/^(\d+) × (\d+) − (\d+)$/))) return m[1] + ' × ' + m[2] + ' = ' + m[1] * m[2] + ', then − ' + m[3] + ' = ' + a;
+  if ((m = q.match(/^\((\d+) ([+−]) (\d+)\) × (\d+)$/))) { const i = m[2] == '+' ? +m[1] + +m[3] : m[1] - m[3]; return '(' + m[1] + ' ' + m[2] + ' ' + m[3] + ') = ' + i + ', then × ' + m[4] + ' = ' + a; }
+  if ((m = q.match(/^(\d+) \+ (\d+) × (\d+)$/))) return m[2] + ' × ' + m[3] + ' = ' + m[2] * m[3] + ' first, then + ' + m[1] + ' = ' + a;
+  if ((m = q.match(/^(\d+) × (\d+) − (\d+)$/))) return m[1] + ' × ' + m[2] + ' = ' + m[1] * m[2] + ', then − ' + m[3] + ' = ' + a;
   return '';
 }
 
@@ -254,8 +255,9 @@ export const factOf = (q) => {
 
 /** Order-insensitive key so "3 + 5" and "5 + 3" count as the same question. */
 export const qk = (q) => {
-  const m = q.match(/^(\d+) ([+×]) (\d+)$/);
-  return m ? [+m[1], +m[3]].sort((a, b) => a - b).join(m[2]) : q;
+  const s = String(q ?? '');
+  const m = s.match(/^(\d+) ([+×]) (\d+)$/);
+  return m ? [+m[1], +m[3]].sort((a, b) => a - b).join(m[2]) : s;
 };
 
 /* ---------------- scoring ---------------- */

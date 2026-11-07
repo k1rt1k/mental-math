@@ -18,7 +18,7 @@ function notebook() {
   const all = Object.values(S.weak).sort((a, b) => (a.due <= now ? 0 : 1) - (b.due <= now ? 0 : 1) || a.box - b.box || (b.at || 0) - (a.at || 0));
   if (filter != 'all' && !all.some((w) => w.sk == filter)) filter = 'all';
   const needle = qtext.trim().toLowerCase();
-  const W = all.filter((w) => (filter == 'all' || w.sk == filter) && (!dueOnly || w.due <= now) && (!needle || w.q.toLowerCase().includes(needle) || String(w.a).includes(needle)));
+  const W = all.filter((w) => (filter == 'all' || w.sk == filter) && (!dueOnly || w.due <= now) && (!needle || String(w.q).toLowerCase().includes(needle) || String(w.a).includes(needle)));
   const counts = {}; all.forEach((w) => (counts[w.sk] = (counts[w.sk] || 0) + 1));
   const nDue = all.filter((w) => w.due <= now).length;
   const rp = reviewPlan(now);   // the same answer Review itself uses, so the button and the count agree

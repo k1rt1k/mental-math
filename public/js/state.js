@@ -149,6 +149,26 @@ export const fresh = () => {
 /** Make any loaded/imported/synced object safe to use. Never throws. Adds new skills with starting ratings. */
 const ONLY = ['all', 'mix', 'zeta', ...IDS];
 const fin = (x, d = 0) => (Number.isFinite(+x) && x !== null && x !== '' ? +x : d);
+const PRESET_MAX = 6;
+/**
+ * Sanitise a saved session setup. Home, Settings and the presets all write the same shape, so one
+ * cleaner keeps a corrupt import or an old build from leaving values the session maths cannot use.
+ */
+function cleanCfg(c) {
+  if (!isObj(c)) return null;
+  const out = { ...c };
+  if (!ONLY.includes(out.only)) out.only = 'all';
+  if (out.dur != null) out.dur = out.dur === 0 ? 0 : clamp(Math.round(fin(out.dur, 120)), 10, 3600);
+  if (out.mix != null) {
+    const mix = Array.isArray(out.mix) ? [...new Set(out.mix.filter((k) => IDS.includes(k)))] : [];
+    if (mix.length) out.mix = mix; else delete out.mix;
+  }
+  if (out.only == 'mix' && !(out.mix || []).length) out.only = 'all';
+  if (out.off != null) { const off = +out.off; out.off = [-1.5, 0, 1.5, 3].includes(off) ? off : 0; }
+  delete out.patt;                         // pattern drills are per-run now; older versions saved one by accident and replayed it forever
+  delete out.pats;                         // shortcut-stage patterns are per-run too; never replay a guided drill on Start
+  return out;
+}
 export function migrate(o) {
   const b = fresh();
   const s = o && typeof o === 'object' ? o : {};
@@ -161,7 +181,31 @@ export function migrate(o) {
   // sessions: keep only well-formed rows, with every number finite so charts never show NaN
   out.sessions = (Array.isArray(s.sessions) ? s.sessions : [])
     .filter((x) => x && typeof x === 'object' && Number.isFinite(+x.t) && x.dur > 0 && x.n >= 0)
-    .map((x) => ({ ...x, t: +x.t, dur: +x.dur, n: +x.n, ok: clamp(fin(x.ok), 0, +x.n), pts: Math.max(0, fin(x.pts)), tm: Math.max(0, fin(x.tm)), m: typeof x.m == 'string' ? x.m : 'train' }));
+    .map((x) => {
+      const n = Math.max(0, +x.n), ok = clamp(fin(x.ok), 0, n);
+      const row = {
+        ...x, t: +x.t, dur: +x.dur, n, ok,
+        ft: clamp(Math.round(fin(x.ft, ok)), 0, ok),   // a first-try count can never exceed the correct answers
+        pts: Math.max(0, fin(x.pts)), tm: Math.max(0, fin(x.tm)), m: typeof x.m == 'string' ? x.m : 'train',
+      };
+      // A saved per-skill breakdown is only read for known skills and three finite counts.
+      if (isObj(x.by)) {
+        const by = {};
+        Object.entries(x.by).forEach(([k, b]) => {
+          if (!SK[k] || !Array.isArray(b)) return;
+          const bn = Math.max(0, Math.round(fin(b[0]))), bok = clamp(Math.round(fin(b[1])), 0, bn), btm = Math.max(0, fin(b[2]));
+          if (bn) by[k] = [bn, bok, btm];
+        });
+        row.by = by;
+      } else delete row.by;
+      // Rating snapshots feed the per-skill charts; keep real skills and real 1..12 ratings only.
+      if (isObj(x.lv)) {
+        const lv = {};
+        Object.entries(x.lv).forEach(([k, v]) => { if (SK[k] && v != null && v !== '' && Number.isFinite(+v)) lv[k] = clamp(+v, 1, 12); });
+        row.lv = lv;
+      } else delete row.lv;
+      return row;
+    });
   out.ctr = readCtr(s); rollup(out);   // pat / facts / errs are derived from the per-device counters
   ['weak', 'mastered', 'best', 'daily', 'gone'].forEach((k) => { if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {}; });
   // notebook rows must name a real skill, or the Notebook screen would throw on them
@@ -215,16 +259,16 @@ export function migrate(o) {
       };
     });
   });
-  if (out.cfg && typeof out.cfg == 'object') {
-    const c = { ...out.cfg };
-    if (!ONLY.includes(c.only)) c.only = 'all';
-    if (c.dur != null) c.dur = c.dur === 0 ? 0 : clamp(Math.round(fin(c.dur, 120)), 10, 3600);
-    if (c.mix && !Array.isArray(c.mix)) delete c.mix;
-    if (c.pats && (!Array.isArray(c.pats) || !c.pats.length || c.pats.some((p) => typeof p != 'string'))) delete c.pats;
-    delete c.patt;                         // pattern drills are per-run now; older versions saved one by accident and replayed it forever
-    delete c.pats;                         // shortcut-stage patterns are per-run too; never replay a guided drill on Start
-    out.cfg = c;
-  } else delete out.cfg;
+  const cfg = cleanCfg(out.cfg);
+  if (cfg) out.cfg = cfg; else delete out.cfg;
+  // Saved setups: Home maps and slices this list, so it must always be an array of usable rows.
+  out.presets = (Array.isArray(s.presets) ? s.presets : []).slice(0, PRESET_MAX).map((p) => {
+    if (!isObj(p)) return null;
+    const cfg = cleanCfg(p.cfg);
+    const name = typeof p.n == 'string' ? p.n.trim().slice(0, 28) : '';
+    return cfg && name ? { n: name, cfg } : null;
+  }).filter(Boolean);
+  out.goal = clamp(Math.round(fin(s.goal, 2)), 1, 5);   // the Settings stepper is 1..5, and plan arithmetic assumes a number
   out.cal = Number.isFinite(+s.cal) && s.cal !== null && s.cal !== '' ? +s.cal : Array.isArray(s.sessions) && s.sessions.length ? 0 : CAL;   // existing data without it predates the scoring fix
   out.ms = Array.isArray(s.ms) ? s.ms : [];
   out.hist = Array.isArray(s.hist) ? s.hist : [];
@@ -369,7 +413,9 @@ export const cfgNow = () => Object.assign({ dur: 120, only: 'all' }, S.cfg);
 export const hasData = () => S.sessions.length > 0;
 
 /* ---------- merge two states (used by cloud sync) ---------- */
-const DEVICE_LOCAL = ['pad', 'theme', 'acc', 'font', 'zen', 'mute', 'noBlur', 'noCd', 'noHap', 'ts', 'hc', 'cb', 'bigA', 'pace', 'rem', 'padFlip', 'rm', 'skOpen', 'bkSnooze', 'padHint'];
+export const DEVICE_LOCAL = ['pad', 'theme', 'acc', 'font', 'zen', 'mute', 'noBlur', 'noCd', 'noHap', 'ts', 'hc', 'cb', 'bigA', 'pace', 'rem', 'padFlip', 'rm', 'skOpen', 'bkSnooze', 'padHint'];
+/** Device preferences (sound, pad, theme, reminders…) describe the device, not the learner's progress, so Reset keeps them. */
+export const devicePrefs = (st = S) => Object.fromEntries(DEVICE_LOCAL.filter((k) => st[k] !== undefined).map((k) => [k, st[k]]));
 
 /**
  * Merge so that no device ever loses work:
