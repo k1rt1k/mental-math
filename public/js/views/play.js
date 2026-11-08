@@ -57,7 +57,7 @@ export function start(opt, cfg) {
       <div class="pts"><div class="big" id="pt">0</div><div class="lbl" id="acc">points</div></div>
     </div>
     <div class="bar tbar" ${sess.un || sv ? 'hidden' : ''}><i id="tb" style="width:100%;background:var(--ac)"></i></div>
-    <div class="bar tbar pbar" id="pbw" ${sess.kind == 'sprint' || sess.kind == 'review' ? '' : 'hidden'} role="progressbar" aria-label="Questions done" aria-valuemin="0" aria-valuemax="100"><i id="pb" style="width:4%;background:var(--ok)"></i></div>
+    <div class="bar tbar qprog" id="pbw" ${sess.kind == 'sprint' || sess.kind == 'review' ? '' : 'hidden'} role="progressbar" aria-label="Questions done" aria-valuemin="0" aria-valuemax="100"><i id="pb" style="width:4%;background:var(--ok)"></i></div>
     <div class="race" ${sess.kind == 'sprint' || !sess.ghost ? 'hidden' : ''}><div class="lg"><span>You <b id="yp" class="num">0</b></span><span id="gh"></span><span>Ghost <b id="gp" class="num">–</b></span></div><div class="bar"><i class="gh" id="gb"></i><i class="me" id="yb"></i></div></div>
     <div class="board cd" id="qc"><div class="tag"><span class="pill" id="sk">Get ready</span><span class="tagr"><span id="pr" class="mu"></span><span id="bn" class="gd"></span><span id="cc" class="cmbchip" hidden></span>${S.pace ? '<span id="pcv" class="pcv num" aria-hidden="true"></span>' : ''}</span></div>
       <div class="q" id="q" aria-live="polite">3</div><div class="bf" id="bf" aria-label="Your answer"></div><span class="qtl" aria-hidden="true">Pace vs par</span><div class="qt" title="Your time on this question against its par time"><i id="qt"></i></div></div>

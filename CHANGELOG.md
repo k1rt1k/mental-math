@@ -2,6 +2,15 @@
 
 Newest first. What is true of the app today is in [README.md](README.md). The release number is the `VERSION` file.
 
+## 14.90
+
+Flash screen layout rebuilt, and a play-screen bar fixed. Front end only; no backend change.
+
+- **Flash setup.** Every choice row is now equal width (they were uneven, and Speed wrapped as "Calm · 1.5 / s"). Speed and Digits show the name over a detail line (Calm / 1.5 s, 1 digit / 1–9). "Best at this setting" is a proper row, Start is full width, Home sits under it.
+- **Flash during a run.** The page now takes the same `playing` state as a practice session, so the tab bar and rail step aside and a stray tap cannot abandon a run (it used to stay on screen and the content floated mid-screen). Every live screen is one layout: header on top (Round x of 5 plus a pip per round, green right, red missed), content centred, actions pinned to the bottom. While numbers flash, dots show how many have gone; the countdown is muted so it cannot be mistaken for a number. Check stays dimmed until something is typed. Feedback shows the total apart from the sum, and "Next round" is a full-width button at the bottom.
+- **Fixed: progress bar tucked under the HUD (rare).** In 20-question and Review sessions the "questions done" bar used the class `pbar`, which the Progress filter row already styles with a negative top margin and flex layout. The bar sat 8 px inside the HUD and cut through the Pause button, on phone and desktop alike. It now has its own class (`qprog`), so it clears the HUD with a normal gap. Other modes never showed that bar, which is why it looked rare.
+- Tests: `test/v1490-flash-hud.test.mjs`.
+
 ## 14.89
 
 Settings look cleanup, from a screenshot of the Appearance card. Front end only; no backend change.

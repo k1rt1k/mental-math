@@ -27,7 +27,12 @@ let F = null, tm = 0;   // the run in progress (F.ph: run | ask | fb | pause); t
 const stop = () => { clearTimeout(tm); tm = 0; };
 const live = (f) => F === f && f.ph == 'run' && view.scr == 'flash';
 const main = () => document.querySelector('#main');
-const seg = (act, cur, opts) => `<div class="seg" role="group">${opts.map(([v, l]) => `<button aria-pressed="${cur == v}" data-act="${esc(act)}" data-v="${esc(v)}">${esc(l)}</button>`).join('')}</div>`;
+/** Equal-width segmented control. A label can be [main, small] to show a second line (speed, digits), so every choice is the same shape. */
+const seg = (act, cur, opts) => `<div class="seg eq" role="group">${opts.map(([v, l]) => `<button aria-pressed="${cur == v}" data-act="${esc(act)}" data-v="${esc(v)}">${Array.isArray(l) ? `<span class="sg-m">${esc(l[0])}</span><span class="sg-s">${esc(l[1])}</span>` : esc(l)}</button>`).join('')}</div>`;
+/** While a run is on, the page takes the same full-screen "playing" state as a practice session: tab bar and rail step aside so a stray tap cannot abandon the run. */
+const playing = (on) => document.body.classList.toggle('playing', on);
+/** The running total as words people read: operators stay glued to their number, and the answer stands apart. */
+const fmtX = (ch) => { const [lhs, rhs] = expr(ch).split(' = '); return `<span class="fl-eq">${esc(lhs.replace(/([+−]) /g, '$1\u00a0'))}</span><span class="fl-tot">= ${esc(rhs)}</span>`; };
 
 /* ---------- sound and touch: same switches as the other modes (Settings, Sound / Vibration) ---------- */
 let AC = null;
@@ -44,16 +49,16 @@ const blip = (hz, dur, type = 'sine', gain = 0.04) => {
 const buzz = (ms) => { try { if (!S.noHap && navigator.vibrate) navigator.vibrate(ms); } catch (e) { /* no haptics */ } };
 
 function setup() {
-  stop(); F = null; const c = cfgLoad(), best = bestOf(c);
+  stop(); F = null; playing(false); const c = cfgLoad(), best = bestOf(c);
   document.title = 'Flash · Mental Math';
   main().innerHTML = `<div class="hd"><h1>Flash</h1></div>
   <div class="card fl-card"><p class="mu fl-lead">Numbers flash one at a time. Keep the running total in your head, then type it. ${ROUNDS} rounds.</p>
     <div class="field"><div class="mu">Numbers</div>${seg('flC', c.c, COUNTS.map((n) => [n, n]))}</div>
-    <div class="field"><div class="mu">Speed</div>${seg('flS', c.s, SPEEDS.map(([v, l]) => [v, l + ' · ' + v / 1000 + ' s']))}</div>
-    <div class="field"><div class="mu">Digits</div>${seg('flD', c.d, [[1, '1'], [2, '2'], [3, '3']])}</div>
+    <div class="field"><div class="mu">Speed</div>${seg('flS', c.s, SPEEDS.map(([v, l]) => [v, [l, v / 1000 + ' s']]))}</div>
+    <div class="field"><div class="mu">Digits</div>${seg('flD', c.d, [[1, ['1 digit', '1–9']], [2, ['2 digits', '10–99']], [3, ['3 digits', '100–999']]])}</div>
     <div class="field"><div class="mu">Subtract</div>${seg('flN', c.neg, [[0, 'Add only'], [1, 'Add and subtract']])}</div>
-    <div class="mu fl-best">${best ? 'Best at this setting: <b class="tx">' + best + ' pts</b>' : 'No run yet at this setting'}</div>
-    <div class="btns fl-btns"><button class="btn primary" data-act="flGo">${icon('play')} Start<kbd>Enter</kbd></button><button class="btn ghost" data-go="home">Home<kbd>Esc</kbd></button></div>
+    <div class="fl-best"><span>Best at this setting</span>${best ? `<b>${best} pts</b>` : '<span class="fl-none">No run yet</span>'}</div>
+    <div class="fl-btns fl-start"><button class="btn primary" data-act="flGo">${icon('play')} Start<kbd>Enter</kbd></button><button class="btn ghost" data-go="home">Home<kbd>Esc</kbd></button></div>
     <p class="mu fl-note">The numbers are drawn on screen only, so this mode is not announced by screen readers.</p></div>`;
 }
 const setC = (k) => (d) => { const c = cfgLoad(); c[k] = +d.v; cfgSave(c); setup(); };
@@ -64,11 +69,14 @@ A.flGo = () => {
   const cfg = cfgLoad(); F = { cfg, i: 0, ok: 0, t0: Date.now(), log: [], v: '', ph: 'run' }; round();
 };
 
-const top = (f, pause) => `<div class="fl-top"><span class="mu">Round ${f.i + 1} of ${ROUNDS}</span>${pause ? `<button class="btn sm ghost" data-act="flPause" aria-label="Pause">${icon('pause')} Pause<kbd>Esc</kbd></button>` : ''}</div>`;
+/** Header of a live screen: which round, a pip per round (green right, red missed, accent for this one), and Pause while numbers are flashing. */
+const pips = (f) => Array.from({ length: ROUNDS }, (_, i) => `<i class="${i < f.log.length ? (f.log[i] ? 'ok' : 'bad') : i == f.i ? 'now' : ''}"></i>`).join('');
+const top = (f, pause) => `<div class="fl-top"><div class="fl-prog"><span class="fl-rd">Round <b>${f.i + 1}</b> of ${ROUNDS}</span><span class="fl-pips" aria-hidden="true">${pips(f)}</span></div>${pause ? `<button class="btn sm ghost" data-act="flPause" aria-label="Pause">${icon('pause')} Pause<kbd>Esc</kbd></button>` : ''}</div>`;
 
 function round() {
   const f = F; f.ph = 'run'; f.ch = makeChain(f.cfg); f.n = 0; f.v = '';
-  main().innerHTML = `<div class="flw" role="status">${top(f, true)}<div class="fl-n" id="fln" aria-hidden="true">Ready</div></div>`;
+  playing(true); scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  main().innerHTML = `<div class="flw live" role="status">${top(f, true)}<div class="fl-body"><div class="fl-n rdy" id="fln" aria-hidden="true">Ready</div></div><div class="fl-foot"><div class="fl-dots" id="fld" aria-hidden="true">${'<i></i>'.repeat(f.cfg.c)}</div></div></div>`;
   const gap = Math.min(160, Math.round(f.cfg.s * 0.25)), el = () => document.querySelector('#fln');
   const step = () => {
     if (!live(f)) return;
@@ -76,26 +84,30 @@ function round() {
     if (f.n >= f.ch.items.length) return ask(f);
     const q = f.ch.items[f.n], e = el(); if (!e) return;
     e.textContent = (f.n ? (q.sub ? '−' : '+') : '') + q.x; e.className = 'fl-n on'; f.n++;
+    document.querySelectorAll('#fld i').forEach((d, k) => d.classList.toggle('on', k < f.n));   // how many numbers have flashed
     blip(440 + f.n * 28, 0.05, 'sine', 0.03);   // a soft tick per number, rising as the chain grows
     tm = setTimeout(() => { if (!live(f)) return; const e2 = el(); if (e2) { e2.textContent = ''; e2.className = 'fl-n'; } tm = setTimeout(step, gap); }, f.cfg.s);
   };
-  const lead = (txt, next) => () => { if (!live(f)) return; const e = el(); if (e) e.textContent = txt; blip(330, 0.04, 'sine', 0.025); tm = setTimeout(next, 600); };
+  const lead = (txt, next) => () => { if (!live(f)) return; const e = el(); if (e) { e.textContent = txt; e.className = 'fl-n cd'; } blip(330, 0.04, 'sine', 0.025); tm = setTimeout(next, 600); };
   tm = setTimeout(lead('3', lead('2', lead('1', step))), 500);
 }
 
 const padKeys = () => (S.padFlip ? [7, 8, 9, 4, 5, 6, 1, 2, 3, '', 0, '⌫'] : [1, 2, 3, 4, 5, 6, 7, 8, 9, '', 0, '⌫']);
 /** The same number pad the practice screen uses (same classes, same flip setting), so the phone keyboard never covers the page. */
 const padHtml = () => '<div class="pad fl-pad" role="group" aria-label="Number pad">' + padKeys().map((k) => k === '' ? '<button type="button" class="fn sym off" tabindex="-1" aria-hidden="true"></button>' : `<button type="button" class="${k === '⌫' ? 'fn' : ''}" data-act="flKey" data-v="${esc(k === '⌫' ? 'Backspace' : k)}" aria-label="${esc(k === '⌫' ? 'Backspace' : k)}">${k === '⌫' ? icon('back') : k}</button>`).join('') + '</div>'
-  + '<div class="padact fl-padact"><button type="button" class="btn primary" data-act="flAns">Check</button></div>';
-const showVal = (f) => { const e = document.querySelector('#fla'); if (e) e.innerHTML = esc(f.v) + '<span class="cur"></span>'; };
+  + '<div class="padact fl-padact"><button type="button" class="btn primary" data-act="flAns" disabled>Check</button></div>';
+const showVal = (f) => {
+  const e = document.querySelector('#fla'); if (e) e.innerHTML = esc(f.v) + '<span class="cur"></span>';
+  const b = document.querySelector('[data-act=flAns]'); if (b) b.disabled = !f.v;   // Check stays dimmed until something is typed
+};
 
 function ask(f) {
   f.ph = 'ask'; f.v = ''; const pad = padOn();
-  if (pad) main().innerHTML = `<div class="flw ask">${top(f, false)}<div class="fl-q" id="flq">What is the total?</div><div class="fl-val" id="fla" role="textbox" aria-readonly="true" aria-labelledby="flq"><span class="cur"></span></div>${padHtml()}</div>`;
+  if (pad) main().innerHTML = `<div class="flw live ask">${top(f, false)}<div class="fl-body"><div class="fl-q" id="flq">What is the total?</div><div class="fl-val" id="fla" role="textbox" aria-readonly="true" aria-labelledby="flq"><span class="cur"></span></div></div><div class="fl-foot">${padHtml()}</div></div>`;
   else {   // keypad switched off in Settings: a plain number box, kept to digits
-    main().innerHTML = `<div class="flw ask">${top(f, false)}<label class="fl-q" for="fla">What is the total?</label><input class="inp fl-a" id="fla" inputmode="numeric" pattern="[0-9]*" autocomplete="off" aria-label="Running total"><div class="btns fl-btns c"><button class="btn primary" data-act="flAns">Check<kbd>Enter</kbd></button></div></div>`;
-    const i = document.querySelector('#fla'); i.focus();
-    i.addEventListener('input', () => { const d = digitsOnly(i.value); if (i.value !== d) i.value = d; });
+    main().innerHTML = `<div class="flw live ask">${top(f, false)}<div class="fl-body"><label class="fl-q" for="fla">What is the total?</label><input class="inp fl-a" id="fla" inputmode="numeric" pattern="[0-9]*" autocomplete="off" aria-label="Running total"></div><div class="fl-foot"><div class="fl-btns"><button class="btn primary" data-act="flAns" disabled>Check<kbd>Enter</kbd></button></div></div></div>`;
+    const i = document.querySelector('#fla'), chk = document.querySelector('[data-act=flAns]'); i.focus();
+    i.addEventListener('input', () => { const d = digitsOnly(i.value); if (i.value !== d) i.value = d; chk.disabled = !d; });
     i.addEventListener('keydown', (e) => { if (e.key == 'Enter') { e.preventDefault(); A.flAns(); } });
   }
 }
@@ -111,9 +123,9 @@ A.flAns = () => {
   const got = parseInt(raw, 10), ok = got === f.ch.total; if (ok) f.ok++;
   f.log.push(ok); f.ph = 'fb';
   if (ok) { blip(740, 0.09, 'sine', 0.05); setTimeout(() => blip(988, 0.12, 'sine', 0.05), 90); } else { blip(170, 0.16, 'square', 0.035); buzz(40); }
-  main().innerHTML = `<div class="flw" role="status">${top(f, false)}<div class="fl-r ${ok ? 'ok' : 'bad'}">${ok ? 'Right' : 'Not quite'}</div>
-    <div class="fl-x">${esc(expr(f.ch))}</div>${ok ? '' : `<div class="mu">You typed ${esc(got)}</div>`}
-    <div class="btns fl-btns c"><button class="btn primary" data-act="flNext">${f.i + 1 < ROUNDS ? 'Next round' : 'Finish'}<kbd>Enter</kbd></button></div></div>`;
+  main().innerHTML = `<div class="flw live fb" role="status">${top(f, false)}<div class="fl-body"><div class="fl-r ${ok ? 'ok' : 'bad'}">${ok ? 'Right' : 'Not quite'}</div>
+    <div class="fl-x">${fmtX(f.ch)}</div>${ok ? '' : `<div class="mu">You typed ${esc(got)}</div>`}</div>
+    <div class="fl-foot"><div class="fl-btns"><button class="btn primary" data-act="flNext">${f.i + 1 < ROUNDS ? 'Next round' : 'Finish'}<kbd>Enter</kbd></button></div></div></div>`;
 };
 A.flNext = () => { const f = F; if (!f || f.ph != 'fb') return; f.i++; if (f.i < ROUNDS) round(); else done(f); };
 
@@ -121,8 +133,8 @@ A.flNext = () => { const f = F; if (!f || f.ph != 'fb') return; f.i++; if (f.i <
 function pause() {
   const f = F; if (!f || f.ph != 'run') return;
   stop(); f.ph = 'pause';
-  main().innerHTML = `<div class="flw" role="status"><div class="fl-r">Paused</div><div class="mu">Round ${f.i + 1} of ${ROUNDS} starts again with new numbers.</div>
-    <div class="btns fl-btns c"><button class="btn primary" data-act="flResume">Resume<kbd>Enter</kbd></button><button class="btn ghost" data-act="flQuit">Quit run<kbd>Esc</kbd></button></div></div>`;
+  main().innerHTML = `<div class="flw live" role="status">${top(f, false)}<div class="fl-body"><div class="fl-r">Paused</div><div class="mu fl-sub">Round ${f.i + 1} of ${ROUNDS} starts again with new numbers.</div></div>
+    <div class="fl-foot"><div class="fl-btns"><button class="btn primary" data-act="flResume">Resume<kbd>Enter</kbd></button><button class="btn ghost" data-act="flQuit">Quit run<kbd>Esc</kbd></button></div></div></div>`;
 }
 A.flPause = pause;
 A.flResume = () => { if (F && F.ph == 'pause') round(); };
@@ -139,13 +151,13 @@ function done(f) {
     if (pts > prev) bestSet(cfg, pts);
     save();
   }
-  f.ph = 'done';
-  main().innerHTML = `<div class="flw"><div class="mu">Flash · ${cfg.c} numbers · ${cfg.d} digit${cfg.d > 1 ? 's' : ''} · ${cfg.s / 1000} s${cfg.neg ? ' · add and subtract' : ''}</div>
+  f.ph = 'done'; playing(false);
+  main().innerHTML = `<div class="flw res"><div class="fl-body"><div class="mu fl-cfg">Flash · ${cfg.c} numbers · ${cfg.d} digit${cfg.d > 1 ? 's' : ''} · ${cfg.s / 1000} s${cfg.neg ? ' · add and subtract' : ''}</div>
     <div class="fl-r ${f.ok >= 4 ? 'ok' : ''}">${f.ok} / ${ROUNDS}</div><div class="mu">${f.log.map((x) => `<span class="fdot ${x ? 'on' : ''}"></span>`).join('')}</div>
     <div class="fl-x">${pts} pts${isBest ? ' · new best for this setting' : prev ? ' · best here ' + Math.max(prev, pts) : ''}</div>
     ${f.ok > 0 ? `<div class="mu fl-sub">Counts toward today’s streak${goal ? ' and daily goal' : ''}.</div>` : ''}
-    <div class="mu fl-tip">${f.ok >= 4 ? 'Solid. Try more numbers, a faster flash or more digits next.' : f.ok >= 2 ? 'Keep this setting for another run before you speed up.' : 'Slow it down or use fewer numbers; accuracy first, speed second.'}</div>
-    <div class="btns fl-btns c"><button class="btn primary" data-act="flGo">${icon('redo')} Again<kbd>Enter</kbd></button><button class="btn" data-act="flash">Change settings</button><button class="btn ghost" data-go="home">Home<kbd>Esc</kbd></button></div></div>`;
+    <div class="mu fl-tip">${f.ok >= 4 ? 'Solid. Try more numbers, a faster flash or more digits next.' : f.ok >= 2 ? 'Keep this setting for another run before you speed up.' : 'Slow it down or use fewer numbers; accuracy first, speed second.'}</div></div>
+    <div class="fl-foot"><div class="fl-btns"><button class="btn primary" data-act="flGo">${icon('redo')} Again<kbd>Enter</kbd></button><div class="fl-row2"><button class="btn" data-act="flash">Change settings</button><button class="btn ghost" data-go="home">Home<kbd>Esc</kbd></button></div></div></div></div>`;
   F = null;
 }
 addEventListener('keydown', (e) => {
