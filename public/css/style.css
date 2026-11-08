@@ -118,7 +118,7 @@ kbd {
 
 /* ---------- shell: side rail on desktop, tab bar on phones ---------- */
 body::before { content: ""; position: fixed; inset: 0 0 auto 0; height: 560px; z-index: 0; pointer-events: none;
-  background: radial-gradient(60% 100% at 28% 0%, color-mix(in srgb, var(--ac) var(--glow), transparent), transparent 72%); }
+  background: radial-gradient(60% 100% at 28% 0%, color-mix(in srgb, var(--skg, var(--ac)) var(--glow), transparent), transparent 72%); }
 #shell { position: relative; z-index: 1; display: grid; grid-template-columns: 84px minmax(0, 1fr); min-height: 100vh; min-height: 100dvh; }
 #main { min-width: 0; overflow-anchor: none; }   /* morph.js keeps the scroll position itself; browser scroll anchoring fought the layout glide and threw the page to the bottom */
 #rail {
@@ -387,8 +387,8 @@ tr:last-child td { border-bottom: 0; }
 .ltitle { font: 700 var(--t-xl)/1.25 var(--sans); letter-spacing: -.02em; overflow-wrap: anywhere; }
 .lbtn { flex: none; }
 .lens { margin-top: 16px; }
-.cust { margin-top: 14px; border-top: 1px solid var(--ln); }
-.cust .hint { text-align: left; margin-top: 4px; }
+div.cust { margin-top: 14px; border-top: 1px solid var(--ln); }   /* div only: the accent swatch label is also ".swatch.cust" */
+div.cust .hint { text-align: left; margin-top: 4px; }
 @media (max-width: 560px) {
   .launch { padding: 16px; }
   .lbtn { width: 100%; } .lbtn .btn { flex: 1; }

@@ -129,6 +129,8 @@ dialog.dlg.out .body > *, dialog.dlg.out .acts { animation: none; }
 /* Blocks below the fold wait, then settle in as they scroll into view (all screen sizes) */
 .rv:not(.seen) { animation: none !important; opacity: 0; transform: translateY(16px); }
 .rv.seen { animation: settle .6s var(--ease) both !important; }
+/* Replays: the same icon pops and chart draws that a new screen plays now run again whenever their block scrolls back into view (the block is re-armed offscreen, see js/motion.js). */
+.rv.seen .hic, .rv.seen .eic { animation: hicpop .55s var(--spring) .12s both; }
 @keyframes slidef { from { opacity: 0; transform: translateX(14px); } } @keyframes slideb { from { opacity: 0; transform: translateX(-14px); } }
 .grab { display: none; }
 @media (max-width: 900px) {

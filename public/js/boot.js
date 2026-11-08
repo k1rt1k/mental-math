@@ -21,11 +21,11 @@
     D.dataset.look2 = l2 ? '1' : '';
     // Keep these tables in step with ACC and SKINS in theme.js (a test checks it).
     var A = { grape: ['#a07bff', '#6a3df0'], blue: ['#7aa8ff', '#2f63d6'], violet: ['#b69cff', '#6d46d6'], teal: ['#4fd1c5', '#0f857b'], rose: ['#ff8fb1', '#d1366b'], amber: ['#ffc15c', '#a05d00'], coral: ['#ff8a65', '#c93e12'], emerald: ['#34d399', '#0a7a50'], sky: ['#4cc9f0', '#0a6c9c'], fuchsia: ['#f472d0', '#b0208c'], lime: ['#a3e635', '#4d7c0f'], indigo: ['#818cf8', '#4338ca'], slate: ['#cbd5e1', '#334155'] };
-    var K = { aurora: ['#0b0813', '#f6f3fb'], midnight: ['#060b16', '#f1f4fa'], forest: ['#07100c', '#f1f5f0'], mocha: ['#100c09', '#f7f2ec'], ocean: ['#061116', '#eff6f7'], classic: ['#0c1017', '#f3f4f8'] };
+    var K = { aurora: ['#0e0a20', '#f6f3fb'], midnight: ['#071229', '#f1f4fa'], forest: ['#06180f', '#f1f5f0'], mocha: ['#170f09', '#f7f2ec'], ocean: ['#03161c', '#eff6f7'], classic: ['#0c1017', '#f3f4f8'] };
     var own = function (o, k) { return typeof k === 'string' && Object.prototype.hasOwnProperty.call(o, k); };
     var skin = own(K, S.skin) ? S.skin : l2 ? 'aurora' : 'classic';
     D.dataset.skin = skin;
-    var pair = S.acc === 'custom' && /^#[0-9a-f]{6}$/i.test(S.accHex || '') ? null : A[own(A, S.acc) ? S.acc : l2 ? 'grape' : 'blue'];
+    var pair = S.acc === 'custom' && /^#[0-9a-f]{6}$/i.test(S.accHex || '') ? null : A[own(A, S.acc) ? S.acc : l2 ? ({ aurora: 'grape', midnight: 'blue', forest: 'emerald', mocha: 'amber', ocean: 'teal', classic: 'grape' })[skin] || 'grape' : 'blue'];
     if (pair) D.style.setProperty('--ac', pair[th == 'light' ? 1 : 0]);   // a custom colour is worked out by theme.js a moment later
     var m = document.querySelector('meta[name=theme-color]');
     if (m) m.content = th == 'light' ? K[skin][1] : th == 'black' ? '#000000' : K[skin][0];

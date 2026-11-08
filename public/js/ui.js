@@ -85,7 +85,7 @@ export const tri = (up) => `<span class="tri ${up ? 'up' : 'dn'}" aria-hidden="t
 
 /** The symbol that stands for each skill (shown in a coloured tile next to its name). */
 const SKG = { add: '+', sub: '−', mul: '×', div: '÷', sq: 'x²', pw: '√', pct: '%', ops: '( )', mod: 'mod', dec: '0.5', neg: '±', frac: '½', life: '$' };
-export const skg = (k) => { const g = SKG[k] || '•'; return `<i class="skg${g.length >= 3 ? ' g3' : ''}" aria-hidden="true">${g}</i>`; };
+export const skg = (k) => { const g = SKG[k] || '•'; return `<i class="skg${g.length >= 3 ? ' skg3' : ''}" aria-hidden="true">${g}</i>`; };
 
 /* ---------- toast ---------- */
 let toastT;

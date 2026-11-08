@@ -13,10 +13,11 @@ function count(el, ms = 800, wait = 0) {
   if (!Number.isFinite(to) || Math.abs(to) < 3 || Math.abs(to) > 1e7) return;
   const fmt = (v) => (sep ? Math.round(v).toLocaleString() : String(Math.round(v)));
   const t0 = performance.now() + wait;
+  el._cnt = true;
   const tick = (now) => {
     const k = Math.min(1, Math.max(0, (now - t0) / ms));
     node.nodeValue = m[1] + fmt(to * ease(k)) + m[3];
-    if (k < 1) requestAnimationFrame(tick);
+    if (k < 1) requestAnimationFrame(tick); else el._cnt = false;
   };
   node.nodeValue = m[1] + fmt(0) + m[3];
   requestAnimationFrame(tick);
@@ -44,19 +45,44 @@ document.addEventListener('pointerdown', (e) => {
   if (e.target.closest('.pad button')) buzz(3); else if (e.target.closest('.nv, .mode, .sk, .btn.primary, .chip, .seg button')) buzz(6);
 }, { passive: true });
 
-/** Phones: blocks below the fold wait, then settle in as they scroll into view (charts draw at that moment too). */
-let io;
-function reveal(root) {
+/** Scroll replay. Every block (card, tile, stat) plays its entrance each time it scrolls into view, not only the first time.
+ *  Two observers, no scroll listeners, nothing running while a block is on screen or off it:
+ *   - `arm` fires when a block has fully left the screen: it goes back to its hidden "waiting" state (class rv, no seen), which nobody can see because it is off screen.
+ *   - `play` fires when a waiting block is 6% inside the screen: class seen, which runs the entrance, the chart draws and the icon pops once (css/motion.css).
+ *  Using two thresholds means a block hovering at the edge of the screen never flickers. Counters re-count the same way. Off with Reduce motion. */
+let play, arm, tally;
+const TILES = '.card, .mode, .sk, .stat';
+function observers() {
+  play ||= new IntersectionObserver((es) => es.forEach((x) => { if (x.isIntersecting && x.target.classList.contains('rv')) x.target.classList.add('seen'); }), { rootMargin: '0px 0px -6% 0px', threshold: 0.06 });
+  arm ||= new IntersectionObserver((es) => es.forEach((x) => { if (!x.isIntersecting) { x.target.classList.add('rv'); x.target.classList.remove('seen'); } }), { threshold: 0 });
+  tally ||= new IntersectionObserver((es) => es.forEach((x) => {
+    const el = x.target;
+    if (!x.isIntersecting) { el._away = true; return; }
+    if (el._away && !el._cnt) { el._away = false; count(el, 700, 60); }
+  }), { threshold: 0.6 });
+}
+function reveal(root, fresh = true) {
   if (still() || !('IntersectionObserver' in window)) return;
-  io ||= new IntersectionObserver((es) => es.forEach((x) => { if (x.isIntersecting) { x.target.classList.add('seen'); io.unobserve(x.target); } }), { rootMargin: '0px 0px -6% 0px', threshold: 0.06 });
-  root.querySelectorAll('.card, .mode, .sk').forEach((el) => {
-    if (el.closest('.rv') || el.closest('dialog') || el.getBoundingClientRect().top < innerHeight - 30) return;
-    el.classList.add('rv'); io.observe(el);
+  observers();
+  root.querySelectorAll(TILES).forEach((el) => {
+    if (el.dataset.rv || el.closest('dialog') || (el.parentElement && el.parentElement.closest('[data-rv]'))) return;   // one per nest: an inner tile rides with its card
+    el.dataset.rv = 1;
+    if (fresh && el.getBoundingClientRect().top >= innerHeight - 30) el.classList.add('rv');   // below the fold: wait for the scroll
+    play.observe(el); arm.observe(el);
   });
+  root.querySelectorAll(SEL).forEach((el) => { if (!el.dataset.tl) { el.dataset.tl = 1; tally.observe(el); } });
+}
+/** A new screen replaces the old one's elements: let go of them so nothing is watched for a screen that is gone. */
+function resetWatch() {
+  [play, arm, tally].forEach((o) => o && o.disconnect());
+  document.querySelectorAll('#main [data-rv], #main [data-tl]').forEach((el) => { delete el.dataset.rv; delete el.dataset.tl; });   // an element that survives the new screen is watched again
 }
 
 const main = document.querySelector('#main');
-if (main) new MutationObserver(() => { if (main.classList.contains('enter')) { run(main); reveal(main); } }).observe(main, { childList: true });
+if (main) {
+  new MutationObserver(() => { if (main.classList.contains('enter')) { resetWatch(); run(main); reveal(main); } }).observe(main, { childList: true });
+  main.addEventListener('mm:paint', () => reveal(main, false));   // in-place repaints: new tiles join the replay, nothing is hidden
+}
 new MutationObserver((ms) => ms.forEach((m) => m.addedNodes.forEach((n) => n.nodeType === 1 && n.matches && n.matches('dialog.dlg') && run(n)))).observe(document.body, { childList: true });
 
 /** Phone bottom sheets: drag the handle down to dismiss, with a springy snap-back. Same result as Esc. */

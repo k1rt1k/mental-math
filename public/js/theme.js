@@ -10,15 +10,17 @@ export const ACC = {
 };
 /** Background skins: [name, dark page, dark card, light page, light card, theme-color dark, theme-color light]. The real values live in extras.css. */
 export const SKINS = {
-  aurora: ['Aurora', '#0b0813', '#1f1833', '#f6f3fb', '#f0ebf8', '#0b0813', '#f6f3fb'],
-  midnight: ['Midnight', '#060b16', '#162038', '#f1f4fa', '#e9eef7', '#060b16', '#f1f4fa'],
-  forest: ['Forest', '#07100c', '#15271d', '#f1f5f0', '#e9efe7', '#07100c', '#f1f5f0'],
-  mocha: ['Mocha', '#100c09', '#271e17', '#f7f2ec', '#f3ede5', '#100c09', '#f7f2ec'],
-  ocean: ['Ocean', '#061116', '#142a34', '#eff6f7', '#e4f0f2', '#061116', '#eff6f7'],
+  aurora: ['Aurora', '#0e0a20', '#261c47', '#f6f3fb', '#f0ebf8', '#0e0a20', '#f6f3fb'],
+  midnight: ['Midnight', '#071229', '#172b58', '#f1f4fa', '#e9eef7', '#071229', '#f1f4fa'],
+  forest: ['Forest', '#06180f', '#12341f', '#f1f5f0', '#e9efe7', '#06180f', '#f1f5f0'],
+  mocha: ['Mocha', '#170f09', '#392619', '#f7f2ec', '#f3ede5', '#170f09', '#f7f2ec'],
+  ocean: ['Ocean', '#03161c', '#0d3340', '#eff6f7', '#e4f0f2', '#03161c', '#eff6f7'],
   classic: ['Classic', '#07090d', '#181d28', '#f4f4f1', '#efeee9', '#0c1017', '#f3f4f8'],
 };
 /** What a brand-new visitor sees. People who already had the app keep the old blue-on-classic look until they pick something (see boot.js). */
 export const DEFAULT_ACC = 'grape', DEFAULT_SKIN = 'aurora', LEGACY_ACC = 'blue', LEGACY_SKIN = 'classic';
+/** When nobody has picked an accent yet, each skin brings the one that suits it (first-time visitors only; a chosen accent always wins). */
+export const SKIN_ACC = { aurora: 'grape', midnight: 'blue', forest: 'emerald', mocha: 'amber', ocean: 'teal', classic: 'grape' };
 export const FONTS = { serif: 'Serif', sans: 'Sans', mono: 'Mono', round: 'Rounded' };
 /** App fonts (whole app, not just questions): [name, sample]. The stacks live in style.css under [data-afont]. Only fonts already bundled or built into the device, so nothing new to download. */
 export const AFONTS = { default: ['Classic', 'Aa'], inter: ['Clean', 'Aa'], serif: ['Serif', 'Aa'], system: ['Device', 'Aa'], round: ['Rounded', 'Aa'], mono: ['Mono', 'Aa'] };
@@ -30,7 +32,7 @@ const has = (o, k) => typeof k === 'string' && Object.prototype.hasOwnProperty.c
 export const HEX = /^#[0-9a-f]{6}$/i;
 /** boot.js marks a device whose first visit happened with this release (no saved data yet); only those get the new default look. */
 const newLook = () => typeof document !== 'undefined' && document.documentElement.dataset.look2 === '1';
-export const accKey = () => (S.acc === 'custom' && HEX.test(S.accHex || '') ? 'custom' : has(ACC, S.acc) ? S.acc : newLook() ? DEFAULT_ACC : LEGACY_ACC);
+export const accKey = () => (S.acc === 'custom' && HEX.test(S.accHex || '') ? 'custom' : has(ACC, S.acc) ? S.acc : newLook() ? SKIN_ACC[skinKey()] || DEFAULT_ACC : LEGACY_ACC);
 export const skinKey = () => (has(SKINS, S.skin) ? S.skin : newLook() ? DEFAULT_SKIN : LEGACY_SKIN);
 
 /* ---- a custom colour becomes a Dark/Light pair that always keeps button text readable (4.5:1) ---- */
