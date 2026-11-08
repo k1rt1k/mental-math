@@ -24,6 +24,7 @@ import { setBadge, refreshSoon } from './notify.js';
 import { flushBoardQueue, boardQueued } from './board.js';
 import './morph.js';
 import './motion.js';
+import './splash.js';
 
 /* ---------- chrome ---------- */
 const NAV = [['home', 'Train', 'home'], ['coach', 'Coach', 'sparkle'], ['learn', 'Learn', 'bulb'], ['progress', 'Progress', 'chart'], ['notebook', 'Notebook', 'book'], ['settings', 'Settings', 'gear']];

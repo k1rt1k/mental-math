@@ -1112,11 +1112,7 @@ dialog.dlg form { overscroll-behavior: contain; -webkit-overflow-scrolling: touc
 [data-skin=mocha][data-theme=light] { --bg: #f7f2ec; --bg2: #fcf9f5; --c2: #f3ede5; --c3: #e6dbce; --grid: rgba(140, 90, 40, .08); }
 [data-skin=ocean][data-theme=light] { --bg: #eff6f7; --bg2: #f8fcfc; --c2: #e4f0f2; --c3: #d6e6e9; --grid: rgba(20, 110, 130, .08); }
 
-/* Settings: quick looks, skin tiles, the custom colour swatch */
-.looks { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
-.look { display: inline-flex; align-items: center; gap: 9px; min-height: 40px; padding: 6px 14px 6px 9px; border-radius: 999px; border: 1px solid var(--ln2); background: var(--c2); color: var(--tx); font: 600 var(--t-sm)/1 var(--sans); cursor: pointer; transition: transform .3s var(--soft, ease), box-shadow .25s, border-color .25s; }
-.look .lk { display: inline-flex; } .look .lk i { width: 16px; height: 16px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(128, 128, 128, .35); } .look .lk i + i { margin-left: -5px; }
-.look[aria-checked=true] { border-color: var(--ac); box-shadow: 0 0 0 1px var(--ac); background: color-mix(in srgb, var(--ac) 12%, var(--c2)); }
+/* Settings: skin tiles, the custom colour swatch */
 .skins { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 12px 10px; margin-top: 8px; }
 .skinb { display: grid; gap: 7px; justify-items: stretch; text-align: center; padding: 0; border: 0; background: none; color: var(--mu); font: 600 var(--t-xs)/1.2 var(--sans); cursor: pointer; }
 .skinb .sb { position: relative; height: 46px; border-radius: 12px; border: 1px solid var(--ln2); background: var(--sb-bg); overflow: hidden; transition: transform .3s var(--soft, ease), box-shadow .25s; }
@@ -1128,7 +1124,7 @@ dialog.dlg form { overscroll-behavior: contain; -webkit-overflow-scrolling: touc
 .swatch.cust .ic { width: 16px; height: 16px; color: #fff; stroke-width: 2.4; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .55)); pointer-events: none; }
 .swatch.cust.on { overflow: visible; box-shadow: 0 0 0 2px var(--c), 0 0 0 4px currentColor; }
 .swatch.cust:focus-within { outline: 2px solid var(--ac); outline-offset: 4px; }
-@media (hover: hover) { .look:hover, .skinb:hover .sb { transform: translateY(-1px); } .swatch.cust:hover { transform: scale(1.14); } }
+@media (hover: hover) { .skinb:hover .sb { transform: translateY(-1px); } .swatch.cust:hover { transform: scale(1.14); } }
 .skins-note { margin: 8px 0 0; font-size: var(--t-xs); color: var(--mu); }
 
 /* ===== First-visit welcome (js/ui.js welcomeDlg) =====
@@ -1222,3 +1218,22 @@ h2.sg { display: block; grid-template-columns: none; gap: 0; }
 .empty.crash .eic { color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, var(--c2)); }
 .sempty .eic { width: 44px; height: 44px; border-radius: 14px; margin-bottom: 10px; } .sempty .eic .ic { width: 22px; height: 22px; }
 
+
+/* 14.87: App font picker. Each sample shows the font's text (Aa) and its numbers (47). */
+.afonts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.afont { display: grid; gap: 6px; justify-items: center; align-content: center; min-height: 64px; padding: 10px 6px 8px; border: 1px solid var(--ln2); border-radius: var(--r2); background: var(--c2); color: var(--mu); font: 600 var(--t-xs)/1.2 var(--sans); cursor: pointer; transition: border-color .15s, color .15s, box-shadow .15s; }
+.afont .afs { display: inline-flex; align-items: baseline; gap: 6px; color: var(--tx); line-height: 1; }
+.afont .afs b { font-size: 22px; font-weight: 600; } .afont .afs i { font-size: 17px; font-style: normal; font-weight: 560; color: var(--mu); }
+.afont[aria-checked=true] { color: var(--tx); border-color: var(--ac); box-shadow: 0 0 0 2px color-mix(in srgb, var(--ac) 28%, transparent); }
+@media (hover: hover) { .afont:hover { border-color: var(--ac); color: var(--tx); } }
+.afont:focus-visible { outline: 2px solid var(--ac); outline-offset: 2px; }
+.afont[data-af=default] .afs b, .afont[data-af=inter] .afs b, .afont[data-af=inter] .afs i { font-family: "Inter Variable", system-ui, sans-serif; }
+.afont[data-af=default] .afs i, .afont[data-af=serif] .afs b, .afont[data-af=serif] .afs i { font-family: "Fraunces Variable", ui-serif, Georgia, serif; }
+.afont[data-af=system] .afs b, .afont[data-af=system] .afs i { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+.afont[data-af=round] .afs b, .afont[data-af=round] .afs i { font-family: ui-rounded, "SF Pro Rounded", "Inter Variable", system-ui, sans-serif; }
+.afont[data-af=mono] .afs b, .afont[data-af=mono] .afs i { font-family: "JetBrains Mono Variable", ui-monospace, Menlo, Consolas, monospace; }
+@media (max-width: 420px) { .afonts { grid-template-columns: repeat(2, 1fr); } }
+
+/* 14.89: the accent colours sit in an even grid (7 x 2, the custom picker last) that shrinks to fit, with room around each so the selected ring is never cut off. */
+.chips.accs { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 12px 10px; padding: 5px; justify-items: center; }
+.sgrp .accs .swatch { width: 100%; max-width: 40px; height: auto; aspect-ratio: 1; }

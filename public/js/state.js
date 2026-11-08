@@ -155,7 +155,7 @@ export const fresh = () => {
  * theme set on the laptop and keypad set on the phone both survive. Goal, the saved session setup and the saved
  * setups sync the same way.
  */
-export const PREF_KEYS = ['pad', 'theme', 'skin', 'acc', 'accHex', 'font', 'zen', 'mute', 'noBlur', 'noCd', 'noHap', 'ts', 'hc', 'cb', 'bigA', 'pace', 'padFlip', 'rm', 'ent', 'noGrace', 'noTimer', 'noQLine'];
+export const PREF_KEYS = ['pad', 'theme', 'skin', 'acc', 'accHex', 'font', 'afont', 'noSplash', 'zen', 'mute', 'noBlur', 'noCd', 'noHap', 'ts', 'hc', 'cb', 'bigA', 'pace', 'padFlip', 'rm', 'ent', 'noGrace', 'noTimer', 'noQLine'];
 export const SYNCED_PREFS = [...PREF_KEYS, 'goal', 'cfg', 'presets'];
 /** Genuinely tied to one browser: the push subscription behind reminders, which panels are open, and snoozed banners. */
 export const DEVICE_LOCAL = ['rem', 'skOpen', 'bkSnooze', 'padHint', 'tipPar'];

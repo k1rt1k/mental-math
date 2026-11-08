@@ -7,6 +7,13 @@
     var th = S.theme || (matchMedia('(prefers-color-scheme:light)').matches ? 'light' : 'dark');
     D.dataset.theme = th;
     D.dataset.font = S.font || 'serif';
+    D.dataset.afont = /^(inter|serif|system|round|mono)$/.test(S.afont) ? S.afont : 'default';   // keep in step with AFONTS in theme.js
+    // Opening animation: once per launch (a reload or an update does not replay it), never for a home-screen shortcut (?go=),
+    // never with Reduce motion, and off when the person turned it off in Settings. The CSS ends it by itself, so nothing can trap the screen.
+    try {
+      var still = S.rm || matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (!S.noSplash && !still && !sessionStorage['mm.splash'] && !/[?&]go=/.test(location.search)) { D.dataset.splash = '1'; sessionStorage['mm.splash'] = '1'; }
+    } catch (e) { /* no storage: no intro */ }
     // A device whose first visit is with this release (nothing saved yet) gets the new default look; everyone else keeps what they had until they choose.
     var flag = 'mm.look2:' + stateKey;
     if (localStorage[stateKey] == null && localStorage[flag] == null) localStorage[flag] = '1';

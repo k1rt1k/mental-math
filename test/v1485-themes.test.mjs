@@ -65,9 +65,10 @@ test('skin and custom colour sync with the other settings', () => {
   for (const k of ['skin', 'accHex']) { assert.ok(PREF_KEYS.includes(k), k); assert.ok(SYNCED_PREFS.includes(k), k); }
 });
 
-test('Settings offers quick looks, backgrounds and a colour picker, and the actions exist', () => {
+test('Settings offers backgrounds and a colour picker, and the actions exist', () => {
   const s = read('js/views/settings.js');
-  for (const x of ['data-act="look"', 'data-act="skin"', 'id="acc-custom"', 'type="color"', 'role="radiogroup" aria-label="Background style"']) assert.ok(s.includes(x), x);
-  for (const a of ['A.skin =', 'A.look =']) assert.ok(s.includes(a), a);
+  for (const x of ['data-act="skin"', 'id="acc-custom"', 'type="color"', 'role="radiogroup" aria-label="Background style"']) assert.ok(s.includes(x), x);
+  assert.ok(s.includes('A.skin ='));
+  assert.ok(!s.includes('Quick looks'), 'Quick looks repeated the Background row and was removed in 14.89');
   assert.match(s, /e\.target\.id != 'acc-custom'/);
 });

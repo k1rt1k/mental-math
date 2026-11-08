@@ -20,12 +20,20 @@
 <link rel="preload" href="fonts/inter.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/fraunces.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/jbmono.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="css/style.css?v=14.86">
-<link rel="stylesheet" href="css/motion.css?v=14.86">
-<link rel="stylesheet" href="css/extras.css?v=14.86">
+<link rel="preload" href="icon.svg" as="image" type="image/svg+xml">
+<link rel="stylesheet" href="css/style.css?v=14.89">
+<link rel="stylesheet" href="css/motion.css?v=14.89">
+<link rel="stylesheet" href="css/extras.css?v=14.89">
 <script src="js/boot.js"></script>
 </head>
 <body>
+<div id="splash" aria-hidden="true">
+  <div class="sp-glow"></div>
+  <div class="sp-stage"><i class="sp-ring"></i><span class="sp-sym" style="--a:-150deg;--k:var(--ac);--d:0.30s">+</span><span class="sp-sym" style="--a:-90deg;--k:var(--gd);--d:0.37s">−</span><span class="sp-sym" style="--a:-30deg;--k:var(--ac);--d:0.44s">×</span><span class="sp-sym" style="--a:30deg;--k:var(--gd);--d:0.51s">÷</span><span class="sp-sym" style="--a:90deg;--k:var(--ac);--d:0.58s">√</span><span class="sp-sym" style="--a:150deg;--k:var(--gd);--d:0.65s">%</span><img class="sp-logo" src="icon.svg" width="132" height="132" alt=""></div>
+  <div class="sp-word"><span style="--i:0">M</span><span style="--i:1">e</span><span style="--i:2">n</span><span style="--i:3">t</span><span style="--i:4">a</span><span style="--i:5">l</span><span style="--i:6">&nbsp;</span><span style="--i:7">M</span><span style="--i:8">a</span><span style="--i:9">t</span><span style="--i:10">h</span></div>
+  <div class="sp-tag">Think fast. Think clear.</div>
+  <div class="sp-bar"><i></i></div>
+</div>
 <a class="sr-skip" href="#main">Skip to content</a>
 <div id="shell">
   <nav id="rail" aria-label="Main"></nav>

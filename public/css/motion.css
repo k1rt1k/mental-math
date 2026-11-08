@@ -485,3 +485,37 @@ dialog[open].stksheet .stk-rest .i-moon { animation: i-rock .8s ease-in-out .5s 
 .stk-h.ipl h4 .i-flag { animation: i-ping .5s ease-out; }
 .stk-h.ipl h4 .i-cal { animation: i-ping .5s ease-out; }
 .stk-h.ipl h4 .i-history { animation: i-tick .6s ease-in-out; }
+
+/* ---------- opening animation (14.88) ----------
+   #splash sits first in <body>. boot.js sets html[data-splash=1] before first paint; the whole show is CSS, 2.3 s end to end:
+   0.1 s logo springs in · 0.3 s symbols burst out · 0.45 s ring · 0.75 s name rises letter by letter · 1.3 s tagline · 1.85 s everything lifts away.
+   Only transform and opacity change. It covers the page in the page's own background, so it follows the skin and theme. */
+#splash { display: none; position: fixed; inset: 0; z-index: 99999; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: var(--bg); color: var(--tx); overflow: hidden; touch-action: manipulation; cursor: default; }
+[data-splash="1"] #splash { display: flex; animation: sp-out .45s cubic-bezier(.4, 0, .2, 1) 1.85s forwards; }
+#splash.skip { animation: sp-out .22s ease-out forwards; }
+@keyframes sp-out { to { opacity: 0; visibility: hidden; } }
+.sp-glow { position: absolute; left: 50%; top: 50%; width: 120vmin; height: 120vmin; margin: -60vmin 0 0 -60vmin; border-radius: 50%; background: radial-gradient(closest-side, color-mix(in srgb, var(--ac) 38%, transparent), transparent 70%); opacity: 0; animation: sp-glow 1.7s cubic-bezier(.22, 1, .36, 1) .05s both; pointer-events: none; }
+@keyframes sp-glow { from { opacity: 0; transform: scale(.5); } 60% { opacity: .9; } to { opacity: .6; transform: scale(1); } }
+.sp-stage { position: relative; width: 260px; height: 260px; display: grid; place-items: center; }
+.sp-logo { position: relative; width: 132px; height: 132px; filter: drop-shadow(0 18px 38px color-mix(in srgb, var(--ac) 42%, transparent)); animation: sp-logo-in .85s cubic-bezier(.2, 1.25, .3, 1) .1s both, sp-logo-out .45s cubic-bezier(.5, 0, 1, .6) 1.85s forwards; }
+@keyframes sp-logo-in { from { opacity: 0; transform: scale(.5) translateY(18px) rotate(-6deg); } 55% { opacity: 1; } to { opacity: 1; transform: none; } }
+@keyframes sp-logo-out { to { opacity: 0; transform: scale(1.35); } }
+.sp-ring { position: absolute; left: 50%; top: 50%; width: 132px; height: 132px; margin: -66px 0 0 -66px; border-radius: 34px; border: 2px solid var(--ac); opacity: 0; animation: sp-ring 1.1s cubic-bezier(.2, .7, .3, 1) .5s both; }
+@keyframes sp-ring { from { opacity: .7; transform: scale(.9); } to { opacity: 0; transform: scale(2.1); } }
+.sp-sym { position: absolute; left: 50%; top: 50%; font: 600 28px/1 var(--serif); color: var(--k, var(--ac)); opacity: 0; --r: 112px; transform: translate(-50%, -50%); animation: sp-sym 1.05s cubic-bezier(.2, .9, .3, 1.15) var(--d, .3s) both; }
+@keyframes sp-sym {
+  from { opacity: 0; transform: translate(-50%, -50%) rotate(var(--a)) translateX(0) rotate(calc(-1 * var(--a))) scale(.3); }
+  35% { opacity: 1; }
+  to { opacity: .55; transform: translate(-50%, -50%) rotate(var(--a)) translateX(var(--r)) rotate(calc(-1 * var(--a))) scale(1); }
+}
+.sp-word { display: flex; justify-content: center; font: 650 28px/1.2 var(--serif); letter-spacing: .01em; }
+.sp-word span { display: inline-block; opacity: 0; animation: sp-let .55s cubic-bezier(.22, 1, .36, 1) calc(.75s + var(--i) * 45ms) both; }
+@keyframes sp-let { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+.sp-tag { color: var(--mu); font: 600 12px/1.2 var(--sans); letter-spacing: .16em; text-transform: uppercase; opacity: 0; animation: sp-fade .6s ease-out 1.3s both; }
+@keyframes sp-fade { to { opacity: 1; } }
+.sp-bar { position: absolute; left: 50%; bottom: calc(14vh + env(safe-area-inset-bottom, 0px)); width: 120px; height: 3px; margin-left: -60px; border-radius: 3px; background: var(--ln2); overflow: hidden; }
+.sp-bar i { display: block; height: 100%; border-radius: 3px; background: var(--ac); transform-origin: left; animation: sp-bar 1.75s cubic-bezier(.5, 0, .2, 1) .1s both; }
+@keyframes sp-bar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@media (max-width: 380px) { .sp-word { font-size: 25px; } .sp-stage { transform: scale(.88); } }
+@media (prefers-reduced-motion: reduce) { #splash { display: none !important; } }
+[data-motion=reduce] #splash { display: none !important; }

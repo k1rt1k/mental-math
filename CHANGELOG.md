@@ -2,6 +2,36 @@
 
 Newest first. What is true of the app today is in [README.md](README.md). The release number is the `VERSION` file.
 
+## 14.89
+
+Settings look cleanup, from a screenshot of the Appearance card. Front end only; no backend change.
+
+- **Quick looks removed.** It repeated the Background row (the same six names, each just a background plus one accent), so the card showed the same choice twice. Background and Accent already cover it: pick a background, then an accent. Nobody's saved look changes; `skin` and `acc` are untouched.
+- **The accent colours sit in an even grid.** They used to wrap as 6, 6 and 2 with a lone pair at the bottom. Now 13 colours plus the custom picker make a tidy 7 by 2 that shrinks to fit narrow phones, and each swatch has room around it so the selected ring is never cut off at the edge.
+- Tests: `test/v1489-settings-look.test.mjs`; the 14.85 theme test no longer expects Quick looks.
+
+## 14.88
+
+Opening animation: the app now opens with a short animated intro, like a native app. Front end only; no backend change.
+
+- **What you see (about 2.3 s):** the logo springs in over a soft glow in your accent colour, six symbols (+ − × ÷ √ %) burst out around it, a ring pulses, the name rises letter by letter with a thin progress line, and then it all lifts away into the app. It uses your skin, theme and accent, so on a light theme it is light.
+- **It plays once per launch.** A reload, an update or switching back to the app does not replay it, and the home-screen shortcuts (Practise now, Daily, Survival, Review) skip it so they stay instant. **Tap anywhere to skip.**
+- **Off switches:** Settings, Look and feel, *Opening animation* (synced like the other appearance settings), and it never plays with Reduce motion (OS or in-app). *Replay the intro* in the same card shows it on demand.
+- **Safe by design:** the animation and its ending are pure CSS (it is gone after 2.4 s even if a script failed), only transform and opacity animate, and it is a plain element at the top of the page, so nothing waits for it. Nothing is downloaded.
+- **Limit of the platform:** the very first frame after tapping the icon is the phone's own launch screen (icon on the app's background colour). That one cannot be animated by any web app; this intro takes over the moment the app's first frame is ready.
+- Tests: `test/v1488-splash.test.mjs`.
+
+## 14.87
+
+App font: choose the font for the whole app, like a theme. Front end only; no backend change.
+
+- **App font** (Settings, Look and feel, *App font*): Classic (the current look: Inter text, Fraunces numbers), Clean (Inter everywhere), Serif (Fraunces everywhere), Device (your phone or computer's own font), Rounded and Mono. It changes text, headings, buttons, stat numbers and dialogs on every screen, and the Preview card shows it live.
+- Only fonts already in the app or built into the device are used, so nothing new downloads and the app still works offline. Rounded uses the device's rounded font where it has one (Apple devices) and Inter elsewhere.
+- **Question font still works on its own** (Serif, Sans, Mono, Rounded). Its Serif/Sans/Mono/Rounded choices follow the app font, so a Mono app with the Sans question font shows mono questions.
+- The choice syncs across browsers and devices with the other appearance settings (`afont` in `PREF_KEYS`), is applied before first paint by `boot.js` (no flash), and Reset keeps it like the other looks. Nobody's current look changes: Classic is the default.
+- Not changed: the share-image card and the app icon keep their own fonts.
+- Tests: `test/v1487-app-font.test.mjs`.
+
 ## 14.86
 
 Icon motion on phones. Front end only; no backend change.

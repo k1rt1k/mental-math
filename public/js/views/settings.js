@@ -4,7 +4,8 @@ import { esc, ymd, clamp, ago } from '../util.js';
 import { A, register, go, view } from '../nav.js';
 import { dialog, confirmDlg, typedConfirmDlg, promptDlg, choiceDlg, toast, download, icon, hic, eic } from '../ui.js';
 import { ib } from '../info.js';
-import { applyTheme, ACC, FONTS, padOn, isTouch, SKINS, LOOKS, accKey, skinKey, themeNow, HEX } from '../theme.js';
+import { playSplash } from '../splash.js';
+import { applyTheme, ACC, FONTS, AFONTS, padOn, isTouch, SKINS, accKey, skinKey, themeNow, HEX } from '../theme.js';
 import { boardHint, setBoardHint, boardWhy, loadBoard, boardHtml } from '../board.js';
 import { rankLine } from '../boardlogic.js';
 import { DEMO, leaveDemo } from '../demoflag.js';
@@ -14,7 +15,7 @@ import { state as remState, enable as remEnable, disable as remDisable, test as 
 const seg = (act, cur, opts) => `<div class="seg" role="group">${opts.map(([v, l]) => `<button aria-pressed="${cur == v}" data-act="${esc(act)}" data-v="${esc(v)}">${l}</button>`).join('')}</div>`;
 const row = (t, d, key, on) => `<div class="set"><div><div class="t"><span id="l-${esc(key)}">${t}</span>${ib('s.' + key)}</div><div class="d">${d}</div></div><button class="sw" role="switch" aria-checked="${on}" aria-labelledby="l-${esc(key)}" data-act="tog" data-v="${esc(key)}"></button></div>`;
 // "noX" keys are stored inverted so existing data keeps its meaning.
-const INV = new Set(['noBlur', 'noCd', 'noHap', 'noGrace', 'noTimer', 'noQLine']);
+const INV = new Set(['noBlur', 'noCd', 'noHap', 'noGrace', 'noTimer', 'noQLine', 'noSplash']);
 const get = (k) => (INV.has(k) ? !S[k] : !!S[k]);
 
 let bd = null;   // this learner's board membership as the server last said: null (unknown) | { member, name }
@@ -48,7 +49,6 @@ function settings() {
   if (bd === null && syncKey()) loadBoardState();
   const goal = S.goal || 2, pad = S.pad == null ? 'auto' : S.pad ? 'on' : 'off', th = S.theme || 'auto';
   const lt = themeNow() == 'light', cur = skinKey(), ak = accKey(), customOn = ak == 'custom', hex = HEX.test(S.accHex || '') ? S.accHex : '#a07bff';
-  const looks = LOOKS.map(([sk, ac, nm]) => `<button class="look" type="button" role="radio" aria-checked="${cur == sk && ak == ac}" data-act="look" data-v="${esc(sk)}"><span class="lk" aria-hidden="true"><i style="background:${SKINS[sk][lt ? 3 : 1]}"></i><i style="background:${ACC[ac][0]}"></i></span>${esc(nm)}</button>`).join('');
   const skins = Object.entries(SKINS).map(([k, v]) => `<button class="skinb" type="button" role="radio" aria-checked="${cur == k}" data-act="skin" data-v="${esc(k)}" style="--sb-bg:${v[lt ? 3 : 1]};--sb-c:${v[lt ? 4 : 2]}"><span class="sb" aria-hidden="true"></span>${esc(v[0])}</button>`).join('');
   const grp = (id, title, sub, inner) => `<section class="sgrp" data-grp="${esc(id)}" aria-labelledby="g-${esc(id)}"><h2 class="sg" id="g-${esc(id)}">${hic(({ look: 'palette', practice: 'target', account: 'user', data: 'info' })[id] || 'sliders')}${title}</h2>${inner}</section>`;
   const cols = (l, r) => `<div class="g g2" style="align-items:start"><div class="g">${l}</div><div class="g">${r}</div></div>`;
@@ -58,9 +58,9 @@ function settings() {
     <nav class="chips sjump" aria-label="Jump to a group">${GROUPS.map(([id, t]) => `<button class="chip" data-act="sjump" data-v="${esc(id)}">${icon(({ look: 'palette', practice: 'target', account: 'user', data: 'info' })[id] || 'sliders')}${t}</button>`).join('')}</nav></div>
   ${grp('look', 'Look and feel', 'Theme, colours and text', cols(`<section class="card"><h3>${hic('palette')}Appearance</h3>
       <div class="field"><div class="mu">Theme</div>${seg('theme', th, [['auto', 'Auto'], ['light', 'Light'], ['dark', 'Dark'], ['black', 'Black']])}</div>
-      <div class="field"><div class="mu">Quick looks</div><div class="looks" role="radiogroup" aria-label="Quick looks">${looks}</div></div>
       <div class="field"><div class="mu">Background</div><div class="skins" role="radiogroup" aria-label="Background style">${skins}</div>${themeNow() == 'black' ? '<p class="skins-note">Black stays pure black. Switch to Dark or Light to see these.</p>' : ''}</div>
-      <div class="field"><div class="mu">Accent</div><div class="chips" role="radiogroup" aria-label="Accent colour">${Object.entries(ACC).map(([k, [c]]) => `<button class="swatch" role="radio" aria-checked="${ak == k}" aria-label="${esc(k)}" data-act="acc" data-v="${esc(k)}" style="background:${c};color:${c}"></button>`).join('')}<label class="swatch cust${customOn ? ' on' : ''}" title="Pick your own colour"${customOn ? ` style="background:${esc(hex)};color:${esc(hex)}"` : ''}>${customOn ? '' : icon('plus')}<input id="acc-custom" type="color" value="${esc(hex)}" aria-label="Custom accent colour"></label></div></div>
+      <div class="field"><div class="mu">Accent</div><div class="chips accs" role="radiogroup" aria-label="Accent colour">${Object.entries(ACC).map(([k, [c]]) => `<button class="swatch" role="radio" aria-checked="${ak == k}" aria-label="${esc(k)}" data-act="acc" data-v="${esc(k)}" style="background:${c};color:${c}"></button>`).join('')}<label class="swatch cust${customOn ? ' on' : ''}" title="Pick your own colour"${customOn ? ` style="background:${esc(hex)};color:${esc(hex)}"` : ''}>${customOn ? '' : icon('plus')}<input id="acc-custom" type="color" value="${esc(hex)}" aria-label="Custom accent colour"></label></div></div>
+      <div class="field"><div class="mu">App font</div><div class="afonts" role="radiogroup" aria-label="App font">${Object.entries(AFONTS).map(([k, [nm, smp]]) => `<button class="afont" type="button" role="radio" aria-checked="${(S.afont || 'default') == k}" data-act="afont" data-v="${esc(k)}" data-af="${esc(k)}"><span class="afs" aria-hidden="true"><b>Aa</b><i>47</i></span>${esc(nm)}</button>`).join('')}</div><p class="mu" style="margin-top:6px">Changes the text and numbers across the whole app.</p></div>
       <div class="field"><div class="mu">Question font</div><div>${seg('font', S.font || 'serif', Object.entries(FONTS))}<div class="fontprev" aria-hidden="true">47 × 38</div></div></div>
       <div class="field"><div class="mu">Text size</div>${seg('ts', S.ts || 'm', [['m', 'Normal'], ['l', 'Large'], ['xl', 'Largest']])}</div>
       ${row('Reduce motion', 'No sliding, shaking or confetti.', 'rm', get('rm'))}
@@ -68,6 +68,8 @@ function settings() {
       ${row('Colour-blind friendly colours', 'Right is blue and wrong is orange, instead of green and red.', 'cb', get('cb'))}
       ${row('Larger answer text', 'Bigger digits in the answer box while you play.', 'bigA', get('bigA'))}
       ${row('Focus layout', 'Hide the side panel and race bar while you play.', 'zen', get('zen'))}
+      ${row('Opening animation', 'A short animated intro each time you open the app. Tap it to skip. Off when Reduce motion is on.', 'noSplash', get('noSplash'))}
+      <div class="set"><div><div class="t">Replay the intro</div><div class="d">See the opening animation now.</div></div><button class="btn sm" data-act="splashPlay">${icon('play')} Play</button></div>
     </section>`, `<section class="card pv" data-k="preview"><h3>${hic('eye')}Preview</h3>
       <div class="pv-box" role="img" aria-label="Preview of the question, answer and colours with your current choices">
         <div class="pv-q">47 × 38</div>
@@ -75,7 +77,7 @@ function settings() {
         <div class="pv-row"><span class="pill ok">Right</span><span class="pill bad">Wrong</span><span class="pv-btn">Accent</span></div>
         <p class="pv-t">The quick fox solves 12 × 12 in your head.</p>
       </div>
-      <p class="mu pv-n">Updates as you change theme, background, accent, font, text size, contrast and colours.</p>
+      <p class="mu pv-n">Updates as you change theme, background, accent, fonts, text size, contrast and colours.</p>
     </section>`))}
   ${grp('practice', 'Practice', 'How you answer and how sessions run', cols(`<section class="card"><h3>${hic('keys')}Answering</h3>
       <div class="field"><div class="mu">Keypad${ib('s.pad')}</div><div>${seg('pad', pad, [['auto', 'Auto'], ['on', 'Always'], ['off', 'Never']])}<div class="mu" style="margin-top:6px">Auto shows it on touch screens only.</div></div></div>
@@ -154,7 +156,6 @@ const again = () => { if (view.scr == 'settings') settings(); };
 A.theme = (d) => { S.theme = d.v == 'auto' ? undefined : d.v; save(); applyTheme(); again(); };
 A.acc = (d) => { S.acc = d.v; save(); applyTheme(); again(); };
 A.skin = (d) => { S.skin = d.v; save(); applyTheme(); again(); };
-A.look = (d) => { const l = LOOKS.find((x) => x[0] == d.v); if (!l) return; S.skin = l[0]; S.acc = l[1]; save(); applyTheme(); again(); };
 // The custom colour follows the picker live (no save, no repaint: either would close it), and is kept when the picker is dismissed.
 document.addEventListener('input', (e) => {
   if (e.target.id != 'acc-custom' || view.scr != 'settings') return;
@@ -163,6 +164,8 @@ document.addEventListener('input', (e) => {
 });
 document.addEventListener('change', (e) => { if (e.target.id == 'acc-custom' && view.scr == 'settings') { S.acc = 'custom'; S.accHex = e.target.value; save(); applyTheme(); again(); } });
 A.ts = (d) => { S.ts = d.v; save(); applyTheme(); again(); };
+A.splashPlay = () => { if (!playSplash()) toast('Turn off Reduce motion to see the intro.'); };
+A.afont = (d) => { S.afont = d.v == 'default' ? undefined : d.v; if (S.afont === undefined) delete S.afont; save(); applyTheme(); again(); };
 A.font = (d) => { S.font = d.v; save(); applyTheme(); again(); };
 A.padFlip = (d) => { S.padFlip = d.v == 'calc'; save(); again(); };
 A.pad = (d) => { S.pad = d.v == 'auto' ? null : d.v == 'on'; save(); applyTheme(); again(); };

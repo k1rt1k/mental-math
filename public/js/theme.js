@@ -17,11 +17,11 @@ export const SKINS = {
   ocean: ['Ocean', '#061116', '#142a34', '#eff6f7', '#e4f0f2', '#061116', '#eff6f7'],
   classic: ['Classic', '#07090d', '#181d28', '#f4f4f1', '#efeee9', '#0c1017', '#f3f4f8'],
 };
-/** One-tap combinations: [skin, accent, name]. */
-export const LOOKS = [['aurora', 'grape', 'Aurora'], ['midnight', 'sky', 'Midnight'], ['forest', 'emerald', 'Forest'], ['mocha', 'coral', 'Mocha'], ['ocean', 'teal', 'Ocean'], ['classic', 'blue', 'Classic']];
 /** What a brand-new visitor sees. People who already had the app keep the old blue-on-classic look until they pick something (see boot.js). */
 export const DEFAULT_ACC = 'grape', DEFAULT_SKIN = 'aurora', LEGACY_ACC = 'blue', LEGACY_SKIN = 'classic';
 export const FONTS = { serif: 'Serif', sans: 'Sans', mono: 'Mono', round: 'Rounded' };
+/** App fonts (whole app, not just questions): [name, sample]. The stacks live in style.css under [data-afont]. Only fonts already bundled or built into the device, so nothing new to download. */
+export const AFONTS = { default: ['Classic', 'Aa'], inter: ['Clean', 'Aa'], serif: ['Serif', 'Aa'], system: ['Device', 'Aa'], round: ['Rounded', 'Aa'], mono: ['Mono', 'Aa'] };
 export const isTouch = () => matchMedia('(pointer:coarse)').matches;
 export const padOn = () => (S.pad != null ? !!S.pad : isTouch());
 export const themeNow = () => S.theme || (matchMedia('(prefers-color-scheme:light)').matches ? 'light' : 'dark');
@@ -63,6 +63,7 @@ export function applyTheme() {
   const m = document.querySelector('meta[name=theme-color]');
   if (m) m.content = th == 'light' ? SKINS[sk][6] : th == 'black' ? '#000000' : SKINS[sk][5];
   D.dataset.font = S.font && FONTS[S.font] ? S.font : 'serif';
+  D.dataset.afont = has(AFONTS, S.afont) ? S.afont : 'default';   // whole-app font
   D.dataset.ts = ['l', 'xl'].includes(S.ts) ? S.ts : 'm';         // text size
   D.dataset.contrast = S.hc ? 'high' : '';
   D.dataset.cb = S.cb ? '1' : '';           // colour-blind-safe pair: blue / orange instead of green / red
