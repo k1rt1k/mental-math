@@ -163,7 +163,7 @@ export class PathSession extends Session {
   /** Answer the current question and remember what the verdict needs. */
   record(ok) {
     const p = this.cur, par = T(p.sk, p.d, p.a), first = !p.tries, res = this.answer(ok);
-    this.rows.push({ q: p.q, a: p.a, ok, first, hinted: !!p.hinted, r: res.r, tm: res.tm, par });
+    this.rows.push({ q: p.q, a: p.a, ok, first, hinted: !!p.hinted, r: res.r, tm: res.tm, par, ty: p.lastWrong || '', sk: p.sk, d: p.d, pt: p.pt });   // ty/sk/d/pt let a missed row open an AI walk-through
     return res;
   }
   verdict() { return judge(this.pmode, this.rows, this.stg); }

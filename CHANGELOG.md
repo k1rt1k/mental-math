@@ -2,6 +2,27 @@
 
 Newest first. What is true of the app today is in [README.md](README.md). The release number is the `VERSION` file.
 
+## 14.75
+
+- **AI in the places that had none.** Guided paths had no AI at all; the week sheet neither. Four new actions, each grounded in numbers the app measured, with an honest offline fallback and the same 4-hour on-device cache as the other sheets:
+  - **Guided path, Teach step: *Explain this another way*.** The same rule and worked examples, a different picture, new numbers, two check questions. It names a stage pattern only if your accuracy there is under 80%. Each shortcut card in a lesson also has *Ask AI* (the existing trick sheet). Offline it shows the lesson's own rule and examples and says no AI was used.
+  - **Guided path, finished run: *AI review of this run*** (practice, check, mastery test, retention check and the placement quiz), plus *AI Method* on every missed answer in the list. The review states the app's verdict as given, uses the app-computed gap and worked method for each miss, and offers the matching next step (review the lesson, try again, continue).
+  - **Practice only: *AI Method* when an answer is revealed.** The run's clock stops while the sheet is open. It is deliberately not offered during checks, tests, retention checks or the placement quiz; those get it on the result screen.
+  - **Learn, Guided paths: *AI: which path next?*** Ranks a ready retention check, then a path in progress, then the lowest-rated unstarted skill, with an *Open path* button for each skill it names.
+  - **This week sheet: *AI read*.** This week against last, the best thing and the biggest gap, and two checkable targets. With no earlier week it says there is nothing to compare.
+- Path rows now keep what was typed and the question's skill, difficulty and pattern (needed for the per-miss AI Method). New module `pathAi.js` builds every path AI context in one place (like `skillAi.js`); `weekAiContext` sits beside `weekData`.
+- The week sheet's share image is now triggered by an explicit `true`, since the dialog can also return `'ai'`.
+- Self-test tool: four new probe cases (19 per model). Its `--mock` mode runs the prompts and content checks but cannot prove live Gemini behaviour.
+- Not added, on purpose: Flash (it keeps five right/wrong dots and its settings, so there is nothing measured to say), the streak sheet, and any AI during a timed assessment.
+- Known limit, not changed: the reply arithmetic checker misreads a line that starts with a unicode minus (`−3 − 4 = −7`) as `3 − 4 = −7`. The Negatives lessons are correct; the test that checks every worked example skips that skill for this reason.
+- Each new button is one request against the shared 300-a-day free budget (cached for 4 hours per identical data).
+- **Fixes from the first live self-test (38 real Gemini replies):**
+  - The 3.1 backup is no longer sent a thinking level: on `low` it spent 760 to 1150 hidden tokens and cut 7 replies off (and took up to 29 s). It also gets 700 tokens of output headroom. 3.5 is unchanged.
+  - The "one concrete action" ending now belongs to the Coach reply only. In the shared rules it appended drill lines to AI Method, lessons and tricks, and the backup invented a "Round and Adjust skill path".
+  - New shared rules: a rating is never an accuracy (the Coach said "multiplication accuracy is 540"), no raw field names in replies ("speedVsPar"), the app's gap text is said as one natural sentence, and no "because/reflecting" between facts the data does not link.
+  - Trick: one true equation per line, no `4 _ (4 + 3) _ 3` notation (it also tripped the arithmetic-check box on correct maths), and the trap is described as the trick's, not the learner's. Lesson: no claimed cause for a weak pattern. Quiz chat: bare questions only.
+- Tests: `test/v1475-ai-paths-and-week.test.mjs`.
+
 ## 14.74
 
 - **Placement quiz: skip what you already know.** An unfinished Learn path now opens with an *Already know this? Find your starting stage* card. The quiz starts at the first stage you have not passed and climbs: 3 questions per stage, no hints, every one right first try to clear a stage, stages 1 to 4 only (at most 12 questions). One miss ends it and the path opens at that stage. Each stage cleared is marked passed, so Stage 2, 3, 4 or the mastery test opens straight away. It never skips the timed mastery test or the two retention checks, never lowers a score or an earlier pass time, and leaving halfway keeps the stages already cleared. Answers feed the notebook like any other path run, and the quiz counts for the streak and Learn minutes like a practice run (ratings stay frozen). The stage checks work as before for anyone who prefers them.

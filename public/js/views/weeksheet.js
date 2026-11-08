@@ -7,7 +7,8 @@ import { MS, modeLabel, msProgress, ctx } from '../stats.js';
 import { icon, dialog, toast } from '../ui.js';
 import { A } from '../nav.js';
 import { shareCard } from '../share.js';
-import { weekData, weekDays, dayInfo, weekLines, sgn } from '../weekdata.js';
+import { weekData, weekDays, dayInfo, weekLines, sgn, weekAiContext } from '../weekdata.js';
+import { showAiSheet } from '../ai.js';
 
 const fmt = (t, o) => new Date(t).toLocaleDateString(undefined, o);
 const clock = (t) => new Date(t).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
@@ -49,7 +50,7 @@ A.weekSheet = async (d) => {
   </div>`;
   const go = await dialog({
     title: 'This week', body,
-    actions: W.empty ? [{ label: 'Close', value: false, primary: true }] : [{ label: 'Close', value: false }, { label: 'Share image', value: true, primary: true }],
+    actions: W.empty ? [{ label: 'Close', value: false, primary: true }] : [{ label: 'Close', value: false }, { label: 'AI read', value: 'ai', icon: 'sparkle' }, { label: 'Share image', value: true, primary: true }],
     onOpen: (dl) => {
       dl.classList.add('stksheet', 'wsheet');
       const row = dl.querySelector('.ws-days'), box = dl.querySelector('.ws-detail');
@@ -64,7 +65,10 @@ A.weekSheet = async (d) => {
       });
     },
   });
-  if (go && !W.empty) {
+  if (go === 'ai' && !W.empty) {
+    return showAiSheet({ title: 'Your week, explained', action: 'week', context: weekAiContext(), extra: () => (S.sessions.length ? [{ label: 'Drill my weakest skill', run: () => A.weakest && A.weakest() }] : []) });
+  }
+  if (go === true && !W.empty) {
     const r = await shareCard({ tag: 'My week', big: nd, bigLabel: 'of 7 days practised', rows: [['Answers', W.n], ['Accuracy', W.acc + '%'], ['Minutes', W.min], W.gain ? ['Top gain', '+' + W.gain.by] : ['Sessions', W.sessions]], streak: W.streak });
     if (r == 'saved') toast('Image saved');
   }

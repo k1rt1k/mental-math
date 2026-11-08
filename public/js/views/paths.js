@@ -8,6 +8,8 @@ import { weakestSkills, streak, learnToday } from '../stats.js';
 import { shareCard } from '../share.js';
 import { A, register, go, view, mark } from '../nav.js';
 import { icon, toast, burst, dialogOpen } from '../ui.js';
+import { showAiSheet, showAiExplanation } from '../ai.js';
+import { lessonAiContext, runAiContext, pathsAiContext, skillsInReply } from '../pathAi.js';
 import { PATHS, KINDS, PHASES, RET, RULES, PATH_STAGES, progress, donePhase, recordCheck, checkMode, PathSession, PlaceSession, PLACE, canPlace, applyPlacement, nextUp, logPathRun, masteryInfo, dueChecks } from '../paths.js';
 
 const $ = (s) => document.querySelector(s);
@@ -90,7 +92,9 @@ function stepper(k, si) {
   const s = progress(k).stages[si], dn = s.done ? 4 : s.ph;
   return `<ol class="pstep" aria-label="Lesson steps">${PHASES.map((n, j) => `<li><button class="pstb ${j == ctx.ph ? 'cur' : ''} ${j < dn ? 'done' : ''}" data-act="pathPhase" data-v="${esc(j)}" ${j == ctx.ph ? 'aria-current="step"' : ''}><span class="pn">${j < dn && j != ctx.ph ? icon('check') : j + 1}</span><span>${n}</span></button></li>`).join('')}</ol>`;
 }
-const trickCard = (t) => `<div class="card ptrick"><b>${esc(t.title)}</b><p class="mu">${esc(t.rule)}</p><div class="ex">${t.ex.map((x) => `<div>${esc(x)}</div>`).join('')}</div></div>`;
+const trickCard = (t) => `<div class="card ptrick"><b>${esc(t.title)}</b><p class="mu">${esc(t.rule)}</p><div class="ex">${t.ex.map((x) => `<div>${esc(x)}</div>`).join('')}</div><div class="btns" style="justify-content:flex-start;margin-top:10px"><button class="btn sm ghost" data-act="aiTrick" data-v="${esc(t.id)}" aria-label="${esc('Ask AI about ' + t.title)}">${icon('sparkle')} Ask AI</button></div></div>`;
+/** An AI walk-through of one missed question (the same sheet Results and the Notebook open). Only for rows that were missed. */
+const aiBtn = (x, k) => (x.ok ? '' : `<br><button class="btn sm ghost" style="padding:2px 8px;font-size:11px;margin-top:4px" data-act="aiExplain" data-q="${esc(x.q)}" data-a="${esc(x.a)}" data-ty="${esc(x.ty || '')}" data-sk="${esc(x.sk || k)}" data-d="${esc(x.d ?? '')}" data-pt="${esc(x.pt || '')}">${icon('sparkle')} AI Method</button>`);
 
 function lesson() {
   const k = ctx.k, si = ctx.si, st = PATHS[k].stages[si], ph = ctx.ph, P = progress(k);
@@ -99,7 +103,7 @@ function lesson() {
   if (ph == 0) {
     body = `<div class="card ptch" style="--sc:${COL[k]}"><div class="eyebrow">Teach</div>${st.teach.map((x) => `<p>${esc(x)}</p>`).join('')}<div class="pkey"><div class="eyebrow" style="margin:0">Remember</div><b>${esc(st.key)}</b></div></div>
       ${st.tr.length ? `<h2>The tricks in this stage</h2><div class="ptricks">${st.tr.map((id) => TRICKS.find((t) => t.id == id)).filter(Boolean).map(trickCard).join('')}</div>` : ''}
-      <div class="btns pnav"><button class="btn primary" data-act="pathNext" data-primary>Next: see it worked ${icon('chev')}</button></div>`;
+      <div class="btns pnav"><button class="btn primary" data-act="pathNext" data-primary>Next: see it worked ${icon('chev')}</button><button class="btn" data-act="aiLesson">${icon('sparkle')} Explain this another way</button></div>`;
   } else if (ph == 1) {
     body = `<div class="card ptch" style="--sc:${COL[k]}"><div class="eyebrow">Demonstrate</div><p class="mu">Step through the worked ${st.demo.length > 1 ? 'examples' : 'example'}. In the last one you finish the answer yourself.</p></div>${demoBody(st)}`;
   } else if (ph == 2) {
@@ -211,7 +215,8 @@ function wrong() {
   }
   locked = true; s.record(false); s.checkpoint();
   const hw = howTo(p);
-  fb(`<span class="bad">✗ ${esc(p.q)} = ${esc(p.a)}</span>${p.tip ? `<div class="tip">${esc(p.tip)}</div>` : ''}${hw ? `<div class="tip">${esc(hw)}</div>` : ''}`);
+  const ai = run.mode == 'practise' ? `<div class="tip"><button class="btn sm ghost" data-act="runAi">${icon('sparkle')} AI Method</button></div>` : '';   // help while learning; assessed runs get it on the result screen instead
+  fb(`<span class="bad">✗ ${esc(p.q)} = ${esc(p.a)}</span>${p.tip ? `<div class="tip">${esc(p.tip)}</div>` : ''}${hw ? `<div class="tip">${esc(hw)}</div>` : ''}${ai}`);
   $('#pin').disabled = true; $('#phint').disabled = true; const nx = $('#pnext'); nx.hidden = false; nx.focus({ preventScroll: true });
 }
 function advance() { if (!run) return; run.s.finished ? finishRun() : showQ(); }
@@ -260,6 +265,8 @@ function finishRun() {
   result();
 }
 
+const aiRunBtn = () => `<div style="margin-top:12px"><button class="btn sm" data-act="aiRun">${icon('sparkle')} AI review of this run</button></div>`;
+
 /** The placement verdict: which stages were marked passed and where to start. */
 function placeResult() {
   const { from, to, cleared, rows, k } = ctx.res, top = to > PLACE.last, at = Math.min(to, PATH_STAGES - 1);
@@ -267,8 +274,8 @@ function placeResult() {
   const body = cleared ? `${cleared == 1 ? 'Stage ' + (from + 1) + ' is' : 'Stages ' + (from + 1) + ' to ' + to + ' are'} marked passed. ${top ? 'The timed mastery test is next, and the retention checks follow it.' : 'Stage ' + (at + 1) + ' is where the path opens now.'}` : 'Nothing was skipped. A missed answer in a quiz this short is not a verdict: you can still take the check on any stage you know.';
   const go2 = top ? 'Open the mastery test' : cleared ? 'Open stage ' + (at + 1) : 'Start stage ' + (at + 1);
   main().innerHTML = `<div class="card pres ${cleared ? 'pass' : ''}" style="--sc:${COL[k]}"><div class="eyebrow">${esc(SK[k].n)} · Level check</div><h1>${esc(title)}</h1>
-    <p>${esc(body)}</p>${ctx.res.logged ? learnLine() : ''}<div class="btns pnav"><button class="btn primary" data-act="pathStage" data-v="${esc(at)}" data-primary>${esc(go2)}</button><button class="btn ghost" data-act="pathMap">Path map</button></div></div>
-    <h2>Every answer</h2><div class="card"><div class="plist">${rows.map((x) => `<div class="prow"><span>${esc(x.q)} = <b>${esc(x.a)}</b>${x.ok ? '' : `<br><span class="mu">${esc(howTo({ q: x.q, a: x.a, sk: k }))}</span>`}</span><span><span class="mu num">${x.tm.toFixed(1)}s</span> <span class="${x.ok ? 'ok' : 'bad'}">${x.ok ? '✓' : '✗'}</span></span></div>`).join('')}</div></div>`;
+    <p>${esc(body)}</p>${ctx.res.logged ? learnLine() : ''}<div class="btns pnav"><button class="btn primary" data-act="pathStage" data-v="${esc(at)}" data-primary>${esc(go2)}</button><button class="btn ghost" data-act="pathMap">Path map</button></div>${aiRunBtn()}</div>
+    <h2>Every answer</h2><div class="card"><div class="plist">${rows.map((x) => `<div class="prow"><span>${esc(x.q)} = <b>${esc(x.a)}</b>${x.ok ? '' : `<br><span class="mu">${esc(howTo({ q: x.q, a: x.a, sk: k }))}</span>${aiBtn(x, k)}`}</span><span><span class="mu num">${x.tm.toFixed(1)}s</span> <span class="${x.ok ? 'ok' : 'bad'}">${x.ok ? '✓' : '✗'}</span></span></div>`).join('')}</div></div>`;
   scrollTo({ top: 0, behavior: 'instant' });
 }
 
@@ -288,8 +295,8 @@ function result() {
   main().innerHTML = `<div class="card pres ${mode == 'practise' || v.pass ? 'pass' : 'fail'}" style="--sc:${COL[k]}"><div class="eyebrow">${esc(SK[k].n)} · ${esc(KINDS[si])}</div><h1>${esc(title)}</h1>
     <div class="pscore"><b class="num">${v.correct}/${v.n}</b><span class="mu">${mode == 'practise' ? 'first try' : 'first-try correct'}${R.need ? ' · ' + R.need + ' needed' : ''}</span></div>
     ${v.pace && R.pace ? `<div class="pace ${R.pace && v.pace > R.pace ? 'bad' : ''}">Pace ${v.pace}× par${R.pace ? ' (limit ' + R.pace + '×)' : ''}</div>` : ''}
-    ${why ? `<p>${esc(why)}</p>` : ''}${note}${ctx.res.logged ? learnLine() : ''}<div class="btns pnav">${next}</div></div>
-    <h2>Every answer</h2><div class="card"><div class="plist">${rows.map((x) => `<div class="prow"><span>${esc(x.q)} = <b>${esc(x.a)}</b>${x.hinted ? ' <span class="mu">· hint</span>' : !x.first && x.ok ? ' <span class="mu">· slip first</span>' : ''}${x.ok ? '' : `<br><span class="mu">${esc(howTo({ q: x.q, a: x.a, sk: k }))}</span>`}</span><span><span class="mu num">${x.tm.toFixed(1)}s</span> <span class="${x.ok ? 'ok' : 'bad'}">${x.ok ? '✓' : '✗'}</span></span></div>`).join('')}</div></div>`;
+    ${why ? `<p>${esc(why)}</p>` : ''}${note}${ctx.res.logged ? learnLine() : ''}<div class="btns pnav">${next}</div>${aiRunBtn()}</div>
+    <h2>Every answer</h2><div class="card"><div class="plist">${rows.map((x) => `<div class="prow"><span>${esc(x.q)} = <b>${esc(x.a)}</b>${x.hinted ? ' <span class="mu">· hint</span>' : !x.first && x.ok ? ' <span class="mu">· slip first</span>' : ''}${x.ok ? '' : `<br><span class="mu">${esc(howTo({ q: x.q, a: x.a, sk: k }))}</span>${aiBtn(x, k)}`}</span><span><span class="mu num">${x.tm.toFixed(1)}s</span> <span class="${x.ok ? 'ok' : 'bad'}">${x.ok ? '✓' : '✗'}</span></span></div>`).join('')}</div></div>`;
   scrollTo({ top: 0, behavior: 'instant' });
 }
 
@@ -313,6 +320,40 @@ function celebrate() {
   scrollTo({ top: 0, behavior: 'instant' });
 }
 A.pathShare = async () => { if (await shareCard(masteryCard(ctx.k)) == 'saved') toast('Image saved'); };
+
+/* ---------- AI ---------- */
+/** Re-teach the stage on the Teach step: same rule and examples, a different angle, new numbers. */
+A.aiLesson = () => {
+  const c = lessonAiContext(ctx.k, ctx.si);
+  if (!c) return;
+  showAiSheet({ title: PATHS[ctx.k].stages[ctx.si].t, action: 'lesson', context: c, extra: () => [{ label: 'Next: see it worked', run: () => A.pathNext() }] });
+};
+/** What the result screen's own buttons offer, so the advice in the sheet can be acted on straight away. */
+function runActions(r) {
+  const at = Math.min(r.si, PATH_STAGES - 1);
+  if (r.place) { const top = r.to > PLACE.last, a = Math.min(r.to, PATH_STAGES - 1); return [{ label: top ? 'Open the mastery test' : r.cleared ? 'Open stage ' + (a + 1) : 'Start stage ' + (a + 1), run: () => A.pathStage({ v: a }) }]; }
+  if (r.mode == 'practise') return [{ label: 'Next: the check', run: () => A.pathPhase({ v: 3 }) }, { label: 'More practice', run: () => A.runStart({ v: 'practise' }) }];
+  if (r.mode == 'retain') return r.v.pass ? [] : [{ label: 'Refresher: shortcuts', run: () => A.pathStage({ v: 2 }) }];
+  if (r.v.pass) return at < PATH_STAGES - 1 ? [{ label: 'Continue to stage ' + (at + 2), run: () => A.pathStage({ v: at + 1 }) }] : [];
+  return [{ label: 'Review the lesson', run: () => A.pathPhase({ v: 0 }) }, { label: 'Try again', run: () => A.runStart({ v: r.mode }) }];
+}
+/** A review of the run that just finished (practice, check, test, retention check or placement quiz). */
+A.aiRun = () => {
+  const r = ctx.res;
+  if (!r) return;
+  const c = runAiContext({ k: r.k, si: r.si, mode: r.place ? 'place' : r.mode, ret: r.ret, v: r.v || null, rows: r.rows, place: r.place ? { from: r.from, to: r.to, cleared: r.cleared } : null });
+  showAiSheet({ title: 'AI review · ' + c.run, action: 'pathrun', context: c, extra: () => runActions(r) });
+};
+/** One tap during practice: the AI walk-through of the question just revealed. The run's clock stops while the sheet is open. */
+A.runAi = async () => {
+  if (!run || run.mode != 'practise' || !run.s.cur) return;
+  const s = run.s, p = s.cur;
+  s.pause();
+  await showAiExplanation({ q: p.q, a: p.a, ty: p.lastWrong || '', sk: p.sk, d: p.d, pt: p.pt });
+  if (run && run.s === s) { s.resume(); const nx = $('#pnext'); if (nx && !nx.hidden) nx.focus({ preventScroll: true }); }
+};
+/** Learn, Guided paths: which path to take next, with an Open button for each skill the reply names. */
+A.aiNextPath = () => showAiSheet({ title: 'Which path should you do next?', action: 'nextpath', context: pathsAiContext(), extra: (res) => skillsInReply(res.text).map((k) => ({ label: `Open ${SK[k].n} path`, run: () => A.pathOpen({ v: k }) })) });
 
 /* ---------- actions ---------- */
 function open(k, si, ph) { ctx.k = k; ctx.si = si; ctx.ph = ph; ctx.dm = newDemo(); }

@@ -31,7 +31,7 @@ function learn() {
   const nChk = dueChecks().length;
   const seg = `<div class="seg learnseg" role="group" aria-label="Learn"><button aria-pressed="${tab == 'paths'}" data-act="learnTab" data-v="paths">Guided paths${nChk ? ` <span class="badge-inline" aria-label="${esc(nChk + (nChk == 1 ? ' retention check ready' : ' retention checks ready'))}">${nChk}</span>` : ''}</button><button aria-pressed="${tab == 'lib'}" data-act="learnTab" data-v="lib">Shortcut library</button></div>`;
   if (tab == 'paths') {
-    document.querySelector('#main').innerHTML = `<div class="hd"><h1>Learn${ib('l.path')}</h1></div>${seg}
+    document.querySelector('#main').innerHTML = `<div class="hd"><h1>Learn${ib('l.path')}</h1>${S.sessions.length ? `<div class="btns"><button class="btn" data-act="aiNextPath">${icon('sparkle')} AI: which path next?</button></div>` : ''}</div>${seg}
     <p class="mu" style="margin:14px 0 16px;max-width:64ch">A path takes one skill from the basics to a timed mastery test. Every stage teaches, shows a worked example, lets you practise, then checks what you can do alone. Passing a check unlocks the next stage, and two later checks (a day and a week on) test what you still remember.</p>${pathsGrid()}`;
     return;
   }

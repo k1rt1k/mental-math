@@ -33,6 +33,13 @@ export function describeGap(correct, typed) {
 const str = (v, n = 80) => String(v ?? '').replace(/[\u0000-\u001f]+/g, ' ').trim().slice(0, n);
 const pct = (x) => (Number.isFinite(+x) ? Math.round(+x) : null);
 
+/** One missed question as a bullet: the question, what was typed, the app-computed gap and the app-verified method. */
+function missLine(m) {
+  const q = str(m.q, 60), a = str(m.answer ?? m.a, 30), ty = m.typed ?? m.ty ?? '';
+  const g = describeGap(a, ty);
+  return `- **${q} = ${a}**${ty !== '' ? ` · typed ${str(ty, 20)}${g ? ` (${g})` : ''}` : ' · skipped or timed out'}${m.method ? `\n  - Method: ${str(m.method, 200)}` : ''}`;
+}
+
 /**
  * What the app can say about a piece of the learner's data WITHOUT an AI. Used when Gemini is unavailable.
  * Everything here is measured or computed, never a guess about why a mistake happened.
@@ -40,14 +47,10 @@ const pct = (x) => (Number.isFinite(+x) ? Math.round(+x) : null);
  */
 export function localInsight(action, summary = {}, context = null) {
   if (['skill', 'facts', 'nexttrick', 'session'].includes(action)) return localInsight2(action, summary, context);
+  if (['lesson', 'pathrun', 'nextpath', 'week'].includes(action)) return localInsight3(action, summary, context);
   const ctx = context && typeof context === 'object' ? context : {};
   const head = (t) => `### ${t} · local view (Gemini unavailable)\n\n`;
   const foot = '\n\nBuilt by the app from your recorded data. No AI was used, so there is no pattern diagnosis.';
-  const missLine = (m) => {
-    const q = str(m.q, 60), a = str(m.answer ?? m.a, 30), ty = m.typed ?? m.ty ?? '';
-    const g = describeGap(a, ty);
-    return `- **${q} = ${a}**${ty !== '' ? ` · typed ${str(ty, 20)}${g ? ` (${g})` : ''}` : ' · skipped or timed out'}${m.method ? `\n  - Method: ${str(m.method, 200)}` : ''}`;
-  };
   if (action === 'debrief') {
     const miss = Array.isArray(ctx.missed) ? ctx.missed.slice(0, 5) : [];
     const slow = Array.isArray(ctx.slowest) ? ctx.slowest.slice(0, 3) : [];
@@ -160,6 +163,62 @@ export function localInsight2(action, summary = {}, context = null) {
     if (sk.length >= 2) lines.push(`- **Weakest skill here:** ${str(sk[0].skill, 30)} (${sk[0].correct}/${sk[0].tried}). **Strongest:** ${str(sk[sk.length - 1].skill, 30)} (${sk[sk.length - 1].correct}/${sk[sk.length - 1].tried}).`);
     else if (arr(ctx.perSkill).length) lines.push('- Too few answers per skill in this session to rank them.');
     return head('Session recap') + lines.join('\n') + foot;
+  }
+  return null;
+}
+
+/**
+ * Local reads for the guided-path lesson, a finished path run, the next-path pick and the week sheet.
+ * A lesson falls back to the app's own rule and worked examples; the rest are measured numbers only, never a guessed cause.
+ */
+export function localInsight3(action, summary = {}, context = null) {
+  const ctx = context && typeof context === 'object' ? context : {};
+  const head = (t) => `### ${t} · local view (Gemini unavailable)\n\n`;
+  const foot = '\n\nBuilt by the app from your recorded data. No AI was used, so there is no pattern diagnosis.';
+  const arr = (v) => (Array.isArray(v) ? v.filter((x) => x && typeof x === 'object') : []);
+  const strs = (v) => (Array.isArray(v) ? v.filter((x) => typeof x === 'string' && x.trim()) : []);
+  const num = (v) => (v === null || v === undefined || v === '' || !Number.isFinite(+v) ? null : +v);
+  const sgn = (d) => (d > 0 ? '+' : d < 0 ? '−' : '±') + Math.abs(d);
+  if (action === 'lesson') {
+    if (!ctx.rule && !ctx.title) return null;
+    const ex = strs(ctx.examples).slice(0, 2);
+    const lines = [];
+    if (ctx.title) lines.push(`**${str(ctx.title, 80)}**${ctx.goal ? ': ' + str(ctx.goal, 120) : ''}`);
+    if (ctx.rule) lines.push(`**Rule:** ${str(ctx.rule, 120)}`);
+    if (ex.length) lines.push('**Worked examples from the lesson:**\n' + ex.map((e) => `- ${str(e, 240)}`).join('\n'));
+    return head('Stage lesson') + lines.join('\n\n') + '\n\nThese are the lesson’s own examples, written and checked by the app. No AI was used, so this is not a new explanation.';
+  }
+  if (action === 'pathrun') {
+    if (!Number.isFinite(+ctx.questions)) return null;
+    const lines = [`- **${str(ctx.run || 'Run', 40)}:** ${num(ctx.firstTryCorrect) ?? '?'} of ${ctx.questions} first-try correct${num(ctx.needed) ? ` (${ctx.needed} needed)` : ''}${num(ctx.paceVsPar) != null ? `, pace ${ctx.paceVsPar}× par${num(ctx.paceLimit) ? ` (limit ${ctx.paceLimit}×)` : ''}` : ''}.${ctx.verdict ? ' Verdict: ' + str(ctx.verdict, 60) + '.' : ''}`];
+    const help = [num(ctx.hintedAnswers) ? `${ctx.hintedAnswers} with a hint` : '', num(ctx.slippedThenRight) ? `${ctx.slippedThenRight} corrected after a slip` : ''].filter(Boolean);
+    if (help.length) lines.push('- **Not counted as first try:** ' + help.join(', ') + '.');
+    const miss = arr(ctx.missed).slice(0, 5);
+    if (miss.length) lines.push(`- **Missed:**\n${miss.map(missLine).map((l) => '  ' + l.replace(/\n/g, '\n  ')).join('\n')}`);
+    const shared = sharedGap(miss);
+    if (shared) lines.push(`- **Shared size of error:** ${shared}.`);
+    const slow = arr(ctx.slowest).slice(0, 3);
+    if (slow.length) lines.push('- **Slowest:** ' + slow.map((x) => `${str(x.q, 40)} (${x.sec} s${num(x.parSec) ? `, par ${x.parSec} s` : ''})`).join(', ') + '.');
+    if (ctx.stageRule) lines.push(`- **Stage rule:** ${str(ctx.stageRule, 120)}`);
+    return head('Run review') + lines.join('\n') + foot;
+  }
+  if (action === 'nextpath') {
+    const rows = arr(ctx.paths).filter((p) => p.skill && p.kind);
+    if (!rows.length) return null;
+    const order = { ready: 0, continue: 1, start: 2 };
+    const pick = rows.filter((p) => p.kind in order).sort((a, b) => order[a.kind] - order[b.kind] || (num(a.rating) ?? 999) - (num(b.rating) ?? 999)).slice(0, 2);
+    if (!pick.length) return head('Next path') + 'Every path is mastered or waiting for its retention checks, so there is nothing new to start.' + foot;
+    const why = (p) => (p.kind === 'ready' ? 'a retention check is ready now' : p.kind === 'continue' ? `in progress, stage ${num(p.stage) ?? '?'} of 5` : `not started${num(p.rating) != null ? ` · rating ${p.rating}` : ''}`);
+    return head('Next path') + pick.map((p) => `- **${str(p.skill, 40)}** · ${why(p)}`).join('\n') + '\n\nOrdered by the app: a ready retention check, then a path in progress, then the lowest-rated skill not yet started.' + foot;
+  }
+  if (action === 'week') {
+    if (!Number.isFinite(+ctx.answers) || !num(ctx.sessions)) return null;
+    const lines = [`- **This week:** ${num(ctx.daysPracticed) ?? '?'} of 7 days, ${ctx.sessions} session${ctx.sessions == 1 ? '' : 's'}, ${ctx.answers} answers, ${num(ctx.accuracyPct) ?? '?'}% accurate, ${num(ctx.minutes) ?? '?'} min.`];
+    const lw = ctx.lastWeek && typeof ctx.lastWeek === 'object' ? ctx.lastWeek : null;
+    if (lw && num(lw.sessions)) lines.push(`- **Against last week:** answers ${sgn(ctx.answers - lw.answers)}, accuracy ${sgn(ctx.accuracyPct - lw.accuracyPct)} pts, minutes ${sgn(ctx.minutes - lw.minutes)}.`);
+    else lines.push('- **Against last week:** nothing to compare yet.');
+    if (ctx.biggestGain && ctx.biggestGain.skill) lines.push(`- **Biggest gain:** ${str(ctx.biggestGain.skill, 30)} +${num(ctx.biggestGain.by) ?? '?'}.`);
+    return head('Your week') + lines.join('\n') + foot;
   }
   return null;
 }

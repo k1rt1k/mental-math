@@ -16,8 +16,9 @@ npm test                     # includes the same check
 ## Current backend contract
 This section describes the deployed backend as it is today; the release history is in [CHANGELOG.md](CHANGELOG.md).
 - Fixed Netlify Blobs initialization: the documented API is `getStore(storeName)`. Strong consistency remains requested on `getWithMetadata` reads.
-- Added a deployment fingerprint to `GET /api/ai`: `buildVersion: "14.74"` and response header `x-mental-math-ai-version: 14.74`.
+- Added a deployment fingerprint to `GET /api/ai`: `buildVersion: "14.75"` and response header `x-mental-math-ai-version: 14.75`.
 - Exposes the active model allow-list and exact application safety policy in the diagnostic response.
+- Added AI actions `lesson`, `pathrun`, `nextpath` and `week` (guided paths and the week sheet). They use the same allow-list, budget and fallbacks as every other action.
 - Keeps Gemini 3.5 Flash-Lite primary and Gemini 3.1 Flash-Lite as the only backup.
 - Keeps the shared 300-upstream-attempt Pacific-day budget and independent 12 RPM rolling windows per model.
 - Keeps the single-device learner architecture, existing progress/sync behavior, AI Coach, mobile navigation and mobile Coach layout.
@@ -50,7 +51,7 @@ The JSON must include:
 
 ```json
 {
-  "buildVersion": "14.74",
+  "buildVersion": "14.75",
   "defaultModel": "gemini-3.5-flash-lite",
   "models": ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite"],
   "budgetPolicy": {
@@ -60,7 +61,7 @@ The JSON must include:
 }
 ```
 
-The `budgetPolicy` object also includes the model list. If `buildVersion` is absent or not `14.74`, the new function bundle is not the one currently serving the site; redeploy the full project root to the correct linked Netlify site.
+The `budgetPolicy` object also includes the model list. If `buildVersion` is absent or not `14.75`, the new function bundle is not the one currently serving the site; redeploy the full project root to the correct linked Netlify site.
 
 ## Modes worth knowing about
 - **Flash** (Home): a chain of flashing numbers with a running total. Visual only, so screen readers are not told the numbers. The answer uses the number pad; Pause and Esc stop a run; each setting keeps its own best (on this device). A run is saved as a session of kind `flash`: it keeps the streak going, counts toward the daily goal at 3 or more rounds right, has no skill ratings and stays out of the pace charts.

@@ -2,7 +2,7 @@
 import { S } from './state.js';
 import { IDS, SK } from './engine.js';
 import { esc, ymd, dayAgo } from './util.js';
-import { streak, lvAgo, days } from './stats.js';
+import { streak, lvAgo, days, modeLabel } from './stats.js';
 
 const DAY = 864e5;
 const sum = (xs, f) => xs.reduce((q, x) => q + f(x), 0);
@@ -17,6 +17,20 @@ export function weekData(now = Date.now()) {
   const dly = Object.entries(S.daily || {}).filter(([d]) => d >= ymd(now - 6 * DAY) && d <= ymd(now)).map(([d, v]) => [d, v]).sort((a, b) => b[1] - a[1])[0];
   const fl = cur.filter((s) => s.m == 'flash');
   return { empty: !cur.length, ...c, prev: p, days, streak: streak(), gain: gains[0] && gains[0][1] >= 1 ? { id: gains[0][0], by: Math.round(gains[0][1]) } : null, daily: dly ? { day: dly[0], pts: dly[1] } : null, flash: fl.length ? { runs: fl.length, best: Math.max(...fl.map((s) => s.pts)) } : null };
+}
+/** What the AI is told about the week, in the shape the `week` action expects: the same numbers the This week sheet shows. Pure; `now` is a parameter so tests can fix the date. */
+export function weekAiContext(now = Date.now()) {
+  const W = weekData(now), D = weekDays(now), DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const modes = {};
+  S.sessions.filter((s) => s.t >= now - 7 * DAY && s.t <= now).forEach((s) => { const m = modeLabel(s.m); modes[m] = (modes[m] || 0) + 1; });
+  return {
+    daysPracticed: W.days, sessions: W.sessions, answers: W.n, accuracyPct: W.acc, minutes: W.min, streakDays: W.streak,
+    ...(W.prev.sessions > 0 ? { lastWeek: { sessions: W.prev.sessions, answers: W.prev.n, accuracyPct: W.prev.acc, minutes: W.prev.min } } : {}),
+    perDay: D.map((d) => ({ day: DOW[new Date(d.t).getDay()] + (d.today ? ' (today)' : ''), answers: d.n, accuracyPct: d.n ? d.acc : null })),
+    biggestGain: W.gain ? { skill: SK[W.gain.id].n, by: W.gain.by } : null,
+    bestDaily: W.daily ? { points: W.daily.pts } : null,
+    modes,
+  };
 }
 /** One calendar day ('YYYY-MM-DD'): its sessions and totals. `D` is the set of practised days, passed in so a loop does not rebuild it. */
 export function dayInfo(k, now = Date.now(), D = days()) {

@@ -68,6 +68,6 @@ test('the live self-test routes regular, probe and latency calls through the pac
   assert.equal((src.match(/await pacer\.acquire\(model\)/g) || []).length, 3, 'regular cases, thinking probe, latency runs');
   assert.match(src, /new ModelPacer\(\{[\s\S]*limit: RPM_LIMIT/);
   assert.match(src, /--actions=/);
-  assert.match(src, /15 regular action cases per model/);
+  assert.match(src, /19 regular action cases per model/);
   assert.doesNotMatch(src, /setTimeout\(res,\s*(1200|1500)\)/, 'fixed delays no longer stand in for pacing');
 });

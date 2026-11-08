@@ -10,6 +10,7 @@ import { dialog } from './ui.js';
 import { esc, ymd } from './util.js';
 import { renderRich } from './richtext.js';
 import { localInsight, focusPattern } from './aiLocal.js';
+import { pathsSummary } from './pathAi.js';
 
 export const AI_MODELS = [
   { id: 'gemini-3.5-flash-lite', name: 'Gemini 3.5 Flash-Lite', tier: 'Free Tier', desc: 'Primary: fastest in the live self-test' },
@@ -184,6 +185,7 @@ export function buildCompactSummary(st = S) {
     lastPracticedDaysAgo, activeDays14, todaySessions: todayCount(),
     commonErrors: commonErrors || 'None logged',
     dueCount,
+    ...pathsSummary(),
     goal: st.goal || 2,
     skillsList,
   };
@@ -283,7 +285,7 @@ export function setCachedExplanation(question, text, model = getSelectedModel(),
 // Actions that analyse a specific chunk of the learner's data. Their Gemini answers are cached
 // on this device for a few hours so reopening the same sheet costs no quota.
 const inflight = new Map();   // identical requests (a double tap) share one upstream call
-const CONTEXT_ACTIONS = new Set(['debrief', 'trick', 'mistakes', 'progress', 'recommend', 'skill', 'facts', 'nexttrick', 'session']);
+const CONTEXT_ACTIONS = new Set(['debrief', 'trick', 'mistakes', 'progress', 'recommend', 'skill', 'facts', 'nexttrick', 'session', 'lesson', 'pathrun', 'nextpath', 'week']);
 /** Late-bound hooks so ai.js never imports a view (the Coach registers `followUp`). */
 export const aiHooks = {};
 const hashKey = (str) => { let h = 5381; for (let i = 0; i < str.length; i++) h = ((h * 33) ^ str.charCodeAt(i)) >>> 0; return h.toString(36) + str.length; };
@@ -388,7 +390,7 @@ export async function callAi({ action = 'coach', question = null, message = '', 
   }
 
   // A saved Gemini answer for the same data is served first, so it still works offline or after the daily budget is used up.
-  const ctxKey = CONTEXT_ACTIONS.has(action) ? JSON.stringify([action, model, message, context, summary.skillsList, summary.patterns, summary.recentMisses, summary.dueCount, summary.goal, summary.sessionsCount]) : '';
+  const ctxKey = CONTEXT_ACTIONS.has(action) ? JSON.stringify([action, model, message, context, summary.skillsList, summary.patterns, summary.recentMisses, summary.dueCount, summary.goal, summary.sessionsCount, summary.paths]) : '';
   if (ctxKey && !forceRefresh) {
     const hit = getCtxCache(ctxKey);
     if (hit) return { ok: true, text: hit.text, structured: hit.structured || null, cached: true, source: 'gemini', model: hit.model || model, freeTier: true };
@@ -484,7 +486,7 @@ export async function callAi({ action = 'coach', question = null, message = '', 
  */
 function generateClientOfflineFallback(action, summary, question, message, context = null) {
   const weak = summary.weaknesses || 'not enough recorded data';
-  const insight = ['debrief', 'mistakes', 'progress', 'skill', 'facts', 'nexttrick', 'session'].includes(action) ? localInsight(action, summary, context) : null;
+  const insight = ['debrief', 'mistakes', 'progress', 'skill', 'facts', 'nexttrick', 'session', 'lesson', 'pathrun', 'nextpath', 'week'].includes(action) ? localInsight(action, summary, context) : null;
   if (insight) return insight;
 
   if (action === 'coach' || action === 'analyze') {
