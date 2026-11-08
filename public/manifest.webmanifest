@@ -11,8 +11,8 @@
     "games"
   ],
   "display": "standalone",
-  "background_color": "#0c1017",
-  "theme_color": "#0c1017",
+  "background_color": "#0b0813",
+  "theme_color": "#0b0813",
   "icons": [
     {
       "src": "icon-192.png",

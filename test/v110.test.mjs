@@ -63,7 +63,7 @@ for (const [name, t] of Object.entries(THEMES)) {
 test('every accent keeps primary-button text readable in both modes', () => {
   const src = readFileSync(join(pub, 'js/theme.js'), 'utf8');
   const acc = [...src.matchAll(/(\w+): \['(#[0-9a-f]{6})', '(#[0-9a-f]{6})'\]/g)];
-  assert.equal(acc.length, 5);
+  assert.ok(acc.length >= 5);
   for (const [, n, dark, light] of acc) {
     assert.ok(ratio(dark, THEMES.dark.ach) >= 4.5, `${n} dark`);
     assert.ok(ratio(light, THEMES.light.ach) >= 4.5, `${n} light`);

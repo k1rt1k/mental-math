@@ -1098,6 +1098,39 @@ dialog.dlg form { overscroll-behavior: contain; -webkit-overflow-scrolling: touc
 .play.nt .tbar:not(.pbar) { display: none; }
 .play.nq .qt, .play.nq .qtl { display: none; }
 
+/* ---------- background skins (v14.85) ----------
+   A skin tints the page and card surfaces. Dark and Light each have their own values; Black stays pure black and Classic is the original
+   neutral look (no rule at all). Text, ok, bad and gold keep their tokens, so contrast is unchanged (test v1485 checks 4.5:1 on every surface). */
+[data-skin=aurora][data-theme=dark] { --bg: #0b0813; --bg2: #0f0b1a; --c: #171126; --c2: #1f1833; --c3: #2a2142; --seg-on: #2b2244; --grid: rgba(190, 170, 255, .06); --glow: 16%; }
+[data-skin=midnight][data-theme=dark] { --bg: #060b16; --bg2: #0a1020; --c: #0f172b; --c2: #162038; --c3: #1f2b49; --seg-on: #1f2b49; --grid: rgba(140, 170, 255, .06); --glow: 13%; }
+[data-skin=forest][data-theme=dark] { --bg: #07100c; --bg2: #0a150f; --c: #0f1c15; --c2: #15271d; --c3: #1e3427; --seg-on: #1e3427; --grid: rgba(150, 230, 180, .055); --glow: 12%; }
+[data-skin=mocha][data-theme=dark] { --bg: #100c09; --bg2: #15100c; --c: #1d1611; --c2: #271e17; --c3: #342920; --seg-on: #342920; --grid: rgba(255, 200, 150, .055); --glow: 12%; }
+[data-skin=ocean][data-theme=dark] { --bg: #061116; --bg2: #09171d; --c: #0e1f27; --c2: #142a34; --c3: #1d3844; --seg-on: #1d3844; --grid: rgba(120, 220, 235, .055); --glow: 13%; }
+[data-skin=aurora][data-theme=light] { --bg: #f6f3fb; --bg2: #fcfaff; --c2: #f0ebf8; --c3: #e6dff3; --grid: rgba(110, 80, 200, .08); }
+[data-skin=midnight][data-theme=light] { --bg: #f1f4fa; --bg2: #f9fbff; --c2: #e9eef7; --c3: #dde4f1; --grid: rgba(50, 80, 170, .08); }
+[data-skin=forest][data-theme=light] { --bg: #f1f5f0; --bg2: #f8fbf7; --c2: #e9efe7; --c3: #dbe5d8; --grid: rgba(40, 110, 70, .08); }
+[data-skin=mocha][data-theme=light] { --bg: #f7f2ec; --bg2: #fcf9f5; --c2: #f3ede5; --c3: #e6dbce; --grid: rgba(140, 90, 40, .08); }
+[data-skin=ocean][data-theme=light] { --bg: #eff6f7; --bg2: #f8fcfc; --c2: #e4f0f2; --c3: #d6e6e9; --grid: rgba(20, 110, 130, .08); }
+
+/* Settings: quick looks, skin tiles, the custom colour swatch */
+.looks { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.look { display: inline-flex; align-items: center; gap: 9px; min-height: 40px; padding: 6px 14px 6px 9px; border-radius: 999px; border: 1px solid var(--ln2); background: var(--c2); color: var(--tx); font: 600 var(--t-sm)/1 var(--sans); cursor: pointer; transition: transform .3s var(--soft, ease), box-shadow .25s, border-color .25s; }
+.look .lk { display: inline-flex; } .look .lk i { width: 16px; height: 16px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(128, 128, 128, .35); } .look .lk i + i { margin-left: -5px; }
+.look[aria-checked=true] { border-color: var(--ac); box-shadow: 0 0 0 1px var(--ac); background: color-mix(in srgb, var(--ac) 12%, var(--c2)); }
+.skins { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 12px 10px; margin-top: 8px; }
+.skinb { display: grid; gap: 7px; justify-items: stretch; text-align: center; padding: 0; border: 0; background: none; color: var(--mu); font: 600 var(--t-xs)/1.2 var(--sans); cursor: pointer; }
+.skinb .sb { position: relative; height: 46px; border-radius: 12px; border: 1px solid var(--ln2); background: var(--sb-bg); overflow: hidden; transition: transform .3s var(--soft, ease), box-shadow .25s; }
+.skinb .sb::before { content: ""; position: absolute; left: 9px; top: 9px; width: 16px; height: 6px; border-radius: 3px; background: var(--ac); }
+.skinb .sb::after { content: ""; position: absolute; left: 9px; right: 9px; bottom: 8px; height: 12px; border-radius: 6px; background: var(--sb-c); }
+.skinb[aria-checked=true] { color: var(--tx); } .skinb[aria-checked=true] .sb { box-shadow: 0 0 0 2px var(--c), 0 0 0 4px var(--ac); }
+.swatch.cust { position: relative; display: inline-grid; place-items: center; overflow: hidden; background: conic-gradient(from 90deg, #ff6b6b, #ffd93d, #6bcb77, #4d96ff, #c77dff, #ff6b6b); }
+.swatch.cust input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; padding: 0; }
+.swatch.cust .ic { width: 16px; height: 16px; color: #fff; stroke-width: 2.4; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .55)); pointer-events: none; }
+.swatch.cust.on { overflow: visible; box-shadow: 0 0 0 2px var(--c), 0 0 0 4px currentColor; }
+.swatch.cust:focus-within { outline: 2px solid var(--ac); outline-offset: 4px; }
+@media (hover: hover) { .look:hover, .skinb:hover .sb { transform: translateY(-1px); } .swatch.cust:hover { transform: scale(1.14); } }
+.skins-note { margin: 8px 0 0; font-size: var(--t-xs); color: var(--mu); }
+
 /* ===== First-visit welcome (js/ui.js welcomeDlg) =====
    The one memorable thing is the question board answering itself: it is the app's own signature (graph paper, soft serif, mono answer, pace line),
    so the welcome shows the product instead of describing it. Everything else is quiet. Only tokens, so every theme and contrast mode follows. */
@@ -1149,3 +1182,43 @@ dialog.dlg.welcome:focus { outline: none; }
 @media (max-height: 640px) { .wl-hero { padding-block: 22px 14px; } .wl-board { padding-top: 34px; } .wl-main { padding-top: 16px; } .wl-sub { display: none; } .wl-acts { margin-top: 14px; } }
 @media (prefers-reduced-motion: reduce) { .wl-board, .wl-q, .wl-a span, .wl-qt i, .wl-ok { animation: none !important; } .wl-cur { animation: blink 1.05s steps(1) infinite; } }
 [data-motion=reduce] .wl-board, [data-motion=reduce] .wl-q, [data-motion=reduce] .wl-a span, [data-motion=reduce] .wl-qt i, [data-motion=reduce] .wl-ok { animation: none !important; }
+
+/* ---------- icon polish (pass 11): heading badges, result marks, delta arrows, stat-card glyphs ---------- */
+.hic { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 9px; margin-right: 10px; vertical-align: -6px; flex: none; color: var(--ac); background: color-mix(in srgb, var(--ac) 14%, transparent); }
+.hic .ic { width: 16px; height: 16px; stroke-width: 2.1; }
+.hic.gd { color: var(--gd); background: color-mix(in srgb, var(--gd) 16%, transparent); }
+.hic.ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 15%, transparent); }
+.hic.bad { color: var(--bad); background: color-mix(in srgb, var(--bad) 14%, transparent); }
+h2.sg .hic { width: 30px; height: 30px; }
+.chead .hic { display: none; }
+.mk { display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; vertical-align: -3px; margin-right: 6px; flex: none; color: var(--bg); background: currentColor; position: relative; }
+.mk .ic { position: absolute; inset: 0; margin: auto; width: 10px; height: 10px; stroke-width: 3; stroke: var(--bg); }
+.mk.ok { color: var(--ok); } .mk.bad { color: var(--bad); }
+.tri { display: inline-grid; place-items: center; vertical-align: -1px; margin-right: 1px; }
+.tri .ic { width: 11px; height: 11px; stroke-width: 1.6; stroke-linejoin: round; }
+.tri.up { color: var(--ok); } .tri.dn { color: var(--bad); }
+.stat .l { display: flex; align-items: center; gap: 7px; }
+.stat .l > .ic { width: 15px; height: 15px; color: var(--ac-ink); flex: none; }
+.pill .mk, .pill .tri { margin-right: 4px; }
+.pill .mk { width: 14px; height: 14px; } .pill .mk .ic { width: 9px; height: 9px; }
+h3 .hic { width: 24px; height: 24px; border-radius: 8px; margin-right: 9px; vertical-align: -5px; } h3 .hic .ic { width: 14px; height: 14px; }
+.bmi .ic { width: 12px; height: 12px; color: var(--ok); }
+.fdot { display: inline-block; width: 11px; height: 11px; margin: 0 3px; border-radius: 50%; box-sizing: border-box; border: 2px solid var(--mu2); vertical-align: -1px; }
+.fdot.on { background: var(--ok); border-color: var(--ok); }
+h2.sg { display: block; grid-template-columns: none; gap: 0; }
+.sjump .chip .ic { width: 15px; height: 15px; margin-right: 0; vertical-align: -3px; color: var(--ac-ink); }
+.sk .nm.g::before { display: none; }
+.skg { flex: none; display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 7px; font: 700 13px/1 var(--sans, inherit); font-style: normal; letter-spacing: 0; color: color-mix(in srgb, var(--sc) var(--fill-mix, 80%), var(--ink-base)); background: color-mix(in srgb, var(--sc) 18%, transparent); }
+.skg.g3 { font-size: 8.5px; font-weight: 750; }
+.eyebrow > .ic { width: 14px; height: 14px; margin-right: 6px; vertical-align: -2px; color: var(--gd); }
+
+/* ---------- icon pass 13: Coach card labels, the streak sheet and empty states ---------- */
+.cpanel-h .eyebrow > .ic, .cdrill .eyebrow > .ic { color: var(--ac-ink); }
+.stk-h h4 { display: flex; align-items: center; gap: 7px; }
+.stk-h h4 .ic { width: 15px; height: 15px; flex: none; color: var(--ac-ink); }
+.empty.ei::before { display: none; }
+.eic { display: grid; place-items: center; width: 56px; height: 56px; margin: 0 auto 14px; border-radius: 16px; border: 1px solid var(--ln); color: var(--ac-ink); background: color-mix(in srgb, var(--ac) 12%, var(--c2)); }
+.eic .ic { width: 26px; height: 26px; }
+.empty.crash .eic { color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, var(--c2)); }
+.sempty .eic { width: 44px; height: 44px; border-radius: 14px; margin-bottom: 10px; } .sempty .eic .ic { width: 22px; height: 22px; }
+

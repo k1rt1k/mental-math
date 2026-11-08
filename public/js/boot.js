@@ -1,14 +1,28 @@
 // Runs before first paint so there is no flash of the wrong theme. Classic script (no modules) on purpose.
 (function () {
+  var D = document.documentElement;
   try {
     var stateKey = localStorage['mmTrainer.activeUser'] === '2' ? 'mmTrainer.v1.user_2' : 'mmTrainer.v1';
-    var S = JSON.parse(localStorage[stateKey] || '{}'), D = document.documentElement;
+    var S = JSON.parse(localStorage[stateKey] || '{}');
     var th = S.theme || (matchMedia('(prefers-color-scheme:light)').matches ? 'light' : 'dark');
     D.dataset.theme = th;
     D.dataset.font = S.font || 'serif';
-    var A = { blue: ['#7aa8ff', '#2f63d6'], violet: ['#b69cff', '#6d46d6'], teal: ['#4fd1c5', '#0f857b'], rose: ['#ff8fb1', '#d1366b'], amber: ['#ffc15c', '#a05d00'] };
-    D.style.setProperty('--ac', (A[S.acc] || A.blue)[th == 'light' ? 1 : 0]);
-  } catch (e) { /* first run */ }
+    // A device whose first visit is with this release (nothing saved yet) gets the new default look; everyone else keeps what they had until they choose.
+    var flag = 'mm.look2:' + stateKey;
+    if (localStorage[stateKey] == null && localStorage[flag] == null) localStorage[flag] = '1';
+    var l2 = localStorage[flag] === '1';
+    D.dataset.look2 = l2 ? '1' : '';
+    // Keep these tables in step with ACC and SKINS in theme.js (a test checks it).
+    var A = { grape: ['#a07bff', '#6a3df0'], blue: ['#7aa8ff', '#2f63d6'], violet: ['#b69cff', '#6d46d6'], teal: ['#4fd1c5', '#0f857b'], rose: ['#ff8fb1', '#d1366b'], amber: ['#ffc15c', '#a05d00'], coral: ['#ff8a65', '#c93e12'], emerald: ['#34d399', '#0a7a50'], sky: ['#4cc9f0', '#0a6c9c'], fuchsia: ['#f472d0', '#b0208c'], lime: ['#a3e635', '#4d7c0f'], indigo: ['#818cf8', '#4338ca'], slate: ['#cbd5e1', '#334155'] };
+    var K = { aurora: ['#0b0813', '#f6f3fb'], midnight: ['#060b16', '#f1f4fa'], forest: ['#07100c', '#f1f5f0'], mocha: ['#100c09', '#f7f2ec'], ocean: ['#061116', '#eff6f7'], classic: ['#0c1017', '#f3f4f8'] };
+    var own = function (o, k) { return typeof k === 'string' && Object.prototype.hasOwnProperty.call(o, k); };
+    var skin = own(K, S.skin) ? S.skin : l2 ? 'aurora' : 'classic';
+    D.dataset.skin = skin;
+    var pair = S.acc === 'custom' && /^#[0-9a-f]{6}$/i.test(S.accHex || '') ? null : A[own(A, S.acc) ? S.acc : l2 ? 'grape' : 'blue'];
+    if (pair) D.style.setProperty('--ac', pair[th == 'light' ? 1 : 0]);   // a custom colour is worked out by theme.js a moment later
+    var m = document.querySelector('meta[name=theme-color]');
+    if (m) m.content = th == 'light' ? K[skin][1] : th == 'black' ? '#000000' : K[skin][0];
+  } catch (e) { D.dataset.look2 = '1'; /* first run, or storage is blocked: show the new default */ }
 })();
 
 // Blank-screen watchdog. If the app has drawn nothing a few seconds after load (a script failed, or a stale cached file is broken), drop this

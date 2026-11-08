@@ -49,7 +49,7 @@ const SEND = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M1
 
 /** Skill ratings as bars, weakest first (the two the coach would drill are marked). Rating is level x 100 on a 12-level scale. */
 const skillBars = () => {
-  if (!(S.sessions && S.sessions.length)) return '<div class="cempty"><b>No ratings yet</b><span>Every skill starts at a default level. Your real ratings appear after your first session.</span></div>';
+  if (!(S.sessions && S.sessions.length)) return `<div class="cempty"><span class="cbadge lg" aria-hidden="true">${icon('chart')}</span><b>No ratings yet</b><span>Every skill starts at a default level. Your real ratings appear after your first session.</span></div>`;
   const weak = new Set(weakestSkills(2));
   return `<div class="cskills" role="list">${IDS.map((k) => ({ k, v: Math.round(S.sk[k].lv * 100) })).sort((a, b) => a.v - b.v).map(({ k, v }) =>
     `<div class="csk${weak.has(k) ? ' weak' : ''}" role="listitem" style="--sc:${COL[k]}"><span class="nm"><i class="dot"></i>${esc(SK[k].n)}${weak.has(k) ? '<em>focus</em>' : ''}</span><span class="trk" aria-hidden="true"><i style="width:${Math.max(3, Math.min(100, v / 12))}%"></i></span><b class="num">${v}</b></div>`).join('')}</div>`;
@@ -57,7 +57,7 @@ const skillBars = () => {
 /** The most frequent kinds of slip, each with a bar scaled to the most common one. */
 const slipList = () => {
   const top = Object.entries(S.errs || {}).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]).slice(0, 5);
-  if (!top.length) return '<div class="cempty"><b>No recurring slips yet</b><span>Keep practising. Patterns show up after a few sessions.</span></div>';
+  if (!top.length) return `<div class="cempty"><span class="cbadge lg" aria-hidden="true">${icon('repeat')}</span><b>No recurring slips yet</b><span>Keep practising. Patterns show up after a few sessions.</span></div>`;
   const max = top[0][1];
   return `<div class="cslips" role="list">${top.map(([k, n]) => `<div class="cslip" role="listitem"><span class="nm">${esc(ERRL[k] ? ERRL[k][0] : k)}</span><span class="trk" aria-hidden="true"><i style="width:${Math.max(6, Math.round((n / max) * 100))}%"></i></span><b class="num">${n}</b></div>`).join('')}</div>`;
 };
@@ -188,7 +188,7 @@ function renderCoachTab(summary, uName) {
   </div>` : ''}
 
   <section class="cpanel">
-    <div class="cpanel-h"><span class="eyebrow">Your performance${ib('c.perf')}</span><span class="mu">${summary.sessionsCount} sessions · ${summary.totalAnswers} answers</span></div>
+    <div class="cpanel-h"><span class="eyebrow">${icon('gauge')}Your performance${ib('c.perf')}</span><span class="mu">${summary.sessionsCount} sessions · ${summary.totalAnswers} answers</span></div>
     <div class="cstats">
       ${stats.map(([ic, v, l]) => `<div class="cstat">${icon(ic)}<b class="num">${v}</b><span>${l}</span></div>`).join('')}
     </div>
@@ -196,12 +196,12 @@ function renderCoachTab(summary, uName) {
   </section>
 
   <div class="cgrid">
-    ${summary.sessionsCount === 0 ? `<details class="cpanel cfold"><summary><span class="eyebrow">Skill ratings${ib('c.slips')}</span><span class="mu">fills in after your first run</span></summary>${skillBars()}</details>` : `<section class="cpanel">
-      <div class="cpanel-h"><span class="eyebrow">Skill ratings${ib('c.slips')}</span></div>
+    ${summary.sessionsCount === 0 ? `<details class="cpanel cfold"><summary><span class="eyebrow">${icon('chart')}Skill ratings${ib('c.slips')}</span><span class="mu">fills in after your first run</span></summary>${skillBars()}</details>` : `<section class="cpanel">
+      <div class="cpanel-h"><span class="eyebrow">${icon('chart')}Skill ratings${ib('c.slips')}</span></div>
       ${skillBars()}
     </section>`}
     <section class="cpanel">
-      <div class="cpanel-h"><span class="eyebrow">Common slips</span><span class="mu">times seen</span></div>
+      <div class="cpanel-h"><span class="eyebrow">${icon('repeat')}Common slips</span><span class="mu">times seen</span></div>
       ${slipList()}
     </section>
   </div>
@@ -232,7 +232,7 @@ function renderRecommendTab(summary) {
       })}
       <div class="cout">
         ${busy ? skeleton('Generating recommendation') : recommendationText ? `
-          ${rec ? `<div class="cdrill" style="--sc:${COL[rec.skill]}"><span class="dot"></span><div><span class="eyebrow">Suggested session</span><b>${rec.durationSec / 60}-min ${esc(SK[rec.skill].n)} drill</b></div><button class="btn primary" data-act="startAiRec">${icon('play', 'fill')} Start</button></div>` : ''}
+          ${rec ? `<div class="cdrill" style="--sc:${COL[rec.skill]}"><span class="dot"></span><div><span class="eyebrow">${icon('timer')}Suggested session</span><b>${rec.durationSec / 60}-min ${esc(SK[rec.skill].n)} drill</b></div><button class="btn primary" data-act="startAiRec">${icon('play', 'fill')} Start</button></div>` : ''}
           ${report(recommendationText, recommendationSource, recommendationMessage, recommendationAt)}`
         : `<div class="cempty"><span class="cbadge lg" aria-hidden="true">${icon('target')}</span><b>No recommendation yet</b><span>Generated on demand, never a canned tip. Or skip the AI and drill your weakest skill right away.</span></div>`}
       </div>
@@ -240,7 +240,7 @@ function renderRecommendTab(summary) {
     </section>
 
     <section class="cpanel cdue${summary.dueCount ? ' has' : ''}">
-      <div class="cpanel-h"><span class="eyebrow">Spaced review${ib('c.review')}</span></div>
+      <div class="cpanel-h"><span class="eyebrow">${icon('history')}Spaced review${ib('c.review')}</span></div>
       <div class="cdue-n"><b class="num">${summary.dueCount}</b><span>${summary.dueCount === 1 ? 'question' : 'questions'} due</span></div>
       <p>${summary.dueCount ? 'Missed questions come back at the right time so they stick.' : 'Nothing due. Missed questions will show up here when it is time to revisit them.'}</p>
       <button class="btn ${summary.dueCount ? 'primary' : ''}" data-act="startReview" ${summary.dueCount === 0 ? 'disabled' : ''}>${icon('book')} Review now${summary.dueCount ? ` (${summary.dueCount})` : ''}</button>

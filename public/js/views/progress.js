@@ -6,7 +6,7 @@ import { factClass, restInfo, weakFacts, ERRL, ctx, streak, week, lvAgo, weakest
 import { spark, bars, heatmap, heatWeeks, sessLabel } from '../charts.js';
 import { register, A, go } from '../nav.js';
 import { drill } from './home.js';
-import { dialog, icon } from '../ui.js';
+import { dialog, icon, hic, tri, mk, eic } from '../ui.js';
 import { start } from './play.js';
 import { showAiSheet } from '../ai.js';
 import { askSkillAi } from '../skillAi.js';
@@ -38,9 +38,9 @@ function progress() {
       ? `Collecting · ${rd.cohort} of ${RETENTION_MIN} pairs${rd.pending ? ` · ${rd.pending} waiting` : ''}`
       : 'Needs questions answered twice, 7 days apart';
   const L = S.sessions.filter(inMode).slice(-range), a = week(0, 7), b = week(7, 14);
-  const dlt = (x, y, u = '') => !b.s ? '' : `<span class="${x >= y ? 'ok' : 'bad'}">${x >= y ? '▲' : '▼'}${Math.abs(Math.round(x - y))}${u}</span>`;
+  const dlt = (x, y, u = '') => !b.s ? '' : `<span class="${x >= y ? 'ok' : 'bad'}">${tri(x >= y)}${Math.abs(Math.round(x - y))}${u}</span>`;
   if (!has) {
-    document.querySelector('#main').innerHTML = `<div class="hd"><h1>Progress</h1></div><div class="card empty"><b>No sessions yet</b>Play a 2-minute session and your charts, ratings and weak spots will appear here.<div style="margin-top:14px"><button class="btn primary" data-go="home">Go practice</button></div></div>`;
+    document.querySelector('#main').innerHTML = `<div class="hd"><h1>Progress</h1></div><div class="card empty ei">${eic('chart')}<b>No sessions yet</b>Play a 2-minute session and your charts, ratings and weak spots will appear here.<div style="margin-top:14px"><button class="btn primary" data-go="home">Go practice</button></div></div>`;
     return;
   }
   const tr = S.sessions.filter((s) => s.m == 'train' && s.dur == 120);
@@ -52,50 +52,50 @@ function progress() {
   const TABS = [['overview', 'Overview'], ['skills', 'Skills'], ['facts', 'Tables'], ['history', 'History']];
   if (!TABS.some(([v]) => v == tab)) tab = 'overview';
   const hs = hourStats();
-  const hourCard = hs.best ? `<h2>When you play best${ib('p.hours')}</h2><div class="card"><div class="hrs">${hs.rows.map((r) => `<div class="hr ${r.l == hs.best.l ? 'top' : ''}"><b>${r.l}</b><span class="num">${r.s ? r.pace + '/min' : '–'}</span><span class="mu">${r.s ? r.acc + '% · ' + r.s + (r.s == 1 ? ' session' : ' sessions') : 'no sessions'}</span></div>`).join('')}</div><div class="mu" style="margin-top:8px">You score highest in the <b class="tx">${hs.best.l.toLowerCase()}</b>. Try your hardest sessions then.</div></div>` : '';
+  const hourCard = hs.best ? `<h2>${hic('clock')}When you play best${ib('p.hours')}</h2><div class="card"><div class="hrs">${hs.rows.map((r) => `<div class="hr ${r.l == hs.best.l ? 'top' : ''}"><b>${r.l}</b><span class="num">${r.s ? r.pace + '/min' : '–'}</span><span class="mu">${r.s ? r.acc + '% · ' + r.s + (r.s == 1 ? ' session' : ' sessions') : 'no sessions'}</span></div>`).join('')}</div><div class="mu" style="margin-top:8px">You score highest in the <b class="tx">${hs.best.l.toLowerCase()}</b>. Try your hardest sessions then.</div></div>` : '';
   const panel = {
     overview: `
   <div class="g g3">
-    <div class="card stat"><button type="button" class="stat-hit" data-act="streakCard" aria-haspopup="dialog" aria-label="Streak details"></button><div class="l">Streak</div>${statB('streak')}<div class="v">${streak()}<span class="s"> days</span></div><div class="s">longest ${c.ls}${restInfo() ? ' ' + restChip(restInfo(), icon, esc) : ''}</div></div>
-    <div class="card stat"><button type="button" class="stat-hit" data-act="ptab" data-v="skills" aria-label="See the rating of every skill"></button><div class="l">Rating</div>${statB('rating')}<div class="v">${Math.round(avgLv() * 100)}</div><div class="s">${esc(rank(Math.round(avgLv() * 100)))}</div></div>
-    <div class="card stat"><button type="button" class="stat-hit" data-act="ptab" data-v="history" aria-label="See your session history"></button><div class="l">Sessions</div><div class="v">${S.sessions.length}</div><div class="s">${c.n.toLocaleString()} ${c.n == 1 ? 'answer' : 'answers'}</div></div>
-    <div class="card stat"><button type="button" class="stat-hit" data-go="notebook" aria-label="Open the Notebook"></button><div class="l">7-day retention</div>${statB('retention')}<div class="v">${ready ? Math.round(rd.retentionRate * 100) + '%' : '–'}</div><div class="s">${retSub}</div>${ms.mastered ? `<div class="s">Mastery: ${Math.round(ms.rate * 100)}% never slipped</div>` : ''}</div>
-    <div class="card stat"><button type="button" class="stat-hit" data-act="ptab" data-v="skills" aria-label="See the skills behind the estimate"></button><div class="l">Zetamac estimate</div>${statB('zeta')}<div class="v">${zDef()}</div><div class="s">× ÷ only ${zMD()}</div></div>
-    <div class="card stat">${tr.length ? `<button type="button" class="stat-hit" data-act="sessInfo" data-v="${esc(tr.reduce((b, s) => (s.pts > b.pts ? s : b)).t)}" aria-label="Open your best 2-minute Train"></button>` : ''}<div class="l">Best 2-min train</div><div class="v">${tr.length ? Math.max(...tr.map((s) => s.pts)) : '–'}</div><div class="s">${tr.length ? Math.max(...tr.map((s) => s.ok)) + ' correct best' : 'play a 2-min Train'}</div></div>
+    <div class="card stat"><button type="button" class="stat-hit" data-act="streakCard" aria-haspopup="dialog" aria-label="Streak details"></button><div class="l">${icon('flame')}Streak</div>${statB('streak')}<div class="v">${streak()}<span class="s"> days</span></div><div class="s">longest ${c.ls}${restInfo() ? ' ' + restChip(restInfo(), icon, esc) : ''}</div></div>
+    <div class="card stat"><button type="button" class="stat-hit" data-act="ptab" data-v="skills" aria-label="See the rating of every skill"></button><div class="l">${icon('trendup')}Rating</div>${statB('rating')}<div class="v">${Math.round(avgLv() * 100)}</div><div class="s">${esc(rank(Math.round(avgLv() * 100)))}</div></div>
+    <div class="card stat"><button type="button" class="stat-hit" data-act="ptab" data-v="history" aria-label="See your session history"></button><div class="l">${icon('list')}Sessions</div><div class="v">${S.sessions.length}</div><div class="s">${c.n.toLocaleString()} ${c.n == 1 ? 'answer' : 'answers'}</div></div>
+    <div class="card stat"><button type="button" class="stat-hit" data-go="notebook" aria-label="Open the Notebook"></button><div class="l">${icon('repeat')}7-day retention</div>${statB('retention')}<div class="v">${ready ? Math.round(rd.retentionRate * 100) + '%' : '–'}</div><div class="s">${retSub}</div>${ms.mastered ? `<div class="s">Mastery: ${Math.round(ms.rate * 100)}% never slipped</div>` : ''}</div>
+    <div class="card stat"><button type="button" class="stat-hit" data-act="ptab" data-v="skills" aria-label="See the skills behind the estimate"></button><div class="l">${icon('gauge')}Zetamac estimate</div>${statB('zeta')}<div class="v">${zDef()}</div><div class="s">× ÷ only ${zMD()}</div></div>
+    <div class="card stat">${tr.length ? `<button type="button" class="stat-hit" data-act="sessInfo" data-v="${esc(tr.reduce((b, s) => (s.pts > b.pts ? s : b)).t)}" aria-label="Open your best 2-minute Train"></button>` : ''}<div class="l">${icon('trophy')}Best 2-min train</div><div class="v">${tr.length ? Math.max(...tr.map((s) => s.pts)) : '–'}</div><div class="s">${tr.length ? Math.max(...tr.map((s) => s.ok)) + ' correct best' : 'play a 2-min Train'}</div></div>
   </div>
   <div class="card insight" style="margin-top:14px"><div class="irow"><span class="mu">Biggest 7-day gain</span><span><button type="button" class="lnk" data-act="skill" data-v="${esc(dl7[0][0])}"><b>${esc(SK[dl7[0][0]].n)}</b></button> <span class="num ok">${dl7[0][1] >= 0 ? '+' : ''}${Math.round(dl7[0][1])}</span></span></div><div class="irow"><span class="mu">Weakest right now</span><button type="button" class="lnk" data-act="skill" data-v="${esc(wk[0])}"><b>${esc(SK[wk[0]].n)}</b></button></div></div>
   <div class="g c2 p4">
-    <div><h2>Overall rating</h2><div class="card">${spark(L.map((s) => (IDS.reduce((q, k) => q + ((s.lv && s.lv[k]) || SK[k].s), 0) / IDS.length) * 100), 'var(--ok)', { labels: L.map(sessLabel) })}</div></div>
-    <div><h2>Pace${ib('p.pace')}</h2><div class="card">${spark(L.map((s) => (s.pts * 60) / s.dur), 'var(--ac)', { labels: L.map(sessLabel), unit: '/min' })}</div></div>
-    <div><h2>Accuracy${ib('p.acc')}</h2><div class="card">${spark(L.map((s) => pct(s.ok, Math.max(1, s.n))), '#ff9f5a', { unit: '%', labels: L.map(sessLabel) })}</div></div>
-    <div><h2>Answers per day</h2><div class="card">${(() => { const D = [...Array(14)].map((_, i) => ymd(dayAgo(13 - i))); return bars(D.map((d) => S.sessions.filter((s) => ymd(s.t) == d).reduce((q, s) => q + s.n, 0)), 'var(--ac)', D); })()}</div></div>
+    <div><h2>${hic('trendup')}Overall rating</h2><div class="card">${spark(L.map((s) => (IDS.reduce((q, k) => q + ((s.lv && s.lv[k]) || SK[k].s), 0) / IDS.length) * 100), 'var(--ok)', { labels: L.map(sessLabel) })}</div></div>
+    <div><h2>${hic('gauge')}Pace${ib('p.pace')}</h2><div class="card">${spark(L.map((s) => (s.pts * 60) / s.dur), 'var(--ac)', { labels: L.map(sessLabel), unit: '/min' })}</div></div>
+    <div><h2>${hic('target')}Accuracy${ib('p.acc')}</h2><div class="card">${spark(L.map((s) => pct(s.ok, Math.max(1, s.n))), '#ff9f5a', { unit: '%', labels: L.map(sessLabel) })}</div></div>
+    <div><h2>${hic('chart')}Answers per day</h2><div class="card">${(() => { const D = [...Array(14)].map((_, i) => ymd(dayAgo(13 - i))); return bars(D.map((d) => S.sessions.filter((s) => ymd(s.t) == d).reduce((q, s) => q + s.n, 0)), 'var(--ac)', D); })()}</div></div>
   </div>
   ${weekCard()}
-  <h2>This week vs last${ib('p.wvl')}</h2>
+  <h2>${hic('layers')}This week vs last${ib('p.wvl')}</h2>
   <div class="card wvl wkopen" role="button" tabindex="0" data-act="weekSheet" aria-haspopup="dialog" aria-label="This week in detail"><div><span>Sessions</span><b>${a.s}</b>${dlt(a.s, b.s).replace('<span', '<small').replace('</span>', '</small>')}</div><div><span>Answers</span><b>${a.n}</b>${dlt(a.n, b.n).replace('<span', '<small').replace('</span>', '</small>')}</div><div><span>Accuracy</span><b>${Math.round(a.acc)}%</b>${dlt(a.acc, b.acc, '%').replace('<span', '<small').replace('</span>', '</small>')}</div><div><span>Pace / min</span><b>${Math.round(a.pace)}</b>${dlt(a.pace, b.pace).replace('<span', '<small').replace('</span>', '</small>')}</div></div>
   ${hourCard}`,
     skills: `
-  <h2>Weakness map${ib('p.weak')}</h2>
+  <h2>${hic('flag','bad')}Weakness map${ib('p.weak')}</h2>
   <div class="card tbl"><table><tr><th>Skill<th>Rating<th><th class="r">Accuracy<th class="r">Speed<th class="r hide-m">7 days<th class="r hide-m">To review<th></tr>
   ${IDS.map((k) => { const s = S.sk[k], d = (s.lv - lvAgo(k, 7)) * 100, wq = Object.values(S.weak).filter((w) => w.sk == k).length; return `<tr><td><span class="dot" style="--sc:${COL[k]}"></span> <button type="button" class="lnk" data-act="skill" data-v="${esc(k)}" aria-label="${esc(SK[k].n + ' details')}">${wk.includes(k) ? '<b>' + esc(SK[k].n) + '</b>' : esc(SK[k].n)}</button><td><b>${Math.round(s.lv * 100)}</b><td style="width:20%"><div class="bar" style="--sc:${COL[k]}"><i style="width:${(s.lv / 12) * 100}%"></i></div><td class="r">${Math.round(s.acc * 100)}%<td class="r">${s.n ? s.spd.toFixed(2) + '×' : '–'} <td class="r hide-m ${d >= 0 ? 'ok' : 'bad'}">${d >= 0 ? '+' : ''}${Math.round(d)}<td class="r hide-m">${wq}<td class="r"><span class="btns" style="justify-content:flex-end"><button class="btn sm" data-act="aiSkill" data-v="${esc(k)}" aria-label="Ask AI about ${esc(SK[k].n)}">${icon('sparkle')}</button><button class="btn sm" data-act="drill" data-v="${esc(k)}">Drill</button></span></tr>`; }).join('')}</table>
   <div class="mu" style="margin-top:6px">Speed 1.00× means on par pace (reading, thinking and typing included); lower is faster. The two weakest skills (bold) get extra practice in All-skills sessions.</div></div>
-  <details class="fold"><summary><h2>Rating per skill</h2></summary>
+  <details class="fold"><summary><h2>${hic('sliders')}Rating per skill</h2></summary>
   <div class="skills skcharts">${IDS.map((k) => `<div class="card"><b class="kc" style="--sc:${COL[k]}">${esc(SK[k].n)}</b> ${spark(L.map((s) => ((s.lv && s.lv[k] != null ? s.lv[k] : SK[k].s)) * 100), COL[k], { w: 320, h: 80, labels: L.map(sessLabel) })}</div>`).join('')}</div></details>
 `,
     facts: `
-  <h2>Times-table map${ib('p.facts')}</h2>
+  <h2>${hic('grid')}Times-table map${ib('p.facts')}</h2>
   <div class="card">${factGrid()}</div>
   ${errCard()}
-  <h2>What actually slows you down${ib('p.slow')}</h2>
+  <h2>${hic('timer','gd')}What actually slows you down${ib('p.slow')}</h2>
   <div class="card tbl">${P.length < 3 ? '<span class="mu">Patterns (carries, borrows, digit sizes, tricks) appear after about 8 attempts each.</span>'
     : `<table><tr><th>Slowest<th class="r">Tries<th class="r">Acc<th class="r">Speed<th></tr>${P.slice().sort((x, y) => y.sp - x.sp).slice(0, 5).map(prow).join('')}<tr><th>Most missed<th><th><th><th></tr>${P.slice().sort((x, y) => x.acc - y.acc).slice(0, 5).map(prow).join('')}</table>`}</div>
 `,
     history: `
-  <h2>Recent sessions${ib('p.hist')}</h2>
-  <div class="card tbl"><table><tr><th>When<th class="hide-m">Mode<th class="r">Pts<th class="r hide-m">✓<th class="r">Acc<th class="r hide-m">Avg<th class="r" title="Points per minute vs your previous session of the same type and length">vs last same</tr>
+  <h2>${hic('history')}Recent sessions${ib('p.hist')}</h2>
+  <div class="card tbl"><table><tr><th>When<th class="hide-m">Mode<th class="r">Pts<th class="r hide-m" title="Correct" aria-label="Correct">${icon('check')}<th class="r">Acc<th class="r hide-m">Avg<th class="r" title="Points per minute vs your previous session of the same type and length">vs last same</tr>
   ${S.sessions.slice(-more).reverse().map((x) => { const pv = prevOf(x), d = pv ? (x.pts * 60) / x.dur - (pv.pts * 60) / pv.dur : 0; return `<tr><td><button class="lnk" data-act="sessInfo" data-v="${esc(x.t)}" aria-label="Details of the session on ${ymd(x.t)}">${ymd(x.t).slice(5)} ${new Date(x.t).toTimeString().slice(0, 5)}</button><td class="hide-m">${esc(modeLabel(x.m))}<td class="r">${x.pts}<td class="r hide-m">${x.ok}<td class="r">${pct(x.ok, Math.max(1, x.n))}%<td class="r hide-m">${x.tm}s<td class="r ${d >= 0 ? 'ok' : 'bad'}">${pv ? (d >= 0 ? '+' : '') + Math.round(d) + '/min' : '–'}</tr>`; }).join('')}</table></div>${S.sessions.length > more ? `<div class="btns" style="margin-top:10px"><button class="btn sm" data-act="moreSess">Show ${Math.min(20, S.sessions.length - more)} more</button></div>` : ''}
-  <h2>Last ${heatWeeks()} weeks</h2><div class="card">${heatmap()}</div>
-  <h2>Milestones<span class="sub">${S.ms.length} of ${MS.length}</span></h2>
+  <h2>${hic('cal')}Last ${heatWeeks()} weeks</h2><div class="card">${heatmap()}</div>
+  <h2>${hic('trophy','gd')}Milestones<span class="sub">${S.ms.length} of ${MS.length}</span></h2>
   <div class="ms">${MS.map((m) => { const got = S.ms.includes(m[0]), pr = !got && msProgress(m[0], c); return `<button type="button" class="chip ${got ? 'on' : ''}" data-act="msTip" data-v="${esc(m[0])}" ${pr ? `title="${pr.cur} of ${pr.goal}"` : ''}>${icon(got ? 'trophy' : 'lock')} ${esc(m[1])}${pr ? ` <span class="mu">${Math.round((100 * pr.cur) / pr.goal)}%</span>` : ''}</button>`; }).join('')}</div>`,
   };
   const filterable = tab == 'overview' || tab == 'skills', modeName = (MODES.find((m) => m[0] == mode) || MODES[0])[1], rangeName = (RANGES.find((r) => r[0] == range) || RANGES[1])[1], filtered = mode != 'all' || range != 40;
@@ -128,7 +128,7 @@ function factGrid() {
 function errCard() {
   const E = S.errs || {}, ks = Object.keys(ERRL).filter((k) => E[k] > 0).sort((a, b) => E[b] - E[a]), tot = ks.reduce((q, k) => q + E[k], 0);
   if (tot < 5) return '';
-  return `<h2>Mistake patterns<span class="sub">all time, ${tot} slips</span>${ib('p.err')}</h2><div class="card">${ks.map((k) => `<div class="fr why"><span><b>${esc(ERRL[k][0])}</b> <span class="mu">${Math.round((100 * E[k]) / tot)}%</span><div class="bar" style="margin-top:5px"><i style="width:${(100 * E[k]) / tot}%;background:var(--ac)"></i></div></span><b class="num">${E[k]}</b></div>`).join('')}<div class="mu" style="margin-top:8px">${esc(ERRL[ks[0]][1])}</div></div>`;
+  return `<h2>${hic('cross','bad')}Mistake patterns<span class="sub">all time, ${tot} slips</span>${ib('p.err')}</h2><div class="card">${ks.map((k) => `<div class="fr why"><span><b>${esc(ERRL[k][0])}</b> <span class="mu">${Math.round((100 * E[k]) / tot)}%</span><div class="bar" style="margin-top:5px"><i style="width:${(100 * E[k]) / tot}%;background:var(--ac)"></i></div></span><b class="num">${E[k]}</b></div>`).join('')}<div class="mu" style="margin-top:8px">${esc(ERRL[ks[0]][1])}</div></div>`;
 }
 A.weakFacts = () => start(undefined, { wf: 1, dur: 60, only: 'all', off: 0, patt: undefined });
 A.tableDrill = (d) => { const n = +d.v; start(undefined, { only: 'zeta', zeta: zNorm({ ops: ['mul', 'div'], a: ZDEF.a, b: ZDEF.b, m: [n, n], n: [2, 12] }) }); };
@@ -149,7 +149,7 @@ A.sessInfo = async (d) => {
   const i = S.sessions.findIndex((x) => x.t == d.v), x = S.sessions[i];
   if (!x) return;
   const pv = S.sessions[i - 1];
-  const by = x.by ? IDS.filter((k) => x.by[k]).map((k) => { const b = x.by[k], mv = x.lv && pv && pv.lv ? Math.round((x.lv[k] - pv.lv[k]) * 100) : 0; return `<div class="fr"><span class="kc" style="--sc:${COL[k]}">${esc(SK[k].n)}</span><span>${b[1]}/${b[0]} · ${b[1] ? (b[2] / b[1]).toFixed(1) + 's' : '–'}${mv ? ` <span class="${mv > 0 ? 'ok' : 'bad'}">${mv > 0 ? '▲' : '▼'}${Math.abs(mv)}</span>` : ''}</span></div>`; }).join('') : '<div class="mu">The per-skill breakdown is only kept for your most recent sessions.</div>';
+  const by = x.by ? IDS.filter((k) => x.by[k]).map((k) => { const b = x.by[k], mv = x.lv && pv && pv.lv ? Math.round((x.lv[k] - pv.lv[k]) * 100) : 0; return `<div class="fr"><span class="kc" style="--sc:${COL[k]}">${esc(SK[k].n)}</span><span>${b[1]}/${b[0]} · ${b[1] ? (b[2] / b[1]).toFixed(1) + 's' : '–'}${mv ? ` <span class="${mv > 0 ? 'ok' : 'bad'}">${tri(mv > 0)}${Math.abs(mv)}</span>` : ''}</span></div>`; }).join('') : '<div class="mu">The per-skill breakdown is only kept for your most recent sessions.</div>';
   const choice = await dialog({ title: modeLabel(x.m) + ' · ' + ymd(x.t), body: `<div class="sg"><div><div class="mu">Points</div><b>${x.pts}</b></div><div><div class="mu">Correct</div><b>${x.ok}/${x.n}</b></div><div><div class="mu">Accuracy</div><b>${pct(x.ok, Math.max(1, x.n))}%</b></div><div><div class="mu">Length</div><b>${x.dur >= 120 ? Math.round(x.dur / 60) + ' min' : x.dur + ' s'}</b></div><div><div class="mu">Avg answer</div><b>${x.tm}s</b></div><div><div class="mu">Pace</div><b>${Math.round((x.pts * 60) / x.dur)}/min</b></div></div>${by}`, actions: [{ label: 'AI read of this session', value: 'ai' }, { label: 'Close', value: true, primary: true }] });
   if (choice !== 'ai') return;
   const perSkill = x.by ? IDS.filter((k) => x.by[k]).map((k) => { const b = x.by[k]; return { skill: SK[k].n, tried: b[0], correct: b[1], avgSec: b[1] ? +(b[2] / b[1]).toFixed(1) : null, ratingChange: x.lv && pv && pv.lv ? Math.round((x.lv[k] - pv.lv[k]) * 100) : 0 }; }) : [];

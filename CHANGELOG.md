@@ -2,6 +2,57 @@
 
 Newest first. What is true of the app today is in [README.md](README.md). The release number is the `VERSION` file.
 
+## 14.86
+
+Icon motion on phones. Front end only; no backend change.
+
+- **Tapping now plays the icon motion.** The hover motion from 14.82 and 14.84 (flames flicker, bells ring, hearts beat, arrows lift, and the rest) was written for a mouse, so on a phone only the arrival pops ever ran. A tap now plays the same motion on the control you tapped, or on the card, stat or heading row it sits in. It is the same set of keyframes, so nothing new to learn: one shot of about half a second, transform and opacity only.
+- Touch devices (and pens) are detected from the tap itself, and on a device with no hover at all; a mouse keeps using hover, so nothing plays twice. Reduce motion (OS or in-app) plays nothing. The nav tabs are left out on purpose, as for hover.
+- The sun icon now turns 45 degrees (its eight rays line up again), where it used to turn 60 and end in a different pose.
+
+## 14.85
+
+Themes: more colours, background skins, your own colour, and a new first-visit look. Front end only; no backend change.
+
+- **New first-visit look.** A brand-new visitor now sees **Aurora** (deep ink-violet surfaces, a soft violet glow behind the header) with the **grape** accent, instead of the neutral dark with blue. On Light it is a pale lavender paper with a deeper violet. **Nobody who already had the app is changed:** `boot.js` marks a device as new only when it finds no saved data on first load, and everyone else keeps blue on Classic until they pick something. Choosing anything, including Classic or blue, always wins.
+- **Background skins** (Settings, Look and feel, *Background*): Aurora, Midnight, Forest, Mocha, Ocean and Classic. Each tints the page and card surfaces, with separate Dark and Light values. Black stays pure black (the picker says so). Text, right, wrong and gold keep their colours, and a test checks 4.5:1 contrast on every surface of every skin.
+- **Eight more accents** (grape, coral, emerald, sky, fuchsia, lime, indigo, slate) next to the original five, each with a Dark and a Light value that keeps button text readable.
+- **Your own colour.** The last swatch is a colour picker. The colour follows the picker live, is kept when it closes, and is turned into a Dark/Light pair that always keeps button text at 4.5:1 or better, whatever you pick (pure yellow or white included).
+- **Quick looks:** six one-tap combinations of background and accent (Aurora, Midnight, Forest, Mocha, Ocean, Classic).
+- Skin and custom colour sync with the other settings (`skin`, `accHex` in `PREF_KEYS`); Reset keeps them like the rest of the appearance settings. The browser bar colour and the installed-app splash follow the skin.
+- Not changed: the app icon and the share-image card keep their own colours.
+- Tests: `test/v1485-themes.test.mjs`; `v110` now checks every accent instead of exactly five.
+
+## 14.84
+
+Icon pass 14: motion for the icons pass 13 added, and for the icons that had none. Front end only; no backend change.
+
+- **New icons arrive with the screen.** The Coach's card-label icons and the empty-state tiles pop in (a beat after the heading badges, in reading order), and the glyph in an empty-state tile makes one small gesture afterwards: the magnifier tilts, the warning triangle wobbles, the chart and book grow, the tick pops. The streak sheet does the same as it opens: section icons pop in, the flame flickers once and the moon rocks once.
+- **More hover motion (pointer devices only).** Share and up arrows lift, the download arrow drops, flames flicker, moons rock, eyes blink, the magnifier tilts, lock, trash and warning shake, keys turn, pencils write, bar charts grow, pulse beats, phone and palette wobble, mail, bookmark, user and layers float, copy and route nudge, the sun turns, and calendar, book, users, calculator, info, grid, list, hash and plus ping. The Coach's four stat tiles react too (target, bolt, check, flame), and so do the Coach card-label and streak-heading icons when their row is hovered.
+- **Left alone on purpose:** the nav tabs (the active tab holds a raised pose and a hover animation would drop it), the search-message tile in Settings (it is rewritten on every keystroke, so it would replay), and anything that would loop. Nothing animates continuously; only transform and opacity change.
+- Reduce motion (OS or in-app) silences all of it through the existing blanket rules.
+
+## 14.83
+
+Icon pass 13: the three places pass 12 left alone. Front end only; no backend change.
+
+- **Coach card labels have icons.** Your performance, Skill ratings, Common slips, Spaced review and the Suggested session tag each carry a small line icon, using the existing `.eyebrow > .ic` style (the Key focus card already had its badge).
+- **The streak sheet's section titles have icons** (Next milestone, Last 5 weeks, Your streaks), and *Share image* has the share icon like the other sheets.
+- **Empty states have an icon tile** in place of the graph-paper mark: Progress (no sessions), Notebook (no matches, nothing to review, nothing missed), Settings search (no match), and the screen-error card. The Coach's *No ratings yet* and *No recurring slips yet* now have the same badge as its other empty cards. Two new icons: `search` and `alert`.
+- Motion: the tile pops in with the screen, like the heading badges; Reduce motion silences it through the existing blanket rules.
+
+## 14.82
+
+Icon pass: more icons, in the same line style as the existing set, and small animations for them. Front end only; no backend change.
+
+- **About 40 new icons** in `ui.js` (trends, clock, timer, gauge, award, layers, grid, list, history, bell, palette, eye, shield, key, users, flag, route, copy and more). The existing icons are unchanged. Every icon now also carries a per-name class (`i-bell`, `i-heart`, ...) so motion can target it.
+- **Section headings have icon badges** on Progress, Results, Settings (groups and cards), Home, Notebook and Learn, through a new `hic()` helper. Settings group titles no longer inherit the 3-column grid from the stat `.sg` class.
+- **Stat cards on Progress have icons**, and Settings jump chips, the Trick of the day and Learn's pick-up card have them too.
+- **Plain text symbols became icons.** ✓ ✗ ▲ ▼ ★ and the ○● dots are now `mk()`, `tri()` and CSS dots: right and wrong marks on Play, Results and paths, change arrows on Home, Progress and Results, the leaderboard banner and the Flash result dots.
+- **Home skill cards show each skill's symbol** (+, −, ×, ÷, √ ...) in a coloured tile instead of a plain dot.
+- **Icon motion (`motion.css`).** Heading badges pop in when a screen arrives. Right and wrong marks pop (a wrong mark also shakes once). Change arrows slide in from their direction. The active tab icon pops once. On hover (pointer devices only) bells ring, hearts beat, bolts flash, play nudges, refresh arrows turn, gears turn, stars and sparkles twinkle, trophies wobble, clocks tick. Nothing loops, only transform and opacity change, and Reduce motion (OS or in-app) silences all of it through the existing blanket rules.
+- Test `v56` now allows the badge in front of the ghost-race heading.
+
 ## 14.77
 
 Five UI items from a screen review of 14.76. Front end only; no backend change.

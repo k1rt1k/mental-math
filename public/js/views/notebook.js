@@ -3,7 +3,7 @@ import { IDS, SK, COL, how, MASTER_BOX } from '../engine.js';
 import { masteryStats } from '../stats.js';
 import { esc, ago, dueIn } from '../util.js';
 import { register, A } from '../nav.js';
-import { confirmDlg, icon, toast } from '../ui.js';
+import { confirmDlg, icon, toast, hic, eic } from '../ui.js';
 import { ib } from '../info.js';
 import { start } from './play.js';
 import { drill } from './home.js';
@@ -36,10 +36,10 @@ function notebook() {
   ${all.length ? `<p class="mu" style="margin:-8px 0 16px"><b style="color:var(--tx)">${nDue}</b> of ${all.length} due now</p>` : ''}
   ${all.length ? `<div class="chips fscroll" style="margin-bottom:14px" role="group" aria-label="Filter by skill"><button class="chip" aria-pressed="${filter == 'all'}" data-act="nbFilter" data-v="all">All ${all.length}</button>${IDS.filter((k) => counts[k]).map((k) => `<button class="chip" aria-pressed="${filter == k}" data-act="nbFilter" data-v="${esc(k)}"><span class="dot" style="--sc:${COL[k]}"></span>${esc(SK[k].n)} ${counts[k]}</button>`).join('')}</div>
   <div class="nbtools"><input class="inp" id="nbq" type="search" placeholder="Search" aria-label="Search the notebook" value="${esc(qtext)}"><button class="chip" aria-pressed="${dueOnly}" data-act="nbDue">Due now only</button></div>
-  ${W.length ? `<div class="nbl">${W.map(card).join('')}</div>` : '<div class="card empty"><b>No matches</b>Try another search or show everything.</div>'}
+  ${W.length ? `<div class="nbl">${W.map(card).join('')}</div>` : `<div class="card empty ei">${eic('search')}<b>No matches</b>Try another search or show everything.</div>`}
   <div class="nbfoot"><button class="btn sm ghost danger" data-act="clearAll">Clear all ${all.length} missed questions</button></div>`
-  : `<div class="card empty"><b>${mastered.length ? 'Nothing to review' : 'Nothing missed yet'}</b>${mastered.length ? 'Every mastered question is holding. A question you miss will come back here.' : 'Questions you get wrong or skip land here, with the method to solve them.'}<div style="margin-top:14px"><button class="btn primary" data-go="home">Start practising</button></div></div>`}
-  ${mastered.length ? `<details class="fold" style="margin-top:18px"><summary><h2>Mastered<span class="sub">${ms.retained} of ${ms.mastered} never slipped since</span></h2></summary>
+  : `<div class="card empty ei">${eic(mastered.length ? 'tick' : 'book')}<b>${mastered.length ? 'Nothing to review' : 'Nothing missed yet'}</b>${mastered.length ? 'Every mastered question is holding. A question you miss will come back here.' : 'Questions you get wrong or skip land here, with the method to solve them.'}<div style="margin-top:14px"><button class="btn primary" data-go="home">Start practising</button></div></div>`}
+  ${mastered.length ? `<details class="fold" style="margin-top:18px"><summary><h2>${hic('award','gd')}Mastered<span class="sub">${ms.retained} of ${ms.mastered} never slipped since</span></h2></summary>
     <div class="card tbl"><table><tr><th>Question<th class="hide-m">Skill<th class="r">Mastered<th class="r">Slipped<th></tr>
     ${mastered.map(([k, m]) => `<tr><td>${esc(m.q)} = <b>${esc(m.a)}</b><td class="hide-m">${esc(SK[m.sk].n)}<td class="r">${esc(ago(m.masteredAt || m.at || now))}<td class="r">${m.lapses ? `<span class="bad">${m.lapses}×</span>` : '<span class="ok">never</span>'}<td class="r"><button class="btn sm" data-act="nbRelearn" data-v="${esc(k)}" aria-label="Put ${esc(m.q)} back into review">Review again</button></tr>`).join('')}
     </table></div></details>` : ''}`;

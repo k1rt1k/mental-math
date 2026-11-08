@@ -1,5 +1,6 @@
 // Tiny router + action registry. Views register themselves; nothing here knows about any view.
 import { $, $$ } from './util.js';
+import { eic } from './ui.js';
 
 export const view = { scr: 'home' };
 const routes = {};
@@ -45,7 +46,7 @@ function run(name) {
   catch (err) {
     console.error(err);
     const m = $('#main');
-    if (m) m.innerHTML = '<div class="card empty crash"><b>This screen hit a problem</b>Your progress is safe. You can go home, download a backup, or reload.<div class="btns" style="justify-content:center;margin-top:14px"><button class="btn primary" data-go="home">Go home</button><button class="btn" data-act="export">Download backup</button><button class="btn" data-act="reload">Reload</button></div></div>';
+    if (m) m.innerHTML = '<div class="card empty ei crash">' + eic('alert') + '<b>This screen hit a problem</b>Your progress is safe. You can go home, download a backup, or reload.<div class="btns" style="justify-content:center;margin-top:14px"><button class="btn primary" data-go="home">Go home</button><button class="btn" data-act="export">Download backup</button><button class="btn" data-act="reload">Reload</button></div></div>';
   }
 }
 A.reload = () => location.reload();

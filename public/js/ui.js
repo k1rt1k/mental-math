@@ -32,8 +32,60 @@ const P = {
   user: '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
   chev: '<path d="m9 6 6 6-6 6"/>',
   sliders: '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
+  trendup: '<path d="M4 16.500 9.500 11l3.500 3.500L20 7.500M15 7.500h5v5"/>',
+  trenddown: '<path d="M4 7.500 9.500 13l3.500-3.500 7 7M15 16.500h5v-5"/>',
+  caretup: '<path d="M12 7.500 5.500 16h13z"/>',
+  caretdown: '<path d="M12 16.500 5.500 8h13z"/>',
+  tick: '<circle cx="12" cy="12" r="8.500"/><path d="m8.500 12.300 2.400 2.400 4.600-5"/>',
+  cross: '<circle cx="12" cy="12" r="8.500"/><path d="m9.200 9.200 5.600 5.600m0-5.600-5.600 5.600"/>',
+  info: '<circle cx="12" cy="12" r="8.500"/><path d="M12 11v5M12 8h.01"/>',
+  clock: '<circle cx="12" cy="12" r="8.500"/><path d="M12 7.500V12l3 2"/>',
+  timer: '<circle cx="12" cy="13.500" r="7"/><path d="M12 10v3.500l2 1.500M9.500 3h5M12 3v3.500"/>',
+  gauge: '<path d="M4 17.500a8.500 8.500 0 1 1 16 0"/><path d="m12 14 3.600-4.600M12 14h.01"/>',
+  award: '<circle cx="12" cy="9" r="5.500"/><path d="m8.800 13.600-1.300 6.900 4.500-2 4.500 2-1.300-6.900"/>',
+  layers: '<path d="m12 4 8.500 4.500L12 13 3.500 8.500z"/><path d="m3.500 12.500 8.500 4.500 8.500-4.500M3.500 16.500l8.500 4.500 8.500-4.500"/>',
+  grid: '<rect x="4" y="4" width="7" height="7" rx="1.500"/><rect x="13" y="4" width="7" height="7" rx="1.500"/><rect x="4" y="13" width="7" height="7" rx="1.500"/><rect x="13" y="13" width="7" height="7" rx="1.500"/>',
+  list: '<path d="M9 7h11M9 12h11M9 17h11M4.500 7h.01M4.500 12h.01M4.500 17h.01"/>',
+  history: '<path d="M4 12a8 8 0 1 0 2.600-5.900L4 8.500M4 4v4.500h4.500M12 8v4.200l2.800 1.800"/>',
+  calc: '<rect x="5" y="3.500" width="14" height="17" rx="2.500"/><path d="M8.500 7.500h7M8.500 12h.01M12 12h.01M15.500 12h.01M8.500 16h.01M12 16h.01M15.500 16h.01"/>',
+  eye: '<path d="M2.500 12S6 5.500 12 5.500 21.500 12 21.500 12 18 18.500 12 18.500 2.500 12 2.500 12z"/><circle cx="12" cy="12" r="2.800"/>',
+  bell: '<path d="M6 16.500V11a6 6 0 0 1 12 0v5.500l1.500 1.500h-15zM10 20.500h4"/>',
+  palette: '<path d="M12 3.500a8.500 8.500 0 1 0 0 17c1.400 0 2-.9 2-1.800 0-1.400-1.200-1.500-1.200-2.700 0-.9.800-1.500 1.700-1.500H17a3.500 3.500 0 0 0 3.500-3.500C20.500 6.600 16.800 3.500 12 3.500z"/><path d="M7.500 11h.01M10 7.800h.01M14.500 7.800h.01"/>',
+  type: '<path d="M5 7V5h14v2M12 5v14M9 19h6"/>',
+  sun: '<circle cx="12" cy="12" r="3.800"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.600 5.600 7 7M17 17l1.400 1.400M18.400 5.600 17 7M7 17l-1.400 1.400"/>',
+  shield: '<path d="M12 3.500 5 6v5.500c0 4.200 2.900 7.300 7 9 4.100-1.700 7-4.800 7-9V6z"/><path d="m9 12 2.200 2.200 4-4.200"/>',
+  key: '<circle cx="8" cy="15" r="3.500"/><path d="m10.500 12.500 8-8M15.500 7.500l2.500 2.500"/>',
+  users: '<circle cx="9" cy="8" r="3.500"/><path d="M2.500 20v-1a5 5 0 0 1 5-5h3a5 5 0 0 1 5 5v1M16 4.700a3.500 3.500 0 0 1 0 6.600M21.500 20v-1a5 5 0 0 0-3.500-4.800"/>',
+  flag: '<path d="M5 21V4M5 5h11l-2 3.500 2 3.500H5"/>',
+  hash: '<path d="M9 4 7 20M17 4l-2 16M4.500 9h16M3.500 15h16"/>',
+  pulse: '<path d="M3 12h4l3-8 4 16 3-8h4"/>',
+  pencil: '<path d="M4 20v-4L16 4a2.100 2.100 0 0 1 3 0l1 1a2.100 2.100 0 0 1 0 3L8 20zM14 6l4 4"/>',
+  bookmark: '<path d="M6.500 4h11v16.500L12 16.500l-5.500 4z"/>',
+  route: '<circle cx="6" cy="18" r="2.200"/><circle cx="18" cy="6" r="2.200"/><path d="M8.200 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.800"/>',
+  copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  minus: '<path d="M5 12h14"/>',
+  dot: '<circle cx="12" cy="12" r="5"/>',
+  mail: '<rect x="3.500" y="5.500" width="17" height="13" rx="2.500"/><path d="m4 7.500 8 6 8-6"/>',
+  phone: '<rect x="7" y="3" width="10" height="18" rx="2.500"/><path d="M11 18h2"/>',
+  repeat: '<path d="M4 11V9a3 3 0 0 1 3-3h11M15 3l3 3-3 3M20 13v2a3 3 0 0 1-3 3H6M9 21l-3-3 3-3"/>',
+  search: '<circle cx="11" cy="11" r="6.500"/><path d="m16 16 4.500 4.500"/>',
+  alert: '<path d="M12 4 3.500 19h17z"/><path d="M12 10v4M12 16.500h.01"/>',
 };
-export const icon = (n, cls = '') => `<svg class="ic ${cls}" viewBox="0 0 24 24" aria-hidden="true">${P[n] || ''}</svg>`;
+export const icon = (n, cls = '') => `<svg class="ic ${cls} i-${n}" viewBox="0 0 24 24" aria-hidden="true">${P[n] || ''}</svg>`;
+
+/** Heading badge: a small tinted tile with an icon, placed in front of a section title (tone: ac | gd | ok | bad). */
+export const hic = (n, tone = '') => `<span class="hic ${tone}" aria-hidden="true">${icon(n)}</span>`;
+/** Empty-state badge: a larger tinted tile with an icon, at the top of a `.card.empty.ei` (which hides the graph-paper mark). */
+export const eic = (n) => `<span class="eic" aria-hidden="true">${icon(n)}</span>`;
+/** Result mark: a filled round tick (right) or cross (wrong), replacing the plain ✓ / ✗ glyphs. */
+export const mk = (ok) => `<span class="mk ${ok ? 'ok' : 'bad'}" aria-hidden="true">${icon(ok ? 'check' : 'x')}</span>`;
+/** Up / down delta arrow for "better / worse than before". */
+export const tri = (up) => `<span class="tri ${up ? 'up' : 'dn'}" aria-hidden="true">${icon(up ? 'caretup' : 'caretdown', 'fill')}</span>`;
+
+/** The symbol that stands for each skill (shown in a coloured tile next to its name). */
+const SKG = { add: '+', sub: '−', mul: '×', div: '÷', sq: 'x²', pw: '√', pct: '%', ops: '( )', mod: 'mod', dec: '0.5', neg: '±', frac: '½', life: '$' };
+export const skg = (k) => { const g = SKG[k] || '•'; return `<i class="skg${g.length >= 3 ? ' g3' : ''}" aria-hidden="true">${g}</i>`; };
 
 /* ---------- toast ---------- */
 let toastT;

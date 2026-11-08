@@ -331,3 +331,157 @@ a { background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px no-re
 /* the one extra key (minus, slash or point) lives in the pad's empty corner and only shows on questions that use it */
 .pad .sym.off { visibility: hidden; pointer-events: none; }
 .pad .sym { font-weight: 700; }
+
+/* ---- v14.82 icon motion ----
+   Icons move to confirm something (a mark lands, a delta arrives, a button is pressed or hovered), never on a loop.
+   Transform and opacity only. Reduce motion (OS or in-app) is covered by the blanket rules in style.css. */
+@keyframes hicpop { 0% { opacity: 0; transform: scale(.55) rotate(-12deg); } 65% { opacity: 1; transform: scale(1.1) rotate(3deg); } 100% { transform: none; } }
+#main.enter .hic { animation: hicpop .55s var(--spring) .12s both; }
+@keyframes mkpop { 0% { opacity: 0; transform: scale(.3); } 60% { opacity: 1; transform: scale(1.2); } 100% { transform: none; } }
+@keyframes mkshake { 0%, 100% { transform: none; } 25% { transform: translateX(-2px) rotate(-8deg); } 50% { transform: translateX(2px) rotate(8deg); } 75% { transform: translateX(-1px); } }
+.mk { animation: mkpop .38s var(--spring) both; }
+.mk.bad { animation: mkpop .38s var(--spring) both, mkshake .4s ease-in-out .3s 1; }
+@keyframes triup { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@keyframes tridn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.tri.up { animation: triup .45s var(--soft) .25s both; } .tri.dn { animation: tridn .45s var(--soft) .25s both; }
+@keyframes pillcheck { 0% { transform: scale(.2) rotate(-30deg); opacity: 0; } 70% { transform: scale(1.25) rotate(4deg); opacity: 1; } 100% { transform: none; } }
+.pill.ok2 .ic { animation: pillcheck .5s var(--spring) .2s both; }
+.bmi .ic { animation: pillcheck .6s var(--spring) .3s both; }
+@keyframes navpop { 0% { transform: scale(.78); } 60% { transform: translateY(-2px) scale(1.18); } 100% { transform: translateY(-1px) scale(1.1); } }
+.nv[aria-current=page] .ic { animation: navpop .45s var(--spring) both; }
+
+@keyframes i-ring { 0%, 100% { transform: none; } 20% { transform: rotate(-16deg); } 45% { transform: rotate(13deg); } 70% { transform: rotate(-7deg); } }
+@keyframes i-beat { 0%, 100% { transform: none; } 30% { transform: scale(1.22); } 55% { transform: scale(.95); } 75% { transform: scale(1.12); } }
+@keyframes i-zap { 0%, 100% { transform: none; } 30% { transform: translateY(-1px) scale(1.18) rotate(-6deg); } 60% { transform: scale(.96); } }
+@keyframes i-nudge { 50% { transform: translateX(3px); } }
+@keyframes i-float { 50% { transform: translateY(-2px); } }
+@keyframes i-wob { 0%, 100% { transform: none; } 35% { transform: rotate(-9deg) scale(1.1); } 70% { transform: rotate(6deg); } }
+@keyframes i-twirl { from { transform: none; } to { transform: rotate(180deg); } }
+@keyframes i-spinc { from { transform: none; } to { transform: rotate(60deg); } }
+@keyframes i-twink { 0%, 100% { transform: none; } 40% { transform: scale(1.22) rotate(18deg); } }
+@keyframes i-tick { 50% { transform: rotate(14deg); } }
+@keyframes i-rise { 50% { transform: translate(2px, -2px); } }
+@keyframes i-ping { 40% { transform: scale(1.18); } }
+
+@media (hover: hover) {
+  :is(button, a, .stat, .nv, .chip, .card[data-act]):hover > .i-bell, :is(button, a, .stat, .nv, .chip):hover .i-bell { animation: i-ring .7s ease-in-out; transform-origin: 50% 12%; }
+  :is(button, a, .stat, .nv, .chip, .card[data-act]):hover .i-heart { animation: i-beat .7s ease-in-out; }
+  :is(button, a, .stat, .nv, .chip, .card[data-act]):hover .i-bolt { animation: i-zap .5s ease-out; }
+  :is(button, a, .stat, .nv, .chip, .card[data-act]):hover .i-play { animation: i-nudge .5s ease-in-out; }
+  :is(button, a, .stat, .nv, .chip, .card[data-act]):hover .i-cloud { animation: i-float .8s ease-in-out; }
+  :is(button, a, .stat, .nv, .chip, .card[data-act]):hover :is(.i-trophy, .i-award) { animation: i-wob .6s ease-in-out; transform-origin: 50% 70%; }
+  :is(button, a, .stat, .nv, .chip, .card[data-act]):hover :is(.i-redo, .i-repeat) { animation: i-twirl .6s var(--ease) both; }
+  :is(button, a, .stat, .nv, .chip, .card[data-act]):hover .i-gear { animation: i-spinc .6s var(--ease) both; }
+  :is(button, a, .stat, .nv, .chip, .card[data-act]):hover :is(.i-sparkle, .i-star) { animation: i-twink .6s ease-in-out; }
+  :is(button, a, .stat, .nv, .chip, .card[data-act]):hover :is(.i-timer, .i-clock, .i-history, .i-gauge) { animation: i-tick .6s ease-in-out; }
+  :is(button, a, .stat, .nv, .chip, .card[data-act]):hover :is(.i-trendup, .i-trenddown) { animation: i-rise .5s ease-out; }
+  :is(button, a, .stat, .nv, .chip, .card[data-act]):hover :is(.i-target, .i-flag, .i-bulb, .i-shield) { animation: i-ping .5s ease-out; }
+  .stat:hover .l > .ic { color: var(--ac); }
+  .sk:hover .skg { transform: scale(1.12) rotate(-4deg); }
+  .skg { transition: transform var(--d3, .3s) var(--spring); }
+}
+.btn:active .ic, .chip:active .ic { transform: scale(.88); }
+
+/* ---- v14.84 icon motion, second set ----
+   Same rules as 14.82: one shot, never a loop, transform and opacity only, pointer-only hover, and Reduce motion (OS or in-app)
+   silences all of it through the blanket rules in style.css. The nav tabs are left out of the new hover rules on purpose: the
+   active tab holds a raised pose from navpop, and a hover animation would drop it. */
+@keyframes icpop { 0% { opacity: 0; transform: scale(.4) rotate(-14deg); } 65% { opacity: 1; transform: scale(1.18) rotate(4deg); } 100% { transform: none; } }
+@keyframes i-lift { 50% { transform: translateY(-2.5px); } }
+@keyframes i-drop { 50% { transform: translateY(2.5px); } }
+@keyframes i-flick { 0%, 100% { transform: none; } 30% { transform: scale(1.06, 1.16) rotate(-4deg); } 65% { transform: scale(.96, 1.05) rotate(3deg); } }
+@keyframes i-rock { 0%, 100% { transform: none; } 35% { transform: rotate(-16deg); } 70% { transform: rotate(9deg); } }
+@keyframes i-blink { 45% { transform: scaleY(.12); } }
+@keyframes i-tilt { 0%, 100% { transform: none; } 40% { transform: rotate(-14deg) scale(1.1); } 80% { transform: rotate(6deg); } }
+@keyframes i-shake { 0%, 100% { transform: none; } 25% { transform: translateX(-2px); } 75% { transform: translateX(2px); } }
+@keyframes i-turn { 50% { transform: rotate(28deg); } }
+@keyframes i-write { 0%, 100% { transform: none; } 30% { transform: translate(1.5px, -1.5px) rotate(-6deg); } 65% { transform: translate(-1px, 1px); } }
+@keyframes i-grow { 50% { transform: scaleY(1.22); } }
+@keyframes i-spin45 { to { transform: rotate(45deg); } }
+
+/* Arrival: the new heading-style icons pop in with the screen, a beat after the badges, in reading order. */
+#main.enter .eic { animation: hicpop .55s var(--spring) .12s both; }
+#main.enter .cbadge.lg { animation: hicpop .55s var(--spring) .2s both; }
+#main.enter .cpanel .eyebrow > .ic { animation: icpop .5s var(--spring) both; animation-delay: calc(.2s + var(--k, 0) * .07s); }
+#main.enter .cgrid > :nth-child(2) { --k: 1; } #main.enter .cdue { --k: 1; } #main.enter .cpanel.ai { --k: 2; }
+/* then, once the tile has landed, the glyph in it makes one small gesture */
+#main.enter .eic .i-search { animation: i-tilt .7s ease-in-out .7s 1; }
+#main.enter .eic .i-alert { animation: i-wob .6s ease-in-out .7s 1; transform-origin: 50% 70%; }
+#main.enter .eic :is(.i-chart, .i-book) { animation: i-grow .6s ease-in-out .7s 1; transform-origin: 50% 100%; }
+#main.enter .eic .i-tick { animation: pillcheck .5s var(--spring) .7s both; }
+#main.enter .cbadge.lg :is(.i-repeat) { animation: i-twirl .7s var(--ease) .75s both; }
+
+/* The streak sheet: section icons pop in as it opens, the flame flickers once, the moon rocks once. */
+dialog[open].stksheet .stk-h h4 .ic { animation: icpop .5s var(--spring) both; animation-delay: .3s; }
+dialog[open].stksheet .stk-sec:nth-child(4) .stk-h h4 .ic { animation-delay: .38s; } dialog[open].stksheet .stk-sec:nth-child(5) .stk-h h4 .ic { animation-delay: .46s; }
+dialog[open].stksheet .stk-hero .i-flame { animation: i-flick .8s ease-in-out .35s 1; transform-origin: 50% 90%; }
+dialog[open].stksheet .stk-rest .i-moon { animation: i-rock .8s ease-in-out .5s 1; }
+
+@media (hover: hover) {
+  :is(button, a, .chip, .stat, .card[data-act]):hover :is(.i-share, .i-up) { animation: i-lift .5s ease-in-out; }
+  :is(button, a, .chip, .stat, .card[data-act]):hover .i-down { animation: i-drop .5s ease-in-out; }
+  :is(button, a, .chip, .stat, .card[data-act], .stk-hero, .cstat):hover .i-flame { animation: i-flick .7s ease-in-out; transform-origin: 50% 90%; }
+  :is(button, a, .chip, .stat, .card[data-act], .stk-rest):hover .i-moon { animation: i-rock .7s ease-in-out; }
+  :is(button, a, .chip, .stat, .card[data-act]):hover .i-eye { animation: i-blink .5s ease-in-out; }
+  :is(button, a, .chip, .stat, .card[data-act]):hover .i-search { animation: i-tilt .6s ease-in-out; }
+  :is(button, a, .chip, .stat, .card[data-act]):hover :is(.i-alert, .i-lock, .i-trash) { animation: i-shake .4s ease-in-out; }
+  :is(button, a, .chip, .stat, .card[data-act]):hover .i-key { animation: i-turn .5s ease-in-out; }
+  :is(button, a, .chip, .stat, .card[data-act]):hover .i-pencil { animation: i-write .5s ease-in-out; }
+  :is(button, a, .chip, .stat, .card[data-act]):hover .i-chart { animation: i-grow .5s ease-in-out; transform-origin: 50% 100%; }
+  :is(button, a, .chip, .stat, .card[data-act]):hover .i-pulse { animation: i-beat .7s ease-in-out; }
+  :is(button, a, .chip, .stat, .card[data-act]):hover :is(.i-phone, .i-palette) { animation: i-wob .6s ease-in-out; }
+  :is(button, a, .chip, .stat, .card[data-act]):hover :is(.i-mail, .i-bookmark, .i-user, .i-layers) { animation: i-float .7s ease-in-out; }
+  :is(button, a, .chip, .stat, .card[data-act]):hover :is(.i-copy, .i-route) { animation: i-nudge .5s ease-in-out; }
+  :is(button, a, .chip, .stat, .card[data-act]):hover .i-sun { animation: i-spin45 .6s var(--ease) both; }
+  :is(button, a, .chip, .stat, .card[data-act]):hover :is(.i-cal, .i-book, .i-users, .i-calc, .i-info, .i-grid, .i-list, .i-hash, .i-plus) { animation: i-ping .5s ease-out; }
+  .cstat:hover .i-target { animation: i-ping .5s ease-out; }
+  .cstat:hover .i-bolt { animation: i-zap .5s ease-out; }
+  .cstat:hover .i-check { animation: i-ping .5s ease-out; }
+  .cpanel-h:hover > .eyebrow > :is(.i-gauge, .i-history, .i-timer) { animation: i-tick .6s ease-in-out; }
+  .cpanel-h:hover > .eyebrow > .i-repeat { animation: i-twirl .6s var(--ease) both; }
+  .cpanel-h:hover > .eyebrow > .i-chart { animation: i-grow .5s ease-in-out; transform-origin: 50% 100%; }
+  .stk-h:hover h4 .i-flag { animation: i-ping .5s ease-out; }
+  .stk-h:hover h4 .i-cal { animation: i-ping .5s ease-out; }
+  .stk-h:hover h4 .i-history { animation: i-tick .6s ease-in-out; }
+}
+
+/* ---- v14.86 icon motion on touch ----
+   A phone has no hover, so the hover motion above never ran there. motion.js puts .ipl on whatever was just tapped for a moment, and
+   the same keyframes play from it. Same rules as everywhere else: one shot, transform and opacity only, silenced by Reduce motion. */
+:is(button, a, .stat, .chip, .card[data-act]).ipl > .i-bell, :is(button, a, .stat, .chip).ipl .i-bell { animation: i-ring .7s ease-in-out; transform-origin: 50% 12%; }
+:is(button, a, .stat, .chip, .card[data-act]).ipl .i-heart { animation: i-beat .7s ease-in-out; }
+:is(button, a, .stat, .chip, .card[data-act]).ipl .i-bolt { animation: i-zap .5s ease-out; }
+:is(button, a, .stat, .chip, .card[data-act]).ipl .i-play { animation: i-nudge .5s ease-in-out; }
+:is(button, a, .stat, .chip, .card[data-act]).ipl .i-cloud { animation: i-float .8s ease-in-out; }
+:is(button, a, .stat, .chip, .card[data-act]).ipl :is(.i-trophy, .i-award) { animation: i-wob .6s ease-in-out; transform-origin: 50% 70%; }
+:is(button, a, .stat, .chip, .card[data-act]).ipl :is(.i-redo, .i-repeat) { animation: i-twirl .6s var(--ease) both; }
+:is(button, a, .stat, .chip, .card[data-act]).ipl .i-gear { animation: i-spinc .6s var(--ease) both; }
+:is(button, a, .stat, .chip, .card[data-act]).ipl :is(.i-sparkle, .i-star) { animation: i-twink .6s ease-in-out; }
+:is(button, a, .stat, .chip, .card[data-act]).ipl :is(.i-timer, .i-clock, .i-history, .i-gauge) { animation: i-tick .6s ease-in-out; }
+:is(button, a, .stat, .chip, .card[data-act]).ipl :is(.i-trendup, .i-trenddown) { animation: i-rise .5s ease-out; }
+:is(button, a, .stat, .chip, .card[data-act]).ipl :is(.i-target, .i-flag, .i-bulb, .i-shield) { animation: i-ping .5s ease-out; }
+:is(button, a, .chip, .stat, .card[data-act]).ipl :is(.i-share, .i-up) { animation: i-lift .5s ease-in-out; }
+:is(button, a, .chip, .stat, .card[data-act]).ipl .i-down { animation: i-drop .5s ease-in-out; }
+:is(button, a, .chip, .stat, .card[data-act], .stk-hero, .cstat).ipl .i-flame { animation: i-flick .7s ease-in-out; transform-origin: 50% 90%; }
+:is(button, a, .chip, .stat, .card[data-act], .stk-rest).ipl .i-moon { animation: i-rock .7s ease-in-out; }
+:is(button, a, .chip, .stat, .card[data-act]).ipl .i-eye { animation: i-blink .5s ease-in-out; }
+:is(button, a, .chip, .stat, .card[data-act]).ipl .i-search { animation: i-tilt .6s ease-in-out; }
+:is(button, a, .chip, .stat, .card[data-act]).ipl :is(.i-alert, .i-lock, .i-trash) { animation: i-shake .4s ease-in-out; }
+:is(button, a, .chip, .stat, .card[data-act]).ipl .i-key { animation: i-turn .5s ease-in-out; }
+:is(button, a, .chip, .stat, .card[data-act]).ipl .i-pencil { animation: i-write .5s ease-in-out; }
+:is(button, a, .chip, .stat, .card[data-act]).ipl .i-chart { animation: i-grow .5s ease-in-out; transform-origin: 50% 100%; }
+:is(button, a, .chip, .stat, .card[data-act]).ipl .i-pulse { animation: i-beat .7s ease-in-out; }
+:is(button, a, .chip, .stat, .card[data-act]).ipl :is(.i-phone, .i-palette) { animation: i-wob .6s ease-in-out; }
+:is(button, a, .chip, .stat, .card[data-act]).ipl :is(.i-mail, .i-bookmark, .i-user, .i-layers) { animation: i-float .7s ease-in-out; }
+:is(button, a, .chip, .stat, .card[data-act]).ipl :is(.i-copy, .i-route) { animation: i-nudge .5s ease-in-out; }
+:is(button, a, .chip, .stat, .card[data-act]).ipl .i-sun { animation: i-spin45 .6s var(--ease) both; }
+:is(button, a, .chip, .stat, .card[data-act]).ipl :is(.i-cal, .i-book, .i-users, .i-calc, .i-info, .i-grid, .i-list, .i-hash, .i-plus) { animation: i-ping .5s ease-out; }
+.cstat.ipl .i-target { animation: i-ping .5s ease-out; }
+.cstat.ipl .i-bolt { animation: i-zap .5s ease-out; }
+.cstat.ipl .i-check { animation: i-ping .5s ease-out; }
+.cpanel-h.ipl > .eyebrow > :is(.i-gauge, .i-history, .i-timer) { animation: i-tick .6s ease-in-out; }
+.cpanel-h.ipl > .eyebrow > .i-repeat { animation: i-twirl .6s var(--ease) both; }
+.cpanel-h.ipl > .eyebrow > .i-chart { animation: i-grow .5s ease-in-out; transform-origin: 50% 100%; }
+.stk-h.ipl h4 .i-flag { animation: i-ping .5s ease-out; }
+.stk-h.ipl h4 .i-cal { animation: i-ping .5s ease-out; }
+.stk-h.ipl h4 .i-history { animation: i-tick .6s ease-in-out; }

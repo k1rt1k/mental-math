@@ -5,7 +5,7 @@ import { patchInto } from '../morph.js';
 import { SK, COL, IDS, T, how as howTo, symFor, showAns } from '../engine.js';
 import { Session, applyRust, LIVES, SPRINT } from '../session.js';
 import { $, esc, mmss } from '../util.js';
-import { toast, icon } from '../ui.js';
+import { toast, icon, mk } from '../ui.js';
 import { A, go, mark, view } from '../nav.js';
 import { padOn, isTouch } from '../theme.js';
 import { showResults } from './results.js';
@@ -170,7 +170,7 @@ function flash(ok) { buzz(ok ? 4 : [14, 36, 14]); const c = $('#qc'); if (!c) re
 function side(r) {
   pulse($('#cmb'), sess.combo, 1.14); $('#bcm').textContent = 'best ' + sess.bc;
   const cc = $('#cc'); if (cc) { cc.hidden = sess.combo < 3; cc.innerHTML = icon('flame', 'fill') + sess.combo; }
-  if (r) patchInto($('#fd'), sess.feed.map((f) => `<div class="fr" data-k="${esc(f[0])}@${Number(f[2]).toFixed(3)}"><span>${esc(f[0])}</span><span class="${f[1] ? (f[3] <= 0.7 ? 'ok' : '') : 'bad'}">${f[1] ? f[2].toFixed(1) + 's' : '✗'}</span></div>`).join('') || '<span class="ph">Your last few answers</span>');
+  if (r) patchInto($('#fd'), sess.feed.map((f) => `<div class="fr" data-k="${esc(f[0])}@${Number(f[2]).toFixed(3)}"><span>${esc(f[0])}</span><span class="${f[1] ? (f[3] <= 0.7 ? 'ok' : '') : 'bad'}">${f[1] ? f[2].toFixed(1) + 's' : mk(false)}</span></div>`).join('') || '<span class="ph">Your last few answers</span>');
   patchInto($('#sb'), IDS.filter((k) => sess.by[k]).map((k) => { const b = sess.by[k]; return `<div class="fr" data-k="${esc(k)}"><span class="kc" style="--sc:${COL[k]}">${esc(SK[k].n)}</span><span>${b[1]}/${b[0]}</span></div>`; }).join('') || '<span class="ph">Fills in as you answer</span>');
 }
 
@@ -185,7 +185,7 @@ function feedback(r) {
   const hw = r.ok ? '' : howTo(p);
   $('#ms').innerHTML = r.ok
     ? (r.lvl ? `<span class="gd">Level up: ${esc(r.lvl)}</span>` : `<span class="${r.r <= 0.7 ? 'ok' : 'mu'}">${r.tm.toFixed(1)}s${r.r <= 0.7 ? ' ' + icon('bolt', 'fill sm') : ''}</span>`)
-    : `<span class="bad">✗ ${esc(p.q)} = ${esc(p.a)}</span>${p.tip ? `<div class="tip">${esc(p.tip)}</div>` : ''}${hw ? `<div class="tip">${esc(hw)}</div>` : ''}`;
+    : `<span class="bad">${mk(false)}${esc(p.q)} = ${esc(p.a)}</span>${p.tip ? `<div class="tip">${esc(p.tip)}</div>` : ''}${hw ? `<div class="tip">${esc(hw)}</div>` : ''}`;
   side(true);
 }
 

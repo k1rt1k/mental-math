@@ -19,7 +19,7 @@ test('coach is unchanged for a normal session', () => {
 test('results: a question missed twice is listed once, and an empty ghost chart is not drawn', () => {
   const src = fs.readFileSync(new URL('../public/js/views/results.js', import.meta.url), 'utf8');
   assert.match(src, /findIndex\(\(y\) => !y\.ok && y\.q == x\.q\)/);
-  assert.match(src, /e\.g\.length && e\.kind != .sprint. \? `<h2>Race against your ghost/);
+  assert.match(src, /e\.g\.length && e\.kind != .sprint. \? `<h2>(\$\{hic\([^)]*\)\})?Race against your ghost/);
   const log = [{ q: 'a', ok: false }, { q: 'b', ok: true }, { q: 'a', ok: false }, { q: 'c', ok: false }];
   const misses = log.filter((x, i, a) => !x.ok && a.findIndex((y) => !y.ok && y.q == x.q) == i);
   assert.deepEqual(misses.map((m) => m.q), ['a', 'c']);

@@ -4,7 +4,7 @@ import { esc, ymd, fmtLen, VERSION, dayAgo, dueIn, clamp } from '../util.js';
 import { restChip } from '../rest.js';
 import { streak, STREAK_MARKS, restInfo, days, plan, todayCount, trickOfDay, weakestSkills, MS, week, zDef, zMD, recommend, lvAgo, records, countsToGoal, modeLabel } from '../stats.js';
 import { radar, ring } from '../charts.js';
-import { icon, promptDlg, dialog, toast } from '../ui.js';
+import { icon, promptDlg, dialog, toast, hic, tri, mk, skg } from '../ui.js';
 import { ib } from '../info.js';
 import { spark, sessLabel } from '../charts.js';
 import { setLearnFilter } from './learn.js';
@@ -99,18 +99,18 @@ function home() {
     <div class="modes m3">${modes.join('')}</div>
 
     <div class="hpair">${pathCard()}
-    <section class="card tod" aria-label="Trick of the day"><div class="eyebrow">Trick of the day · ${kc(t.sk, SK[t.sk].n)}${ib('home.trick')}</div><div class="todt"><div><button type="button" class="todgo" data-act="openTrick" data-v="${esc(t.sk)}" aria-label="${esc('Open ' + SK[t.sk].n + ' tricks in Learn')}"><b>${esc(t.title)}</b></button><div class="mu">${esc(t.rule)}</div><div class="todx">${esc(t.ex[0])}</div></div><div class="btns"><button class="btn sm" data-act="tryTrick" data-v="${esc(t.id)}">Try one</button><button class="btn sm tonal" data-act="practiceTrick" data-v="${esc(t.id)}">Practise</button></div></div></section></div>
+    <section class="card tod" aria-label="Trick of the day"><div class="eyebrow">${icon('bulb')}Trick of the day · ${kc(t.sk, SK[t.sk].n)}${ib('home.trick')}</div><div class="todt"><div><button type="button" class="todgo" data-act="openTrick" data-v="${esc(t.sk)}" aria-label="${esc('Open ' + SK[t.sk].n + ' tricks in Learn')}"><b>${esc(t.title)}</b></button><div class="mu">${esc(t.rule)}</div><div class="todx">${esc(t.ex[0])}</div></div><div class="btns"><button class="btn sm" data-act="tryTrick" data-v="${esc(t.id)}">Try one</button><button class="btn sm tonal" data-act="practiceTrick" data-v="${esc(t.id)}">Practise</button></div></div></section></div>
     ${has ? reviewCard(saved, dueNow, now) : ''}
     ${has ? skillsFold() : howItWorks()}
    </div>
 
    ${has ? `<aside class="home-side" aria-label="Your stats">
-     <section class="card" aria-label="This week"><h3>This week${ib('home.week')}</h3>${weekStrip(D)}
-       <div class="mini wkopen" role="button" tabindex="0" data-act="weekSheet" aria-haspopup="dialog" aria-label="This week in detail"><div><b>${a.s}</b><span>${a.s == 1 ? 'session' : 'sessions'}</span></div><div><b>${a.n}</b><span>${a.n == 1 ? 'answer' : 'answers'}</span></div><div><b>${Math.round(a.acc)}%</b><span>accurate${b.s && dd ? ` <span class="${dd >= 0 ? 'ok' : 'bad'}">${dd >= 0 ? '▲' : '▼'}${Math.abs(dd)}</span>` : ''}</span></div></div>
+     <section class="card" aria-label="This week"><h3>${hic('cal')}This week${ib('home.week')}</h3>${weekStrip(D)}
+       <div class="mini wkopen" role="button" tabindex="0" data-act="weekSheet" aria-haspopup="dialog" aria-label="This week in detail"><div><b>${a.s}</b><span>${a.s == 1 ? 'session' : 'sessions'}</span></div><div><b>${a.n}</b><span>${a.n == 1 ? 'answer' : 'answers'}</span></div><div><b>${Math.round(a.acc)}%</b><span>accurate${b.s && dd ? ` <span class="${dd >= 0 ? 'ok' : 'bad'}">${tri(dd >= 0)}${Math.abs(dd)}</span>` : ''}</span></div></div>
        <div class="wkn mu wkopen" role="button" tabindex="0" data-act="weekSheet" aria-haspopup="dialog" aria-label="This week in detail"><span>${[6, 5, 4, 3, 2, 1, 0].filter((i) => D.has(ymd(dayAgo(i)))).length} of 7 days practised</span><span>${nextMs ? 'Next unlock: ' + esc(nextMs[1]) : 'Every milestone unlocked'}</span></div></section>
-     <section class="card" aria-label="Skill balance"><h3>Skill balance${ib('home.balance')}</h3><div class="lvl wkopen" role="button" tabindex="0" data-act="openSkills" aria-label="${esc('Average rating ' + r + ', ' + rank(r) + '. See every skill')}"><b class="num" title="Average rating across skills">${r}</b><span>${esc(rank(r))}</span></div>${radar()}
+     <section class="card" aria-label="Skill balance"><h3>${hic('sliders')}Skill balance${ib('home.balance')}</h3><div class="lvl wkopen" role="button" tabindex="0" data-act="openSkills" aria-label="${esc('Average rating ' + r + ', ' + rank(r) + '. See every skill')}"><b class="num" title="Average rating across skills">${r}</b><span>${esc(rank(r))}</span></div>${radar()}
        <div class="zline mu wkopen" role="button" tabindex="0" data-act="info" data-v="p.zeta" aria-label="What the Zetamac estimate means"><span>Zetamac estimate <b class="tx">${zDef()}</b></span><span>× ÷ only <b class="tx">${zMD()}</b></span></div></section>
-     <section class="card" aria-label="Personal bests"><h3>Personal bests</h3>${records().map(([l, v], i) => { const g = recordGo(i); return g ? `<button type="button" class="fr frgo" data-act="${esc(g[0])}" data-v="${esc(g[1])}" aria-label="${esc(l + ': ' + v + '. ' + g[2])}"><span class="mu">${l}</span><b>${v}</b><em class="go" aria-hidden="true">${icon('chev')}</em></button>` : `<div class="fr"><span class="mu">${l}</span><b>${v}</b></div>`; }).join('')}</section>
+     <section class="card" aria-label="Personal bests"><h3>${hic('trophy','gd')}Personal bests</h3>${records().map(([l, v], i) => { const g = recordGo(i); return g ? `<button type="button" class="fr frgo" data-act="${esc(g[0])}" data-v="${esc(g[1])}" aria-label="${esc(l + ': ' + v + '. ' + g[2])}"><span class="mu">${l}</span><b>${v}</b><em class="go" aria-hidden="true">${icon('chev')}</em></button>` : `<div class="fr"><span class="mu">${l}</span><b>${v}</b></div>`; }).join('')}</section>
    </aside>` : ''}
   </div>
   <p class="foot">Mental Math ${VERSION}</p>`;
@@ -170,7 +170,7 @@ function weekStrip(D) {
 function skillCard(k, weak) {
   const s = S.sk[k], lv = Math.round(s.lv * 100), pk = s.pk && s.pk - s.lv > 0.15 ? ' · peak ' + Math.round(s.pk * 100) : '', d7 = s.n ? Math.round((s.lv - lvAgo(k, 7)) * 100) : 0;
   return `<button class="card sk" data-act="skill" data-v="${esc(k)}" style="--sc:${COL[k]}" aria-label="${esc(SK[k].n)}, rating ${lv}. Open details">
-    <div class="nm">${esc(SK[k].n)}</div><div class="lv">${lv}${d7 ? `<small class="${d7 > 0 ? 'ok' : 'bad'}" title="Change in the last 7 days">${d7 > 0 ? '▲' : '▼'}${Math.abs(d7)}</small>` : ''}</div>
+    <div class="nm g">${skg(k)}${esc(SK[k].n)}</div><div class="lv">${lv}${d7 ? `<small class="${d7 > 0 ? 'ok' : 'bad'}" title="Change in the last 7 days">${tri(d7 > 0)}${Math.abs(d7)}</small>` : ''}</div>
     <div class="bar" title="${lv} on a scale of 100 to 1200"><i style="width:${Math.min(100, (s.lv / 12) * 100).toFixed(1)}%"></i></div>
     <div class="sknote"><span>${s.n ? Math.round(s.acc * 100) + '% · ' + s.spd.toFixed(2) + '×' + (pk ? '<span class="pk">' + pk + '</span>' : '') : 'new'}</span>${weak ? '<span class="tag">focus</span>' : ''}</div></button>`;
 }
@@ -179,11 +179,11 @@ function skillCard(k, weak) {
 const skOpen = () => (S.skOpen === undefined ? innerWidth > 760 : !!S.skOpen);
 function skillsFold() {
   const weak = weakestSkills(2), strip = IDS.map((k) => `<i style="height:${Math.round(18 + (82 * (S.sk[k].lv - 1)) / 11)}%;--sc:${COL[k]}"></i>`).join('');
-  return `<details class="fold skfold" ${skOpen() ? 'open' : ''}><summary data-act="skToggle" aria-label="Your skills, ${skOpen() ? 'hide' : 'show'} details"><h2>Your skills<span class="sub">tap one for details and drills</span></h2><span class="sstrip" aria-hidden="true">${strip}</span></summary>
+  return `<details class="fold skfold" ${skOpen() ? 'open' : ''}><summary data-act="skToggle" aria-label="Your skills, ${skOpen() ? 'hide' : 'show'} details"><h2>${hic('target')}Your skills<span class="sub">tap one for details and drills</span></h2><span class="sstrip" aria-hidden="true">${strip}</span></summary>
     <div class="skills">${IDS.map((k) => skillCard(k, weak.includes(k))).join('')}</div></details>`;
 }
 /** First-run replacement for the stats widgets, which would all be empty. */
-const howItWorks = () => `<section class="card how1" aria-label="How it works"><h3>How it works</h3>
+const howItWorks = () => `<section class="card how1" aria-label="How it works"><h3>${hic('info')}How it works</h3>
   <ol><li><span class="n">1</span><div><b>Play 2 minutes</b><span>Type each answer. It submits itself, no Enter needed.</span></div></li>
   <li><span class="n">2</span><div><b>Get a rating per skill</b><span>It rises as you get faster and cleaner, and sets how hard questions are.</span></div></li>
   <li><span class="n">3</span><div><b>Misses come back</b><span>Missed questions return later, with the method to solve them.</span></div></li></ol>${DEMO ? '' : '<button class="btn sm tonal" data-act="demoEnter">See it with sample data</button>'}</section>`;

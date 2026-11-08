@@ -179,3 +179,16 @@ document.addEventListener('pointerdown', (e) => {
   addEventListener('pointerup', off, { once: true, passive: true }); addEventListener('pointercancel', off, { once: true, passive: true });
   setTimeout(off, 1200);
 }, { passive: true });
+
+/** Touch has no hover, so a tap plays the icon motion that a mouse hover plays (css/motion.css, rules on .ipl). It is put on the tapped control (or the
+ *  card, stat or heading row it sits in) for a moment and then taken off. Mouse users keep the hover rules; Reduce motion plays nothing. */
+const IPL = 'button, a, .chip, .stat, .card[data-act], .cstat, .stk-hero, .stk-rest, .stk-h, .cpanel-h';
+document.addEventListener('click', (e) => {
+  if (still() || !e.target || !e.target.closest) return;
+  const touch = e.pointerType === 'touch' || e.pointerType === 'pen' || !matchMedia('(hover: hover)').matches;
+  if (!touch) return;
+  const el = e.target.closest(IPL);
+  if (!el || !el.querySelector('.ic')) return;
+  el.classList.remove('ipl'); void el.offsetWidth; el.classList.add('ipl');      // restart if tapped again
+  clearTimeout(el._ipl); el._ipl = setTimeout(() => el.classList.remove('ipl'), 1000);
+}, { passive: true });

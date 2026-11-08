@@ -7,7 +7,7 @@ import { PATHS, dueChecks } from '../paths.js';
 import { pathsGrid } from './paths.js';
 import { register, A } from '../nav.js';
 import { drill } from './home.js';
-import { icon } from '../ui.js';
+import { icon, mk } from '../ui.js';
 import { ib } from '../info.js';
 import { showAiSheet } from '../ai.js';
 
@@ -26,7 +26,7 @@ function learn(swap = false) {
     if (!o || !o.n) return t.pt ? '<span class="mu">Not practised yet</span>' : '';
     const acc = Math.round((100 * o.ok) / o.n), sp = o.ok ? o.r / o.ok : 0;
     const mastered = o.n >= 15 && acc >= 90 && sp && sp <= 1;
-    return `${mastered ? '<span class="pill ok2">Mastered ✓</span> ' : ''}<span class="mu">You: ${o.n} tries · <span class="${acc >= 90 ? 'ok' : acc < 75 ? 'bad' : ''}">${acc}%</span> accurate${sp ? ' · ' + sp.toFixed(2) + '× par time' : ''}${sp ? ib('l.par') : ''}</span>`;
+    return `${mastered ? `<span class="pill ok2">${icon('check')}Mastered</span> ` : ''}<span class="mu">You: ${o.n} tries · <span class="${acc >= 90 ? 'ok' : acc < 75 ? 'bad' : ''}">${acc}%</span> accurate${sp ? ' · ' + sp.toFixed(2) + '× par time' : ''}${sp ? ib('l.par') : ''}</span>`;
   };
   const nChk = dueChecks().length;
   const segHtml = () => `<div class="seg learnseg" role="group" aria-label="Learn"><button aria-pressed="${tab == 'paths'}" data-act="learnTab" data-v="paths">Guided paths${nChk ? ` <span class="badge-inline" aria-label="${esc(nChk + (nChk == 1 ? ' retention check ready' : ' retention checks ready'))}">${nChk}</span>` : ''}</button><button aria-pressed="${tab == 'lib'}" data-act="learnTab" data-v="lib">Shortcut library</button></div>`;
@@ -94,7 +94,7 @@ A.tryTrick = async (d) => {
       const check = () => {
         if (solved) { p = sample(t); return show(); }
         if (!inp.value.trim()) return;
-        if (ansMatch(inp.value.trim().replace(/−/g, '-'), p.a)) { solved = true; res.innerHTML = '<span class="ok">✓ Correct.</span> <span class="mu">Press Enter for another.</span>'; }
+        if (ansMatch(inp.value.trim().replace(/−/g, '-'), p.a)) { solved = true; res.innerHTML = '<span class="ok">' + mk(true) + 'Correct.</span> <span class="mu">Press Enter for another.</span>'; }
         else { res.innerHTML = '<span class="bad">Not quite.</span> <span class="mu">Try again, or show the method.</span>'; inp.select(); }
       };
       dlg.querySelector('#tc').onclick = check;

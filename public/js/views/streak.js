@@ -36,7 +36,7 @@ const mileBlock = (st) => {
   const nm = STREAK_MARKS.find((m) => m > st), pm = [...STREAK_MARKS].reverse().find((m) => m <= st) || 0;
   const pct = nm ? Math.round(((st - pm) / (nm - pm)) * 100) : 100;
   const line = nm ? `<b>${nm - st}</b> ${nm - st == 1 ? 'day' : 'days'} to the <b>${nm}-day</b> mark` : 'Every milestone reached';
-  return `<div class="stk-sec"><div class="stk-h"><h4>Next milestone</h4><span>${line}</span></div>
+  return `<div class="stk-sec"><div class="stk-h"><h4>${icon('flag')}Next milestone</h4><span>${line}</span></div>
     <div class="bar" role="progressbar" aria-label="Progress to the next streak milestone" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><i style="width:${pct}%"></i></div>
     <div class="stk-marks" aria-hidden="true">${STREAK_MARKS.map((m) => `<span class="${m <= st ? 'hit' : ''}">${m}</span>`).join('')}</div></div>`;
 };
@@ -53,7 +53,7 @@ const runsBlock = (rs) => {
   const last = rs.slice(-6);
   if (last.length < 2) return '';
   const mx = Math.max(...last.map((r) => r.len));
-  return `<div class="stk-sec"><div class="stk-h"><h4>Your streaks</h4><span>latest ${last.length}</span></div>
+  return `<div class="stk-sec"><div class="stk-h"><h4>${icon('history')}Your streaks</h4><span>latest ${last.length}</span></div>
     <div class="stk-runs">${last.map((r) => `<div class="${r.cur ? 'cur' : ''}"><span class="mu">${esc(fmt(new Date(r.end + 'T12:00').getTime(), { month: 'short', day: 'numeric' }))}</span><span class="rb"><i style="width:${Math.max(4, Math.round((r.len / mx) * 100))}%"></i></span><b class="num">${r.len}</b></div>`).join('')}</div></div>`;
 };
 
@@ -63,7 +63,7 @@ A.streakCard = async () => {
   const hero = `<div class="stk-hero"><span class="sring big ${restInfo() && restInfo().state == 'ready' ? 'rest' : ''}" style="--p:${esc(ring(st).toFixed(3))}">${icon('flame', 'fill')}</span>
     <div><div class="stk-n"><b class="num">${st}</b><span>${st == 1 ? 'day streak' : 'day streak'}</span></div>
     <p class="mu">${st ? `Longest ${lg} · ${recent} of the last ${passed} days practised` : total ? `Longest ${lg}. Practise today to start a new one.` : 'Finish a session to start your streak.'}</p></div></div>`;
-  const body = `<div class="stk">${hero}${restBlock(st)}<div class="stk-sec"><div class="stk-h"><h4>Last 5 weeks</h4><span>${total} ${total == 1 ? 'day' : 'days'} in total</span></div>${heat(cells)}</div>${mileBlock(st)}${runsBlock(streakRuns())}</div>`;
-  const go = await dialog({ title: 'Your streak', body, actions: st ? [{ label: 'Close', value: false }, { label: 'Share image', value: true, primary: true }] : [{ label: 'Close', value: false, primary: true }], onOpen: (dl) => dl.classList.add('stksheet') });
+  const body = `<div class="stk">${hero}${restBlock(st)}<div class="stk-sec"><div class="stk-h"><h4>${icon('cal')}Last 5 weeks</h4><span>${total} ${total == 1 ? 'day' : 'days'} in total</span></div>${heat(cells)}</div>${mileBlock(st)}${runsBlock(streakRuns())}</div>`;
+  const go = await dialog({ title: 'Your streak', body, actions: st ? [{ label: 'Close', value: false }, { label: 'Share image', value: true, primary: true, icon: 'share' }] : [{ label: 'Close', value: false, primary: true }], onOpen: (dl) => dl.classList.add('stksheet') });
   if (go && await shareCard(card(st)) == 'saved') toast('Image saved');
 };

@@ -1,5 +1,6 @@
 // Daily leaderboard, client side. Opt-in: nothing is sent unless this learner joined (Settings, Cloud sync).
 import { esc } from './util.js';
+import { icon } from './ui.js';
 import { syncKey, boardApi } from './sync.js';
 import { ymd } from './util.js';
 import { queueAdd, queueClean, queueDrop, rankChange, moveText } from './boardlogic.js';
@@ -64,6 +65,6 @@ export function boardHtml(b) {
   if (b.error) return `<p class="mu" style="margin:0">${esc(b.error)}${b.queued ? ' Your score is saved on this device and will be sent later.' : ''}</p>`;
   const mv = b.moved, climb = mv && mv.up ? ` style="--n:${Math.min(mv.up, 6)}"` : '';
   const rows = b.board.map((x, i) => `<tr${x.you ? ` class="you${mv ? ' climb' : ''}" aria-current="true"${climb}` : ''}><td class="r">${i + 1}<td>${esc(x.name)}${x.you ? ' <span class="mu">(you)</span>' : ''}<td class="r num">${x.pts}<td class="r mu">${x.ok}/${x.n}</tr>`).join('');
-  const banner = mv ? `<div class="bmove" role="status"><span class="bmi" aria-hidden="true">${mv.first ? '★' : '▲'}</span><span>${esc(moveText(mv))}</span></div>` : '';
+  const banner = mv ? `<div class="bmove" role="status"><span class="bmi" aria-hidden="true">${mv.first ? icon('star', 'fill') : icon('caretup', 'fill')}</span><span>${esc(moveText(mv))}</span></div>` : '';
   return `${banner}${b.board.length ? `<div class="tbl"><table><tr><th class="r">#<th>Learner<th class="r">Points<th class="r">Right</tr>${rows}</table></div>` : '<p class="mu" style="margin:0">Nobody has played today’s Daily yet.</p>'}${b.waiting && b.waiting.length ? `<p class="mu" style="margin:10px 0 0">Still to play: ${b.waiting.map(esc).join(', ')}</p>` : ''}`;
 }

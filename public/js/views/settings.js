@@ -2,9 +2,9 @@ import { S, save, replaceState, mergeStates, asCurrent, stampWipe, fresh, avgLv,
 import { IDS, SK } from '../engine.js';
 import { esc, ymd, clamp, ago } from '../util.js';
 import { A, register, go, view } from '../nav.js';
-import { dialog, confirmDlg, typedConfirmDlg, promptDlg, choiceDlg, toast, download, icon } from '../ui.js';
+import { dialog, confirmDlg, typedConfirmDlg, promptDlg, choiceDlg, toast, download, icon, hic, eic } from '../ui.js';
 import { ib } from '../info.js';
-import { applyTheme, ACC, FONTS, padOn, isTouch } from '../theme.js';
+import { applyTheme, ACC, FONTS, padOn, isTouch, SKINS, LOOKS, accKey, skinKey, themeNow, HEX } from '../theme.js';
 import { boardHint, setBoardHint, boardWhy, loadBoard, boardHtml } from '../board.js';
 import { rankLine } from '../boardlogic.js';
 import { DEMO, leaveDemo } from '../demoflag.js';
@@ -23,7 +23,7 @@ const hh = (t) => String(t.h).padStart(2, '0') + ':' + String(t.m).padStart(2, '
 const DN = ['S', 'M', 'T', 'W', 'T', 'F', 'S'], DFULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'], ORDER = [1, 2, 3, 4, 5, 6, 0];
 function remindersCard() {
   const r = remGet();
-  const head = `<section class="card"><h3>Reminders${ib('s.remind')}</h3>`;
+  const head = `<section class="card"><h3>${hic('bell')}Reminders${ib('s.remind')}</h3>`;
   if (rs === null) return head + '<p class="mu" style="margin-top:8px">Checking…</p></section>';
   const note = (t) => `<p class="mu" style="margin:8px 0 0;max-width:56ch">${t}</p>`;
   if (rs == 'unsupported') return head + note('This browser cannot show reminders when the app is closed. Try Chrome, Edge, Firefox or Safari 16.4+, and install the app.') + '</section>';
@@ -47,15 +47,20 @@ function settings() {
   if (rs === null) loadRem();
   if (bd === null && syncKey()) loadBoardState();
   const goal = S.goal || 2, pad = S.pad == null ? 'auto' : S.pad ? 'on' : 'off', th = S.theme || 'auto';
-  const grp = (id, title, sub, inner) => `<section class="sgrp" data-grp="${esc(id)}" aria-labelledby="g-${esc(id)}"><h2 class="sg" id="g-${esc(id)}">${title}</h2>${inner}</section>`;
+  const lt = themeNow() == 'light', cur = skinKey(), ak = accKey(), customOn = ak == 'custom', hex = HEX.test(S.accHex || '') ? S.accHex : '#a07bff';
+  const looks = LOOKS.map(([sk, ac, nm]) => `<button class="look" type="button" role="radio" aria-checked="${cur == sk && ak == ac}" data-act="look" data-v="${esc(sk)}"><span class="lk" aria-hidden="true"><i style="background:${SKINS[sk][lt ? 3 : 1]}"></i><i style="background:${ACC[ac][0]}"></i></span>${esc(nm)}</button>`).join('');
+  const skins = Object.entries(SKINS).map(([k, v]) => `<button class="skinb" type="button" role="radio" aria-checked="${cur == k}" data-act="skin" data-v="${esc(k)}" style="--sb-bg:${v[lt ? 3 : 1]};--sb-c:${v[lt ? 4 : 2]}"><span class="sb" aria-hidden="true"></span>${esc(v[0])}</button>`).join('');
+  const grp = (id, title, sub, inner) => `<section class="sgrp" data-grp="${esc(id)}" aria-labelledby="g-${esc(id)}"><h2 class="sg" id="g-${esc(id)}">${hic(({ look: 'palette', practice: 'target', account: 'user', data: 'info' })[id] || 'sliders')}${title}</h2>${inner}</section>`;
   const cols = (l, r) => `<div class="g g2" style="align-items:start"><div class="g">${l}</div><div class="g">${r}</div></div>`;
   document.querySelector('#main').innerHTML = `
   <div class="hd"><h1>Settings</h1></div>
   <div class="sfind"><input id="sq" class="inp" type="search" placeholder="Search settings" aria-label="Search settings" autocomplete="off" spellcheck="false" value="${esc(sq)}">
-    <nav class="chips sjump" aria-label="Jump to a group">${GROUPS.map(([id, t]) => `<button class="chip" data-act="sjump" data-v="${esc(id)}">${t}</button>`).join('')}</nav></div>
-  ${grp('look', 'Look and feel', 'Theme, colours and text', cols(`<section class="card"><h3>Appearance</h3>
+    <nav class="chips sjump" aria-label="Jump to a group">${GROUPS.map(([id, t]) => `<button class="chip" data-act="sjump" data-v="${esc(id)}">${icon(({ look: 'palette', practice: 'target', account: 'user', data: 'info' })[id] || 'sliders')}${t}</button>`).join('')}</nav></div>
+  ${grp('look', 'Look and feel', 'Theme, colours and text', cols(`<section class="card"><h3>${hic('palette')}Appearance</h3>
       <div class="field"><div class="mu">Theme</div>${seg('theme', th, [['auto', 'Auto'], ['light', 'Light'], ['dark', 'Dark'], ['black', 'Black']])}</div>
-      <div class="field"><div class="mu">Accent</div><div class="chips" role="radiogroup" aria-label="Accent colour">${Object.entries(ACC).map(([k, [c]]) => `<button class="swatch" role="radio" aria-checked="${(S.acc || 'blue') == k}" aria-label="${esc(k)}" data-act="acc" data-v="${esc(k)}" style="background:${c};color:${c}"></button>`).join('')}</div></div>
+      <div class="field"><div class="mu">Quick looks</div><div class="looks" role="radiogroup" aria-label="Quick looks">${looks}</div></div>
+      <div class="field"><div class="mu">Background</div><div class="skins" role="radiogroup" aria-label="Background style">${skins}</div>${themeNow() == 'black' ? '<p class="skins-note">Black stays pure black. Switch to Dark or Light to see these.</p>' : ''}</div>
+      <div class="field"><div class="mu">Accent</div><div class="chips" role="radiogroup" aria-label="Accent colour">${Object.entries(ACC).map(([k, [c]]) => `<button class="swatch" role="radio" aria-checked="${ak == k}" aria-label="${esc(k)}" data-act="acc" data-v="${esc(k)}" style="background:${c};color:${c}"></button>`).join('')}<label class="swatch cust${customOn ? ' on' : ''}" title="Pick your own colour"${customOn ? ` style="background:${esc(hex)};color:${esc(hex)}"` : ''}>${customOn ? '' : icon('plus')}<input id="acc-custom" type="color" value="${esc(hex)}" aria-label="Custom accent colour"></label></div></div>
       <div class="field"><div class="mu">Question font</div><div>${seg('font', S.font || 'serif', Object.entries(FONTS))}<div class="fontprev" aria-hidden="true">47 × 38</div></div></div>
       <div class="field"><div class="mu">Text size</div>${seg('ts', S.ts || 'm', [['m', 'Normal'], ['l', 'Large'], ['xl', 'Largest']])}</div>
       ${row('Reduce motion', 'No sliding, shaking or confetti.', 'rm', get('rm'))}
@@ -63,16 +68,16 @@ function settings() {
       ${row('Colour-blind friendly colours', 'Right is blue and wrong is orange, instead of green and red.', 'cb', get('cb'))}
       ${row('Larger answer text', 'Bigger digits in the answer box while you play.', 'bigA', get('bigA'))}
       ${row('Focus layout', 'Hide the side panel and race bar while you play.', 'zen', get('zen'))}
-    </section>`, `<section class="card pv" data-k="preview"><h3>Preview</h3>
+    </section>`, `<section class="card pv" data-k="preview"><h3>${hic('eye')}Preview</h3>
       <div class="pv-box" role="img" aria-label="Preview of the question, answer and colours with your current choices">
         <div class="pv-q">47 × 38</div>
         <div class="pv-a">1786<i></i></div>
         <div class="pv-row"><span class="pill ok">Right</span><span class="pill bad">Wrong</span><span class="pv-btn">Accent</span></div>
         <p class="pv-t">The quick fox solves 12 × 12 in your head.</p>
       </div>
-      <p class="mu pv-n">Updates as you change theme, accent, font, text size, contrast and colours.</p>
+      <p class="mu pv-n">Updates as you change theme, background, accent, font, text size, contrast and colours.</p>
     </section>`))}
-  ${grp('practice', 'Practice', 'How you answer and how sessions run', cols(`<section class="card"><h3>Answering</h3>
+  ${grp('practice', 'Practice', 'How you answer and how sessions run', cols(`<section class="card"><h3>${hic('keys')}Answering</h3>
       <div class="field"><div class="mu">Keypad${ib('s.pad')}</div><div>${seg('pad', pad, [['auto', 'Auto'], ['on', 'Always'], ['off', 'Never']])}<div class="mu" style="margin-top:6px">Auto shows it on touch screens only.</div></div></div>
       <div class="field"><div class="mu">Keypad layout</div><div>${seg('padFlip', S.padFlip ? 'calc' : 'phone', [['phone', '1 2 3 on top'], ['calc', '7 8 9 on top']])}</div></div>
       ${row('Enter to submit', 'Answers are only judged when you press Enter or Submit. Slower, but a slip on the last digit can be fixed, and the answer length is not revealed.', 'ent', get('ent'))}
@@ -80,7 +85,7 @@ function settings() {
       ${row('Show session timer', 'The big clock and the shrinking time bar while you play. Turn off if a ticking clock adds pressure; the session still ends on time.', 'noTimer', get('noTimer'))}
       ${row('Show question time line', 'The thin line under each question that runs down against its par time.', 'noQLine', get('noQLine'))}
       ${row('Pace readout', 'Show seconds on the current question against your target time.', 'pace', get('pace'))}
-    </section>`, `<section class="card"><h3>Sessions</h3>
+    </section>`, `<section class="card"><h3>${hic('timer')}Sessions</h3>
       ${row('3-2-1 countdown', 'A short countdown before each session.', 'noCd', get('noCd'))}
       ${row('Sound', 'Soft tones for right and wrong answers.', 'mute', !S.mute)}
       ${row('Vibration', 'Haptic buzz on wrong answers and keypad taps.', 'noHap', get('noHap'))}
@@ -88,10 +93,10 @@ function settings() {
       <div class="set"><div><div class="t">Daily goal${ib('s.goal')}</div><div class="d">Sessions of 2+ minutes that keep your streak alive.</div></div><div class="stepper"><button class="btn sm" data-act="goal" data-v="-1" aria-label="Fewer sessions" ${goal <= 1 ? 'disabled' : ''}>−</button><b class="num" aria-live="polite">${goal}</b><button class="btn sm" data-act="goal" data-v="1" aria-label="More sessions" ${goal >= 5 ? 'disabled' : ''}>+</button></div></div>
       <div class="set"><div><div class="t">Ratings${ib('s.ratings')}</div><div class="d">Average ${Math.round(avgLv() * 100)}. Ratings adapt on their own; reset them if the level feels off.</div></div><div class="btns"><button class="btn sm" data-act="calib">Set all…</button><button class="btn sm" data-act="placement">Choose level</button></div></div>
     </section>`))}
-  ${grp('account', 'Account', 'AI Coach, reminders and cloud sync', cols(`${remindersCard()}<section class="card"><h3>AI Coach${ib('s.ai')}</h3>
+  ${grp('account', 'Account', 'AI Coach, reminders and cloud sync', cols(`${remindersCard()}<section class="card"><h3>${hic('sparkle')}AI Coach${ib('s.ai')}</h3>
       <p class="mu" style="margin:6px 0 0;max-width:56ch">The AI Coach belongs to this device's learner. Gemini is configured securely on the server; your personal sync password identifies which learner's cloud data and AI access to use. There is no separate User 1 / User 2 switch or browser-stored API key.</p>
       <div class="btns" style="margin-top:12px"><button class="btn sm" data-act="aiStatus">${icon('sparkle')} Check AI status</button></div>
-    </section>`, `<section class="card"><h3>Cloud sync${ib('s.sync')}</h3>
+    </section>`, `<section class="card"><h3>${hic('cloud')}Cloud sync${ib('s.sync')}</h3>
       <p class="mu" style="margin:6px 0 12px;max-width:56ch">${syncKey() ? "Your progress syncs to the personal cloud account selected by this device's key. Your settings (theme, accent, keypad, sound, goal and saved setups) sync too, so a new browser looks and behaves like your others. Reminders stay per device. Use your own key on your devices; the other learner must use a different key." : "Set this learner's personal sync password. Use the same password on other devices belonging to this learner and your settings will follow you. Another person must use their own different password."}</p>
       <div class="set"><div><div class="t">${syncKey() ? esc(statusText()) : DEMO ? 'Synced (sample)' : 'Sync is off'}</div><div class="d">${syncKey() ? 'Key set on this device' : DEMO ? 'Simulated in sample mode; nothing leaves this tab' : 'No key set'}</div></div><div class="btns"><button class="btn sm" data-act="syncKey">${syncKey() ? 'Change key' : 'Set up sync'}</button>${syncKey() ? '<button class="btn sm" data-act="syncNow">Sync now</button>' : ''}</div></div>
       ${syncKey() && isWeakKey() ? `<div class="notice" role="status" style="margin:0 0 12px"><span>This sync key is shorter than ${MIN_KEY_LENGTH} characters, so it is easier to guess. Replace it with a longer one: set a new SYNC_KEY in Netlify, or ask the main account for a new key under Learners and keys.</span></div>` : ''}
@@ -99,17 +104,17 @@ function settings() {
       ${syncKey() ? `<div class="set"><div><div class="t">Daily leaderboard</div><div class="d">${bd && bd.member ? `On, as <b>${esc(bd.name)}</b>. ${esc(rankLine(bd))} Learners who joined see each other's Daily points.` : 'Off. Compare each day\u2019s Daily score with the other learners on this server. Shares only the display name you choose, your Daily points and how many you answered; leaving deletes it.'}</div></div><div class="btns">${bd && bd.member ? `<button class="btn sm" data-act="boardView">Today</button><button class="btn sm" data-act="boardJoin">Rename</button><button class="btn sm danger" data-act="boardLeave">Leave</button>` : `<button class="btn sm" data-act="boardJoin">Join\u2026</button>`}</div></div>` : ''}
       ${syncKey() ? `<div class="set"><div><div class="t">Recover from cloud safety copy${ib('s.recover')}</div><div class="d">The server keeps a daily copy. This merges back anything missing here.</div></div><button class="btn sm" data-act="restoreCloud">Recover</button></div>` : ''}
     </section>`))}
-  ${grp('data', 'Data and help', 'Backups, reset and how things work', cols(`<section class="card"><h3>Your data</h3>
+  ${grp('data', 'Data and help', 'Backups, reset and how things work', cols(`<section class="card"><h3>${hic('shield')}Your data</h3>
       <div class="set"><div><div class="t">Backup${ib('s.backup')}</div><div class="d">${S.lastExport ? 'Last download ' + ymd(S.lastExport) + ' (' + ago(S.lastExport) + ')' : 'Never downloaded'}. Home reminds you after 12 days without one, unless sync is on. ${S.sessions.length} ${S.sessions.length == 1 ? 'session' : 'sessions'} stored here.</div></div><button class="btn sm" data-act="export">${icon('down')} Download</button></div>
       <div class="set"><div><div class="t">Restore from backup${ib('s.import')}</div><div class="d">Merge or replace using a backup file.</div></div><button class="btn sm" data-act="import">${icon('up')} Import</button></div>
       <div class="set"><div><div class="t">Session history</div><div class="d">One row per session, for spreadsheets.</div></div><button class="btn sm" data-act="csv">${icon('down')} CSV</button></div>
       ${installRow()}
       <div class="set"><div><div class="t">Reset everything${ib('s.reset')}</div><div class="d">Erases progress on this device.</div></div><button class="btn sm danger" data-act="reset">${icon('trash')} Reset</button></div>
-    </section>`, `<section class="card"><h3>Help</h3>
+    </section>`, `<section class="card"><h3>${hic('info')}Help</h3>
       <div class="set"><div><div class="t">How it works</div><div class="d">Ratings, scoring, the notebook and modes.</div></div><button class="btn sm" data-act="help">Read</button></div>
       <div class="set"><div><div class="t">Keyboard shortcuts</div><div class="d">Everything is reachable without a mouse.</div></div><button class="btn sm" data-act="keys">${icon('keys')} Show</button></div>
     </section>`))}
-  <div class="card empty sempty" id="sempty" role="status" hidden></div>`;
+  <div class="card empty ei sempty" id="sempty" role="status" hidden></div>`;
   filterSettings();
 }
 
@@ -138,7 +143,7 @@ function filterSettings() {
     const pv = g.querySelector('.pv'); if (pv) pv.hidden = !!terms.length && !gShow;
     g.hidden = !gShow; any = any || gShow;
   });
-  const e = main.querySelector('#sempty'); if (e) { e.hidden = any || !terms.length; e.textContent = terms.length && !any ? 'No settings match “' + sq.trim() + '”. Try a shorter word, such as theme, sound or sync.' : ''; }
+  const e = main.querySelector('#sempty'); if (e) { e.hidden = any || !terms.length; e.innerHTML = terms.length && !any ? eic('search') + esc('No settings match “' + sq.trim() + '”. Try a shorter word, such as theme, sound or sync.') : ''; }
 }
 document.addEventListener('input', (e) => { if (e.target.id == 'sq' && view.scr == 'settings') { sq = e.target.value; filterSettings(); } });
 document.addEventListener('keydown', (e) => { if (e.target.id == 'sq' && e.key == 'Escape' && sq) { e.preventDefault(); sq = ''; e.target.value = ''; filterSettings(); } });
@@ -148,6 +153,15 @@ A.sjump = (d) => { const g = document.querySelector('#g-' + d.v); if (g) g.scrol
 const again = () => { if (view.scr == 'settings') settings(); };
 A.theme = (d) => { S.theme = d.v == 'auto' ? undefined : d.v; save(); applyTheme(); again(); };
 A.acc = (d) => { S.acc = d.v; save(); applyTheme(); again(); };
+A.skin = (d) => { S.skin = d.v; save(); applyTheme(); again(); };
+A.look = (d) => { const l = LOOKS.find((x) => x[0] == d.v); if (!l) return; S.skin = l[0]; S.acc = l[1]; save(); applyTheme(); again(); };
+// The custom colour follows the picker live (no save, no repaint: either would close it), and is kept when the picker is dismissed.
+document.addEventListener('input', (e) => {
+  if (e.target.id != 'acc-custom' || view.scr != 'settings') return;
+  S.acc = 'custom'; S.accHex = e.target.value; applyTheme();
+  const l = e.target.closest('.swatch'); if (l) { l.classList.add('on'); l.style.background = l.style.color = e.target.value; const i = l.querySelector('.ic'); if (i) i.remove(); }
+});
+document.addEventListener('change', (e) => { if (e.target.id == 'acc-custom' && view.scr == 'settings') { S.acc = 'custom'; S.accHex = e.target.value; save(); applyTheme(); again(); } });
 A.ts = (d) => { S.ts = d.v; save(); applyTheme(); again(); };
 A.font = (d) => { S.font = d.v; save(); applyTheme(); again(); };
 A.padFlip = (d) => { S.padFlip = d.v == 'calc'; save(); again(); };

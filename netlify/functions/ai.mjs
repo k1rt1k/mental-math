@@ -21,7 +21,7 @@ import {
 } from '../lib/ailogic.mjs';
 import { authenticate, lockedText } from '../lib/gate.mjs';
 
-const AI_BUILD_VERSION = '14.81';
+const AI_BUILD_VERSION = '14.86';
 
 const J = (o, status = 200) =>
   Response.json(o, {

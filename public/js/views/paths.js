@@ -7,7 +7,7 @@ import { esc } from '../util.js';
 import { weakestSkills, streak, learnToday } from '../stats.js';
 import { shareCard } from '../share.js';
 import { A, register, go, view, mark, enter } from '../nav.js';
-import { icon, toast, burst, dialogOpen } from '../ui.js';
+import { icon, toast, burst, dialogOpen, hic, tri, mk } from '../ui.js';
 import { showAiSheet, showAiExplanation } from '../ai.js';
 import { lessonAiContext, runAiContext, pathsAiContext, skillsInReply } from '../pathAi.js';
 import { PATHS, KINDS, PHASES, RET, RULES, PATH_STAGES, progress, donePhase, recordCheck, checkMode, PathSession, PlaceSession, PLACE, canPlace, applyPlacement, nextUp, logPathRun, masteryInfo, dueChecks } from '../paths.js';
@@ -49,12 +49,12 @@ const track = (k) => {
 
 export function pathsGrid() {
   const nu = nextUp(S.sessions.length ? weakestSkills(1)[0] : 'mul');
-  const top = nu ? `<div class="card nextup pcard"><div><div class="eyebrow">${nu.kind == 'retain' ? 'Ready now' : nu.kind == 'start' ? 'Suggested start' : 'Pick up where you left off'}</div><b>${esc(SK[nu.k].n)}: ${esc(nu.kind == 'retain' ? RET[nu.ret].label : PATHS[nu.k].stages[Math.max(0, nu.p.cur)].t)}</b><div class="mu">${esc(statusLine(nu.k))}</div></div><button class="btn primary" data-act="pathOpen" data-v="${esc(nu.k)}">${esc(cta(nu.k))}</button></div>` : '';
-  return `${top}<h2 class="phd">All ${IDS.length} paths${IDS.filter((x) => progress(x).mastered).length ? ` <span class="mu" style="font-weight:500;font-size:.7em">· ${IDS.filter((x) => progress(x).mastered).length} mastered</span>` : ''}</h2><div class="pgrid">${IDS.map((k) => {
+  const top = nu ? `<div class="card nextup pcard"><div><div class="eyebrow">${icon(nu.kind == 'retain' ? 'repeat' : 'play')}${nu.kind == 'retain' ? 'Ready now' : nu.kind == 'start' ? 'Suggested start' : 'Pick up where you left off'}</div><b>${esc(SK[nu.k].n)}: ${esc(nu.kind == 'retain' ? RET[nu.ret].label : PATHS[nu.k].stages[Math.max(0, nu.p.cur)].t)}</b><div class="mu">${esc(statusLine(nu.k))}</div></div><button class="btn primary" data-act="pathOpen" data-v="${esc(nu.k)}">${esc(cta(nu.k))}</button></div>` : '';
+  return `${top}<h2 class="phd">${hic('route')}All ${IDS.length} paths${IDS.filter((x) => progress(x).mastered).length ? ` <span class="mu" style="font-weight:500;font-size:.7em">· ${IDS.filter((x) => progress(x).mastered).length} mastered</span>` : ''}</h2><div class="pgrid">${IDS.map((k) => {
     const p = progress(k);
     const pc = Math.round(p.pct * 100);
     return `<article class="card ppath ${p.mastered ? 'is-mastered' : p.started ? 'is-started' : ''}" style="--sc:${COL[k]}"><div class="phead"><span class="pring ${p.mastered ? 'full' : ''}" style="--p:${pc}" role="progressbar" aria-label="${esc(SK[k].n + ' path progress')}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pc}">${gly(k)}</span>
-      <div class="pht"><div class="kc">${esc(SK[k].n)}${p.mastered ? ' <span class="pill ok2">Mastered ✓</span>' : p.assessed ? ' <span class="pill ok2">Assessed ✓</span>' : ''}</div><span class="mu">${esc(statusLine(k))}</span></div></div>
+      <div class="pht"><div class="kc">${esc(SK[k].n)}${p.mastered ? ` <span class="pill ok2">${icon('check')}Mastered</span>` : p.assessed ? ' <span class="pill ok2">Assessed ✓</span>' : ''}</div><span class="mu">${esc(statusLine(k))}</span></div></div>
       <h3>${esc(PATHS[k].blurb)}</h3>
       ${track(k)}
       <div class="trick-foot"><span class="mu pct">${p.mastered ? 'All ' + p.total + ' milestones done' : p.done + ' of ' + p.total + ' milestones'}</span><button class="btn sm ${nu && nu.k == k ? 'primary' : ''}" data-act="pathOpen" data-v="${esc(k)}" aria-label="${esc(cta(k) + ' ' + SK[k].n + ' path')}">${esc(cta(k))}</button></div></article>`;
@@ -86,7 +86,7 @@ function map() {
   const ret = p.ret.map((r) => {
     const body = r.state == 'locked' ? '<span class="mu">' + icon('lock') + ' Pass the mastery test first</span>'
       : r.state == 'waiting' ? `<span class="mu">Ready ${esc(when(r.dueAt))}</span>`
-      : r.state == 'done' ? '<span class="pill ok2">Passed ✓</span>'
+      : r.state == 'done' ? `<span class="pill ok2">${icon('check')}Passed</span>`
       : `<button class="btn primary" data-act="retStart" data-v="${esc(r.i)}">Take the check</button>`;
     return `<article class="card pret ${r.state}" style="--sc:${COL[k]}"><div><div class="kc">Retention · ${r.i == 0 ? 'a day later' : 'a week later'}</div><b>${esc(r.label)}</b><p class="mu">${r.i == 0 ? '6 fresh questions, no hints, the day after your mastery test.' : '6 more questions a week on: the real test of what stuck.'}${r.state == 'retry' ? ' You can retake it after a refresher.' : ''}</p></div><div>${body}</div></article>`;
   }).join('');
@@ -101,7 +101,7 @@ function map() {
     <div class="pherofoot">${track(k)}<span class="mu num">${p.done} of ${p.total} milestones</span>${nextBtn}</div></header>
     ${p.mastered ? `<div class="card nextup pcard pmbanner" style="--sc:${COL[k]}"><div><b>${esc(SK[k].n)} is mastered</b><div class="mu">Every check passed. Show it off.</div></div><button class="btn primary" data-act="pathShare">Share mastery card</button></div>` : ''}
   ${canPlace(k) ? placeCard(p) : ''}
-  <div class="pstages">${p.stages.map(stage).join('')}</div><h2 class="pstick">Does it stick?</h2><p class="mu pstickp">Two short checks after mastery, a day later and a week later, show what you still remember.</p><div class="prets">${ret}</div>
+  <div class="pstages">${p.stages.map(stage).join('')}</div><h2 class="pstick">${hic('repeat')}Does it stick?</h2><p class="mu pstickp">Two short checks after mastery, a day later and a week later, show what you still remember.</p><div class="prets">${ret}</div>
   <p class="mu" style="margin-top:18px;max-width:62ch">${sk(k)} Prefer to browse? The <button class="lnk2" data-act="pathLib" data-v="${esc(k)}">trick library</button> has every shortcut as a stand-alone card.</p>`;
 }
 
@@ -125,7 +125,7 @@ function lesson() {
   let body = '';
   if (ph == 0) {
     body = `<div class="card ptch" style="--sc:${COL[k]}"><div class="eyebrow">Teach</div>${st.teach.map((x) => `<p>${esc(x)}</p>`).join('')}<div class="pkey"><div class="eyebrow" style="margin:0">Remember</div><b>${esc(st.key)}</b></div></div>
-      ${st.tr.length ? `<h2>The tricks in this stage</h2><div class="ptricks">${st.tr.map((id) => TRICKS.find((t) => t.id == id)).filter(Boolean).map(trickCard).join('')}</div>` : ''}
+      ${st.tr.length ? `<h2>${hic('bulb','gd')}The tricks in this stage</h2><div class="ptricks">${st.tr.map((id) => TRICKS.find((t) => t.id == id)).filter(Boolean).map(trickCard).join('')}</div>` : ''}
       <div class="btns pnav"><button class="btn primary" data-act="pathNext" data-primary>Next: see it worked ${icon('chev')}</button><button class="btn" data-act="aiLesson">${icon('sparkle')} Explain this another way</button></div>`;
   } else if (ph == 1) {
     body = `<div class="card ptch" style="--sc:${COL[k]}"><div class="eyebrow">Demonstrate</div><p class="mu">Step through the worked ${st.demo.length > 1 ? 'examples' : 'example'}. In the last one you finish the answer yourself.</p></div>${demoBody(st)}`;
@@ -226,7 +226,7 @@ const fb = (h) => { const f = $('#pfb'); f && (f.innerHTML = h); };
 function right() {
   const s = run.s, p = s.cur, res = s.record(true);
   s.checkpoint(); locked = true;
-  fb(`<span class="ok">✓ ${res.tm.toFixed(1)} s</span>${p.hinted ? ' <span class="mu">with a hint</span>' : ''}`);
+  fb(`<span class="ok">${mk(true)}${res.tm.toFixed(1)} s</span>${p.hinted ? ' <span class="mu">with a hint</span>' : ''}`);
   setTimeout(() => run && advance(), run.mode == 'practise' ? 650 : 380);
 }
 function wrong() {
@@ -239,7 +239,7 @@ function wrong() {
   locked = true; s.record(false); s.checkpoint();
   const hw = howTo(p);
   const ai = run.mode == 'practise' ? `<div class="tip"><button class="btn sm ghost" data-act="runAi">${icon('sparkle')} AI Method</button></div>` : '';   // help while learning; assessed runs get it on the result screen instead
-  fb(`<span class="bad">✗ ${esc(p.q)} = ${esc(p.a)}</span>${p.tip ? `<div class="tip">${esc(p.tip)}</div>` : ''}${hw ? `<div class="tip">${esc(hw)}</div>` : ''}${ai}`);
+  fb(`<span class="bad">${mk(false)}${esc(p.q)} = ${esc(p.a)}</span>${p.tip ? `<div class="tip">${esc(p.tip)}</div>` : ''}${hw ? `<div class="tip">${esc(hw)}</div>` : ''}${ai}`);
   $('#pin').disabled = true; $('#phint').disabled = true; const nx = $('#pnext'); nx.hidden = false; nx.focus({ preventScroll: true });
 }
 function advance() { if (!run) return; run.s.finished ? finishRun() : showQ(); }
@@ -299,7 +299,7 @@ function placeResult() {
   enter();   // same cascade and count-ups as every other screen
   main().innerHTML = `<div class="card pres ${cleared ? 'pass' : ''}" style="--sc:${COL[k]}"><div class="eyebrow">${esc(SK[k].n)} · Level check</div><h1>${esc(title)}</h1>
     <p>${esc(body)}</p>${ctx.res.logged ? learnLine() : ''}<div class="btns pnav"><button class="btn primary" data-act="pathStage" data-v="${esc(at)}" data-primary>${esc(go2)}</button><button class="btn ghost" data-act="pathMap">Path map</button></div>${aiRunBtn()}</div>
-    <h2>Every answer</h2><div class="card"><div class="plist">${rows.map((x) => `<div class="prow"><span>${esc(x.q)} = <b>${esc(x.a)}</b>${x.ok ? '' : `<br><span class="mu">${esc(howTo({ q: x.q, a: x.a, sk: k }))}</span>${aiBtn(x, k)}`}</span><span><span class="mu num">${x.tm.toFixed(1)}s</span> <span class="${x.ok ? 'ok' : 'bad'}">${x.ok ? '✓' : '✗'}</span></span></div>`).join('')}</div></div>`;
+    <h2>${hic('list')}Every answer</h2><div class="card"><div class="plist">${rows.map((x) => `<div class="prow"><span>${esc(x.q)} = <b>${esc(x.a)}</b>${x.ok ? '' : `<br><span class="mu">${esc(howTo({ q: x.q, a: x.a, sk: k }))}</span>${aiBtn(x, k)}`}</span><span><span class="mu num">${x.tm.toFixed(1)}s</span> <span class="${x.ok ? 'ok' : 'bad'}">${mk(x.ok)}</span></span></div>`).join('')}</div></div>`;
   scrollTo({ top: 0, behavior: 'instant' });
 }
 
@@ -307,7 +307,7 @@ function result() {
   if (ctx.res.place) return placeResult();
   const { v, rows, mode, ret, si, k } = ctx.res, st = PATHS[k].stages[si], last = si == PATH_STAGES - 1;
   const R = RULES[mode](st), P = progress(k);
-  const title = mode == 'practise' ? 'Practice complete' : v.pass ? (mode == 'retain' ? 'Retained ✓' : last ? 'Mastery assessment passed' : 'Stage ' + (si + 1) + ' passed') : 'Not this time';
+  const title = mode == 'practise' ? 'Practice complete' : v.pass ? (mode == 'retain' ? 'Retained' : last ? 'Mastery assessment passed' : 'Stage ' + (si + 1) + ' passed') : 'Not this time';
   const why = v.pass ? '' : v.reason == 'pace' ? `Accurate enough, but your average pace was ${v.pace}× par and the limit is ${v.paceLimit}×. Speed comes from the shortcuts, so a refresher helps.` : `You need ${v.need} first-try answers and had ${v.correct}. A hinted answer or a corrected slip does not count.`;
   let next = '';
   if (mode == 'practise') next = `<button class="btn primary" data-act="pathPhase" data-v="3" data-primary>Next: the check</button><button class="btn" data-act="runStart" data-v="practise">More practice</button>`;
@@ -321,7 +321,7 @@ function result() {
     <div class="pscore"><b class="num">${v.correct}/${v.n}</b><span class="mu">${mode == 'practise' ? 'first try' : 'first-try correct'}${R.need ? ' · ' + R.need + ' needed' : ''}</span></div>
     ${v.pace && R.pace ? `<div class="pace ${R.pace && v.pace > R.pace ? 'bad' : ''}">Pace ${v.pace}× par${R.pace ? ' (limit ' + R.pace + '×)' : ''}</div>` : ''}
     ${why ? `<p>${esc(why)}</p>` : ''}${note}${ctx.res.logged ? learnLine() : ''}<div class="btns pnav">${next}</div>${aiRunBtn()}</div>
-    <h2>Every answer</h2><div class="card"><div class="plist">${rows.map((x) => `<div class="prow"><span>${esc(x.q)} = <b>${esc(x.a)}</b>${x.hinted ? ' <span class="mu">· hint</span>' : !x.first && x.ok ? ' <span class="mu">· slip first</span>' : ''}${x.ok ? '' : `<br><span class="mu">${esc(howTo({ q: x.q, a: x.a, sk: k }))}</span>${aiBtn(x, k)}`}</span><span><span class="mu num">${x.tm.toFixed(1)}s</span> <span class="${x.ok ? 'ok' : 'bad'}">${x.ok ? '✓' : '✗'}</span></span></div>`).join('')}</div></div>`;
+    <h2>${hic('list')}Every answer</h2><div class="card"><div class="plist">${rows.map((x) => `<div class="prow"><span>${esc(x.q)} = <b>${esc(x.a)}</b>${x.hinted ? ' <span class="mu">· hint</span>' : !x.first && x.ok ? ' <span class="mu">· slip first</span>' : ''}${x.ok ? '' : `<br><span class="mu">${esc(howTo({ q: x.q, a: x.a, sk: k }))}</span>${aiBtn(x, k)}`}</span><span><span class="mu num">${x.tm.toFixed(1)}s</span> <span class="${x.ok ? 'ok' : 'bad'}">${mk(x.ok)}</span></span></div>`).join('')}</div></div>`;
   scrollTo({ top: 0, behavior: 'instant' });
 }
 

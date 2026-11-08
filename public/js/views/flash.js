@@ -141,7 +141,7 @@ function done(f) {
   }
   f.ph = 'done';
   main().innerHTML = `<div class="flw"><div class="mu">Flash · ${cfg.c} numbers · ${cfg.d} digit${cfg.d > 1 ? 's' : ''} · ${cfg.s / 1000} s${cfg.neg ? ' · add and subtract' : ''}</div>
-    <div class="fl-r ${f.ok >= 4 ? 'ok' : ''}">${f.ok} / ${ROUNDS}</div><div class="mu">${f.log.map((x) => (x ? '●' : '○')).join(' ')}</div>
+    <div class="fl-r ${f.ok >= 4 ? 'ok' : ''}">${f.ok} / ${ROUNDS}</div><div class="mu">${f.log.map((x) => `<span class="fdot ${x ? 'on' : ''}"></span>`).join('')}</div>
     <div class="fl-x">${pts} pts${isBest ? ' · new best for this setting' : prev ? ' · best here ' + Math.max(prev, pts) : ''}</div>
     ${f.ok > 0 ? `<div class="mu fl-sub">Counts toward today’s streak${goal ? ' and daily goal' : ''}.</div>` : ''}
     <div class="mu fl-tip">${f.ok >= 4 ? 'Solid. Try more numbers, a faster flash or more digits next.' : f.ok >= 2 ? 'Keep this setting for another run before you speed up.' : 'Slow it down or use fewer numbers; accuracy first, speed second.'}</div>
