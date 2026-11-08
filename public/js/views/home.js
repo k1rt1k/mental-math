@@ -11,6 +11,7 @@ import { setLearnFilter } from './learn.js';
 import { pathCard } from './paths.js';
 import { A, register, view, go } from '../nav.js';
 import { syncKey, statusText, status } from '../sync.js';
+import { DEMO, enterDemo } from '../demoflag.js';
 import { applyTheme } from '../theme.js';
 import { start } from './play.js';
 import { mkOf } from '../session.js';
@@ -31,7 +32,7 @@ const STEP_IC = { train: 'target', review: 'redo', daily: 'cal' };
 const DIFF = [[-1.5, 'Easier'], [0, 'Auto'], [1.5, 'Harder'], [3, 'Brutal']];
 
 export const syncChip = () => {
-  const on = !!syncKey(), lbl = on ? 'Sync status: ' + statusText() : 'Sync is off. Set up sync';
+  const on = !!syncKey() || DEMO, lbl = on ? 'Sync status: ' + statusText() : 'Sync is off. Set up sync';
   return `<button class="syncdot ${on ? status.kind : 'off'}" data-act="sync" aria-haspopup="dialog" title="${esc(lbl)}" aria-label="${esc(lbl)}"><span class="sico">${icon('cloud')}<i></i></span><span id="sy">${esc(on ? statusText() : 'Set up sync')}</span></button><span class="offp" role="status">${icon('cloud')} Offline<span class="offw"> · still works</span></span>`;
 };
 
@@ -55,14 +56,18 @@ function home() {
   const rec = recommend(), open = S.customOpen === true;
   const diffL = cf.off ? ' · ' + (DIFF.find((d) => d[0] == cf.off) || [0, 'custom'])[1].toLowerCase() : '';
   const [hello, dateStr] = greeting(), warnStreak = st && !D.has(ymd());
+  // Each mode card says where you stand: your best so far, and the rating of the skill Drill weakest will target. (Daily moves into Today's plan after the first session, where it shows done or not.)
+  const stat = (cls, ic, t, tip = '') => `<span class="mstat ${cls}" ${tip ? `title="${esc(tip)}"` : ''}>${icon(ic, 'sm')}${esc(t)}</span>`;
+  const flashBest = Math.max(0, ...S.sessions.filter((x) => x.m == 'flash').map((x) => x.pts));
+  const bestSt = (v) => (has && v ? stat('best', 'trophy', 'Best ' + v) : '');
   const modes = [
-    `<button class="mode" data-act="daily"><span class="mi">${icon('cal')}</span><b>Daily</b><span class="mdesc">${dly ? 'Today ' + dly + ' pts' : '60\u00a0s · same for everyone'}</span></button>`,
-    `<button class="mode" data-act="survival"><span class="mi">${icon('heart')}</span><b>Survival</b><span class="mdesc">3 lives${svBest ? ' · best ' + svBest.pts : ', rising difficulty'}</span></button>`,
-    `<button class="mode" data-act="sprint"><span class="mi">${icon('bolt')}</span><b>Sprint</b><span class="mdesc">20 questions${S.best.sprint ? ' · best ' + S.best.sprint.t + '\u00a0s' : ', fastest time'}</span></button>`,
-    `<button class="mode" data-act="flash"><span class="mi">${icon('star')}</span><b>Flash</b><span class="mdesc">${(() => { const b = Math.max(0, ...S.sessions.filter((x) => x.m == 'flash').map((x) => x.pts)); return b ? 'Running total · best ' + b : 'Numbers flash, you add'; })()}</span></button>`,
+    `<button class="mode" data-act="daily"><span class="mi">${icon('cal')}</span><b>Daily</b><span class="mdesc">60\u00a0s · same for everyone</span></button>`,
+    `<button class="mode" data-act="survival"><span class="mi">${icon('heart')}</span><b>Survival</b>${bestSt(svBest && svBest.pts)}<span class="mdesc">${svBest ? '3 lives · rising difficulty' : '3 lives, rising difficulty'}</span></button>`,
+    `<button class="mode" data-act="sprint"><span class="mi">${icon('bolt')}</span><b>Sprint</b>${has && S.best.sprint ? stat('best', 'trophy', 'Best ' + S.best.sprint.t + '\u00a0s') : ''}<span class="mdesc">${S.best.sprint ? '20 questions · fastest time' : '20 questions, fastest time'}</span></button>`,
+    `<button class="mode" data-act="flash"><span class="mi">${icon('star')}</span><b>Flash</b>${bestSt(flashBest)}<span class="mdesc">${flashBest ? 'Running total' : 'Numbers flash, you add'}</span></button>`,
   ];
   if (has) { modes.shift(); modes.push(
-    `<button class="mode" data-act="weakest"><span class="mi">${icon('target')}</span><b>Drill weakest</b><span class="mdesc">${esc(SK[w1].n)}</span></button>`); }
+    `<button class="mode" data-act="weakest"><span class="mi">${icon('target')}</span><b>Drill weakest</b>${stat('todo', 'target', 'Rating ' + Math.round(S.sk[w1].lv * 100))}<span class="mdesc">${esc(SK[w1].n)}</span></button>`); }
   // One Start. When the recommendation is a plain training session it runs the learner's configured session; the title follows the setup.
   const dflt = cf.dur == 120 && cf.only == 'all' && !(cf.off || 0), conf = has && rec.act == 'recommended';
   const heroAct = conf ? 'start' : rec.act, heroCta = conf && !dflt ? 'Start' : rec.cta, heroTitle = conf && !dflt ? fmtLen(cf.dur) + ' · ' + onLabel(cf) + diffL : rec.title;
@@ -93,8 +98,8 @@ function home() {
 
     <div class="modes m3">${modes.join('')}</div>
 
-    ${pathCard()}
-    <section class="card tod" aria-label="Trick of the day"><div class="eyebrow">Trick of the day · ${kc(t.sk, SK[t.sk].n)}${ib('home.trick')}</div><div class="todt"><div><button type="button" class="todgo" data-act="openTrick" data-v="${esc(t.sk)}" aria-label="${esc('Open ' + SK[t.sk].n + ' tricks in Learn')}"><b>${esc(t.title)}</b></button><div class="mu">${esc(t.rule)}</div><div class="todx">${esc(t.ex[0])}</div></div><div class="btns"><button class="btn sm" data-act="tryTrick" data-v="${esc(t.id)}">Try one</button><button class="btn sm tonal" data-act="practiceTrick" data-v="${esc(t.id)}">Practise</button></div></div></section>
+    <div class="hpair">${pathCard()}
+    <section class="card tod" aria-label="Trick of the day"><div class="eyebrow">Trick of the day · ${kc(t.sk, SK[t.sk].n)}${ib('home.trick')}</div><div class="todt"><div><button type="button" class="todgo" data-act="openTrick" data-v="${esc(t.sk)}" aria-label="${esc('Open ' + SK[t.sk].n + ' tricks in Learn')}"><b>${esc(t.title)}</b></button><div class="mu">${esc(t.rule)}</div><div class="todx">${esc(t.ex[0])}</div></div><div class="btns"><button class="btn sm" data-act="tryTrick" data-v="${esc(t.id)}">Try one</button><button class="btn sm tonal" data-act="practiceTrick" data-v="${esc(t.id)}">Practise</button></div></div></section></div>
     ${has ? reviewCard(saved, dueNow, now) : ''}
     ${has ? skillsFold() : howItWorks()}
    </div>
@@ -181,7 +186,8 @@ function skillsFold() {
 const howItWorks = () => `<section class="card how1" aria-label="How it works"><h3>How it works</h3>
   <ol><li><span class="n">1</span><div><b>Play 2 minutes</b><span>Type each answer. It submits itself, no Enter needed.</span></div></li>
   <li><span class="n">2</span><div><b>Get a rating per skill</b><span>It rises as you get faster and cleaner, and sets how hard questions are.</span></div></li>
-  <li><span class="n">3</span><div><b>Misses come back</b><span>Missed questions return later, with the method to solve them.</span></div></li></ol></section>`;
+  <li><span class="n">3</span><div><b>Misses come back</b><span>Missed questions return later, with the method to solve them.</span></div></li></ol>${DEMO ? '' : '<button class="btn sm tonal" data-act="demoEnter">See it with sample data</button>'}</section>`;
+A.demoEnter = () => enterDemo();
 A.skToggle = () => { S.skOpen = !skOpen(); save(); home(); };
 /** Hide the backup reminder for a week (this device only). */
 A.dismissBk = () => { S.bkSnooze = Date.now() + 7 * 864e5; save(); home(); };

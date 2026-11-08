@@ -1,6 +1,9 @@
 // App state: one stable object `S`, persisted to localStorage, with migration and a sync-safe merge.
 import { IDS, SK, MASTER_BOX, qk } from './engine.js';
 import { clamp } from './util.js';
+import { DEMO } from './demoflag.js';
+import { buildDemo } from './demo.js';
+export { DEMO };
 
 export const KEY = 'mmTrainer.v1'; // one local learner per device; legacy profile data is migrated once below.
 export const LEGACY_ACTIVE_USER = (() => {
@@ -155,7 +158,7 @@ export const fresh = () => {
 export const PREF_KEYS = ['pad', 'theme', 'acc', 'font', 'zen', 'mute', 'noBlur', 'noCd', 'noHap', 'ts', 'hc', 'cb', 'bigA', 'pace', 'padFlip', 'rm', 'ent', 'noGrace'];
 export const SYNCED_PREFS = [...PREF_KEYS, 'goal', 'cfg', 'presets'];
 /** Genuinely tied to one browser: the push subscription behind reminders, which panels are open, and snoozed banners. */
-export const DEVICE_LOCAL = ['rem', 'skOpen', 'bkSnooze', 'padHint'];
+export const DEVICE_LOCAL = ['rem', 'skOpen', 'bkSnooze', 'padHint', 'tipPar'];
 /** What Reset keeps: device-bound settings plus the synced appearance/input settings (and their change times). Progress, goal and setups go. */
 export const devicePrefs = (st = S) => {
   const out = Object.fromEntries([...DEVICE_LOCAL, ...PREF_KEYS].filter((k) => st[k] !== undefined).map((k) => [k, st[k]]));
@@ -300,7 +303,8 @@ export const S = {};
 export const replaceState = (o) => { Object.keys(S).forEach((k) => delete S[k]); Object.assign(S, migrate(o)); snapPrefs(); };
 
 let loaded = {};
-try { loaded = JSON.parse(localStorage[activeKey()]); } catch (e) { /* first run or blocked storage */ }
+if (DEMO) loaded = buildDemo(fresh());   // sample mode: a made-up learner, held in memory only
+else try { loaded = JSON.parse(localStorage[activeKey()]); } catch (e) { /* first run or blocked storage */ }
 replaceState(loaded);
 
 const listeners = new Set();
@@ -328,6 +332,7 @@ export function trimRecall(st = S) {
 
 /** Write to localStorage without touching the modified-time (used after a sync merge). */
 export function persist() {
+  if (DEMO) return true;   // sample mode never writes to the visitor's saved data
   try { localStorage[activeKey()] = JSON.stringify(S); return true; } catch (e) { return false; }
 }
 /** Stamp as modified, persist, and tell the sync layer. */

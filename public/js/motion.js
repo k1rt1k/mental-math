@@ -22,7 +22,7 @@ function count(el, ms = 800, wait = 0) {
   requestAnimationFrame(tick);
 }
 
-const SEL = '.stat .v, .lvl b, .sk .lv, .score .v, .rs b';
+const SEL = '.stat .v, .lvl b, .sk .lv, .score .v, .rs b, .pscore b, .pmstats b';
 /** How long until `el` is visible: the longest entrance delay on it or any ancestor (cascade position), plus a beat for the fade to get going. */
 function lead(el, root) {
   let d = 0;

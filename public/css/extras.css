@@ -98,7 +98,7 @@ dialog.dlg.info .acts .btn { min-width: 96px; }
 
 /* Play: quiet placeholders instead of bare dashes, and a name for the thin bar at the foot of the card */
 .side .ph { color: var(--mu2); font-size: var(--t-sm); }
-.board .qtl { position: absolute; left: 18px; bottom: 14px; font-size: 10.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--mu2); pointer-events: none; }
+.board .qtl { position: absolute; left: 18px; bottom: 14px; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--mu2); pointer-events: none; }
 @media (max-width: 700px) { .board .qtl { display: none; } }   /* the board is too short on phones for a caption beside the answer line */
 
 /* Learn: the AI shortcut is an icon, so "Practise this" is the only loud button on a trick card */
@@ -294,11 +294,11 @@ h2.sg { margin: 28px 0 12px; scroll-margin-top: 16px; }
 .rpips { display: inline-flex; gap: 3px; align-items: center; }
 .rpips i { width: 6px; height: 6px; border-radius: 50%; background: var(--ln2); }
 .rpips i.on { background: var(--ok); }
-.stat .s .pill.rest { margin-left: 4px; padding: 1px 8px; font-size: 11px; vertical-align: 1px; }
+.stat .s .pill.rest { margin-left: 4px; padding: 1px 8px; font-size: 12px; vertical-align: 1px; }
 
 /* ---------- Leaderboard: moving up (14.57) ---------- */
 .bmove { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; padding: 9px 12px; border-radius: 12px; font-weight: 650; background: color-mix(in srgb, var(--ok) 13%, var(--c)); color: var(--ok); animation: bmin .5s var(--ease, ease-out) both; }
-.bmi { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; font-size: 11px; background: color-mix(in srgb, var(--ok) 22%, transparent); animation: bmhop .9s var(--ease, ease-out) .3s both; }
+.bmi { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; font-size: 12px; background: color-mix(in srgb, var(--ok) 22%, transparent); animation: bmhop .9s var(--ease, ease-out) .3s both; }
 #main .tbl tr.you.climb { position: relative; animation: bclimb .8s cubic-bezier(.2, .8, .2, 1) .35s both; }
 #main .tbl tr.you.climb td { animation: bglow 1.8s ease-out .35s both; }
 @keyframes bmin { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
@@ -406,7 +406,7 @@ h2.sg { margin: 28px 0 12px; scroll-margin-top: 16px; }
 .csk, .cslip { display: contents; font-size: var(--t-sm); }
 .csk .nm, .cslip .nm { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--mu); font-weight: 560; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .csk .dot, .cdrill .dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--sc); }
-.csk .nm em { flex: none; font-style: normal; font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; padding: 2px 7px; border-radius: 999px; background: color-mix(in srgb, var(--gd) 18%, transparent); color: var(--gd); }
+.csk .nm em { flex: none; font-style: normal; font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; padding: 2px 7px; border-radius: 999px; background: color-mix(in srgb, var(--gd) 18%, transparent); color: var(--gd); }
 .csk.weak .nm { color: var(--tx); }
 .trk { height: 8px; border-radius: 4px; background: var(--ln); overflow: hidden; }
 .trk > i { display: block; height: 100%; border-radius: 4px; background: color-mix(in srgb, var(--sc, var(--ac)) var(--fill-mix), var(--ink-base)); transform-origin: left; animation: csgrow .7s var(--ease, ease-out) both; }
@@ -499,7 +499,7 @@ dialog.dlg .body .ai-prose { max-height: none !important; overflow: visible !imp
 .cm-body { min-width: 0; flex: 1; }
 .chat-author { margin: 0 0 5px 2px; font-size: var(--t-xs); font-weight: 650; color: var(--mu); }
 .chat-author.warn { color: var(--gd); }
-.chat-note { margin: -2px 0 6px 2px; font-size: 11.5px; line-height: 1.4; color: var(--mu2); }
+.chat-note { margin: -2px 0 6px 2px; font-size: 12px; line-height: 1.4; color: var(--mu2); }
 .chat-bubble { min-width: 0; max-width: 100%; }
 .chat-msg.coach .chat-bubble { padding: 14px 18px; border-radius: 6px 18px 18px 18px; background: var(--c2); border: 1px solid var(--ln); }
 .chat-msg.user .chat-bubble { padding: 11px 17px; border-radius: 18px 18px 6px 18px; color: var(--ach); background: linear-gradient(145deg, var(--btn-top), var(--btn-bot)); font-size: 15px; line-height: 1.55; font-weight: 520; }
@@ -534,10 +534,10 @@ dialog.dlg .body .ai-prose { max-height: none !important; overflow: visible !imp
 @media (max-width: 760px) {
   .ch { grid-template-columns: auto minmax(0, 1fr); gap: 8px 12px; margin-bottom: 16px; }
   .ch-av { width: 46px; height: 46px; border-radius: 15px; } .ch-av .ic { width: 23px; height: 23px; }
-  .ch-q { grid-column: 1 / -1; } .ch-q .pill { max-width: 100%; white-space: normal; font-size: 11.5px; }
+  .ch-q { grid-column: 1 / -1; } .ch-q .pill { max-width: 100%; white-space: normal; font-size: 12px; }
   .ch-t p { display: none; }
   .ctabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px; width: 100%; padding: 4px; margin-bottom: 16px; }
-  .ctab { flex-direction: column; gap: 4px; min-height: 54px; padding: 8px 2px; font-size: 11.5px; }
+  .ctab { flex-direction: column; gap: 4px; min-height: 54px; padding: 8px 2px; font-size: 12px; }
   .ctab .ic { width: 20px; height: 20px; }
   .cpanel { padding: 16px; border-radius: 16px; margin-bottom: 12px; }
   .cgrid { gap: 12px; margin-bottom: 12px; }
@@ -563,7 +563,7 @@ dialog.dlg .body .ai-prose { max-height: none !important; overflow: visible !imp
   .chat-form { position: sticky; bottom: calc(68px + env(safe-area-inset-bottom)); z-index: 5; margin: 14px -4px 0; padding: 8px 4px 2px; background: linear-gradient(to top, var(--c) 80%, transparent); }
   .chat-form .inp { min-height: 48px; } .send { width: 48px; height: 48px; }
 }
-@media (max-width: 360px) { .ctab { font-size: 11px; } .starters { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 360px) { .ctab { font-size: 12px; } .starters { grid-template-columns: minmax(0, 1fr); } }
 
 .pill.streak[data-act] { cursor: pointer; }
 .pill.streak[data-act]:focus-visible { outline: 2px solid var(--ac); outline-offset: 2px; }
@@ -606,8 +606,8 @@ dialog.dlg.stksheet .body { color: var(--tx); }
 .stk-h span { font-size: 12.5px; color: var(--mu); text-align: right; }
 .stk-h span b { color: var(--tx); }
 .stk-dow, .stk-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
-.stk-dow { margin-bottom: 6px; } .stk-dow span { text-align: center; font-size: 11px; font-weight: 650; color: var(--mu); }
-.sd { display: grid; place-items: center; aspect-ratio: 1; border-radius: 9px; font-style: normal; font-size: 11.5px; font-weight: 600; color: var(--mu); background: color-mix(in srgb, var(--mu) 11%, transparent); }
+.stk-dow { margin-bottom: 6px; } .stk-dow span { text-align: center; font-size: 12px; font-weight: 650; color: var(--mu); }
+.sd { display: grid; place-items: center; aspect-ratio: 1; border-radius: 9px; font-style: normal; font-size: 12px; font-weight: 600; color: var(--mu); background: color-mix(in srgb, var(--mu) 11%, transparent); }
 .stk-grid .sd { font-size: 12px; }
 .sd.on { color: #fff; background: color-mix(in srgb, var(--ac) 42%, var(--c)); }
 .sd.on.l2 { background: color-mix(in srgb, var(--ac) 70%, var(--c)); }
@@ -618,9 +618,9 @@ dialog.dlg.stksheet .body { color: var(--tx); }
 .sd.fut { opacity: .38; background: transparent; border: 1px dashed var(--ln2); }
 .stk-grid .sd.on { animation: stkpop .35s var(--ease, ease-out) both; animation-delay: calc(var(--i, 0) * 8ms); }
 @keyframes stkpop { from { transform: scale(.6); opacity: 0; } }
-.stk-key { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 11.5px; color: var(--mu); margin-top: 4px; }
+.stk-key { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 12px; color: var(--mu); margin-top: 4px; }
 .stk-key .sd { width: 14px; height: 14px; aspect-ratio: auto; border-radius: 4px; } .stk-key .sd .ic { width: 9px; height: 9px; } .stk-key span + .sd { margin-left: 2px; } .stk-key .sd.rest { margin-left: 10px; }
-.stk-marks { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--mu); font-variant-numeric: tabular-nums; }
+.stk-marks { display: flex; justify-content: space-between; font-size: 12px; color: var(--mu); font-variant-numeric: tabular-nums; }
 .stk-marks .hit { color: var(--gd); font-weight: 700; }
 .stk-runs { display: grid; gap: 7px; }
 .stk-runs > div { display: grid; grid-template-columns: 52px 1fr 28px; align-items: center; gap: 10px; font-size: 12.5px; }
@@ -670,15 +670,15 @@ dialog.dlg.wsheet { width: min(480px, calc(100vw - 32px)); }
 .ws-hero p { margin: 3px 0 0; font-size: var(--t-sm); }
 .ws-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .ws-stats > div { display: grid; gap: 2px; padding: 10px 12px; border-radius: 14px; background: var(--c2); border: 1px solid var(--ln); }
-.ws-stats span { font-size: 11.5px; color: var(--mu); }
+.ws-stats span { font-size: 12px; color: var(--mu); }
 .ws-stats b { font: 680 20px/1.1 var(--sans); letter-spacing: -.02em; }
-.ws-stats small { font-size: 11px; color: var(--mu); }
+.ws-stats small { font-size: 12px; color: var(--mu); }
 .ws-stats small.ok { color: var(--ok); } .ws-stats small.bad { color: var(--bad, #e5645b); }
 .ws-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
 .wsday { display: grid; grid-template-rows: auto 44px auto; gap: 5px; justify-items: center; padding: 8px 0 7px; border-radius: 12px; border: 1px solid transparent; background: color-mix(in srgb, var(--mu) 9%, transparent); color: var(--mu); font: inherit; cursor: pointer; transition: background .15s, transform .15s var(--ease, ease-out); }
 .wsday:hover { background: color-mix(in srgb, var(--mu) 16%, transparent); }
 .wsday:active { transform: scale(.95); }
-.wsday .wsl { font-size: 11px; font-weight: 650; }
+.wsday .wsl { font-size: 12px; font-weight: 650; }
 .wsday .wsn { font-size: 12.5px; font-weight: 650; font-variant-numeric: tabular-nums; }
 .wsday .wsb { width: 14px; height: 44px; border-radius: 7px; display: flex; align-items: flex-end; background: color-mix(in srgb, var(--mu) 12%, transparent); overflow: hidden; }
 .wsday .wsb i { display: block; width: 100%; border-radius: 7px; background: color-mix(in srgb, var(--ac) 60%, var(--c)); animation: wsgrow .45s var(--ease, ease-out) both; }
@@ -753,3 +753,336 @@ button.fr:hover { background: color-mix(in srgb, var(--mu) 6%, transparent); }
 @keyframes pmpop { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .pmast .pmark { animation: none; } }
 [data-motion=reduce] .pmast .pmark { animation: none; }
+
+/* ===== v14.77 UI pass: pad slot, first-run note, mode status, Learn rings, two-column Home, Coach fold ===== */
+/* Pad: the slot beside 0 is the Hint key unless the question needs a symbol. */
+.pad .sym.hintk { visibility: visible; pointer-events: auto; color: var(--mu); }
+.pad .sym.hintk .ic { width: 26px; height: 26px; }
+.padact.one { grid-template-columns: 1fr; }
+.padact[hidden], .padact .btn[hidden] { display: none; }
+/* One-time explanation of "par" and "Skill · rating", shown in the message line of the first question. */
+.cmark { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; color: var(--tx); font-size: 13px; line-height: 1.4; }
+.cmark .lnk2 { color: var(--ac-ink, var(--ac)); font-weight: 650; text-decoration: underline; }
+.board .tagr #pr { cursor: help; }
+/* Home mode cards: what is done, what is at risk, what is your best. */
+.mode { position: relative; }
+.mstat { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 650; line-height: 1.5; white-space: nowrap; background: color-mix(in srgb, var(--mc) 14%, transparent); color: color-mix(in srgb, var(--mc) var(--ink-mix), var(--ink-base)); }
+.mstat .ic { width: 13px; height: 13px; }
+.mstat.done { background: color-mix(in srgb, var(--ok) 16%, transparent); color: var(--ok); }
+.mstat.risk { background: color-mix(in srgb, var(--bad) 16%, transparent); color: var(--bad); }
+.mstat.todo { background: transparent; box-shadow: inset 0 0 0 1px var(--ln2); color: var(--mu); }
+.mode.is-done { border-color: color-mix(in srgb, var(--ok) 40%, var(--ln)); }
+@media (min-width: 761px) { .mode > .mstat { position: absolute; top: 14px; right: 14px; } }
+@media (max-width: 760px) { .mode > .mstat { grid-area: b; } }
+/* Learn: skill mark inside a progress ring. */
+.phead { display: flex; align-items: center; gap: 14px; }
+.pht { display: grid; gap: 2px; min-width: 0; }
+.pring { --p: 0; flex: none; position: relative; display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; background: conic-gradient(var(--sc) calc(var(--p) * 1%), color-mix(in srgb, var(--sc) 20%, transparent) 0); }
+.pring::before { content: ""; position: absolute; inset: 5px; border-radius: 50%; background: var(--c); }
+.pring b { position: relative; font-size: 16px; font-weight: 700; letter-spacing: -.02em; color: color-mix(in srgb, var(--sc) var(--ink-mix), var(--ink-base)); }
+.pring.full::after { content: ""; position: absolute; inset: 0; border-radius: 50%; box-shadow: 0 0 0 2px color-mix(in srgb, var(--sc) 35%, transparent); }
+.ppath .trick-foot .pct { flex: 1 1 100px; }
+/* Desktop Home: the guided path and the trick of the day share a row; the stats row goes three-up before the side column appears. */
+.hpair { display: grid; gap: 16px; align-items: stretch; }
+.hpair > * { margin-top: 0; min-width: 0; }
+@container (min-width: 640px) { .hpair { grid-template-columns: repeat(2, minmax(0, 1fr)); } .hpair .pcard, .hpair .tod { flex-direction: column; align-items: stretch; justify-content: space-between; } .hpair .todt { flex-direction: column; align-items: stretch; } .hpair .todt > div:first-child { flex: none; } .hpair .pcard > .btn { align-self: flex-start; } }
+@media (min-width: 900px) and (max-width: 1159px) { .home-side { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; } }
+/* Coach: skill ratings fold away until there is data. */
+.cfold { padding: 0; }
+.cfold > summary { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 16px; cursor: pointer; list-style: none; }
+.cfold > summary::-webkit-details-marker { display: none; }
+.cfold[open] > summary { border-bottom: 1px solid var(--ln); }
+.cfold > :not(summary) { padding: 12px 16px 16px; }
+
+/* Text size (Settings, Large and Extra large): #main is zoomed, so the navigation and header text follows it rather than staying small. */
+[data-ts=l] #tabs .nv, [data-ts=l] .rail .nv { font-size: 13px; } [data-ts=xl] #tabs .nv, [data-ts=xl] .rail .nv { font-size: 14px; }
+[data-ts=l] .syncdot, [data-ts=l] .hd-gear { font-size: 13px; } [data-ts=xl] .syncdot, [data-ts=xl] .hd-gear { font-size: 14px; }
+[data-ts=xl] .hpair { grid-template-columns: minmax(0, 1fr) !important; }
+[data-ts=xl] .home-side { grid-template-columns: minmax(0, 1fr) !important; }
+.cgrid > .cfold { align-self: start; }
+/* Large and Extra large text on a phone: let the header wrap instead of clipping the greeting, and drop the keyboard hint from Start. */
+@media (max-width: 760px) {
+  [data-ts=l] .home-hd, [data-ts=xl] .home-hd { flex-wrap: wrap; row-gap: 6px; }
+  [data-ts=l] .home-hd > div:first-child, [data-ts=xl] .home-hd > div:first-child { flex: 1 1 100%; }
+  [data-ts=l] .home-hd .meta, [data-ts=xl] .home-hd .meta { flex: 1 1 100%; justify-content: flex-start; }
+  [data-ts=l] .hero .btn kbd, [data-ts=xl] .hero .btn kbd { display: none; }
+}
+
+/* Sample mode banner */
+#demobar { position: sticky; top: 0; z-index: 60; display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; padding: 8px 14px; background: color-mix(in srgb, var(--ac) 16%, var(--c)); border-bottom: 1px solid var(--ln2); font-size: 13px; line-height: 1.4; color: var(--tx); text-align: center; }
+#demobar .btn { flex: none; }
+
+/* ===== Guided paths: a route you can read at a glance =====
+   Seven segments (five stages, two retention checks) on every card, a header with the one next action,
+   and the stages joined by a line so it is clear what is done, what is next and what is still locked. */
+.ptrack { display: flex; gap: 4px; align-items: center; min-width: 0; }
+.ptrack i { flex: 1 1 0; height: 6px; border-radius: 3px; background: color-mix(in srgb, var(--sc, var(--ac)) 16%, var(--c2)); }
+.ptrack i.gap { margin-left: 8px; }
+.ptrack i.done { background: var(--ok); }
+.ptrack i.current { background: linear-gradient(90deg, var(--sc, var(--ac)) 55%, color-mix(in srgb, var(--sc, var(--ac)) 16%, var(--c2)) 0); }
+.ptrack i.open { background: color-mix(in srgb, var(--sc, var(--ac)) 38%, var(--c2)); }
+.ptrack i.locked { background: transparent; box-shadow: inset 0 0 0 1px var(--ln2); }
+
+/* Library cards */
+.ppath { gap: 12px; }
+.ppath h3 { font-size: var(--t-sm); font-weight: 500; color: var(--mu); line-height: 1.45; }
+.ppath.is-mastered { border-color: color-mix(in srgb, var(--ok) 45%, var(--ln)); }
+.ppath .trick-foot { gap: 8px 12px; }
+.ppath .trick-foot .pct { font-size: var(--t-sm); white-space: nowrap; }
+
+/* Header on a path's own page */
+.phero { --sc: var(--ac); display: grid; gap: 12px; margin-bottom: 22px; }
+.phero > .btn { justify-self: start; }
+.phero .phead { margin: 0; gap: 16px; align-items: center; flex-wrap: nowrap; }
+.phero h1 { margin: 0; }
+.phero .lede { margin: 0; }
+.pring.lg { width: 68px; height: 68px; }
+.pring.lg::before { inset: 6px; }
+.pring.lg b { font-size: 20px; }
+.pherofoot { display: grid; grid-template-columns: minmax(80px, 1fr) auto auto; align-items: center; gap: 12px 16px; padding-top: 14px; border-top: 1px solid var(--ln); }
+.pherofoot .ptrack { max-width: 320px; }
+
+/* Stages as a route: a line runs behind the numbers, green once a stage is passed */
+.pstages { gap: 14px; position: relative; }
+.pstage { position: relative; grid-template-columns: 44px 1fr auto; align-items: start; }
+.pstage .pnum { align-self: start; position: relative; z-index: 1; }
+.pstage::after, .pstage::before { content: ""; position: absolute; left: 39px; width: 2px; background: var(--ln2); pointer-events: none; }
+.pstage::after { top: 62px; bottom: -14px; }
+.pstage:last-child::after { display: none; }
+.pstage::before { top: -14px; height: 18px; }
+.pstage:first-child::before { display: none; }
+.pstage.done::after, .pstage.done + .pstage::before { background: color-mix(in srgb, var(--ok) 60%, var(--ln2)); }
+.pstage .pact { align-self: center; display: flex; flex-direction: column; align-items: stretch; gap: 8px; min-width: 120px; }
+.pstage .pact .mu { font-size: var(--t-sm); }
+.pstage .pbody p { margin: 0 0 10px; }
+.pstage.now { border-color: color-mix(in srgb, var(--sc) 65%, var(--ln)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--sc) 14%, transparent); }
+.pstage.now .pnum { border: 2px solid var(--sc); background: color-mix(in srgb, var(--sc) 18%, var(--c)); color: var(--tx); }
+.pstage.done { padding-block: 12px; }
+.pstage.done .pbody > p { display: none; }
+.pstage.done h3 { margin: 2px 0 6px; font-size: var(--t-md); }
+.pstage.locked { opacity: 1; background: transparent; border-style: dashed; }
+.pstage.locked h3, .pstage.locked .kc, .pstage.locked .pbody > p { opacity: .6; }
+.pstage.locked .pnum { background: transparent; }
+.pdots { gap: 4px; }
+.pdot { width: 22px; height: 5px; border-radius: 3px; }
+.pstage.current .pdot.on, .pstage.open .pdot.on { background: var(--sc); }
+.pstick { margin-top: 30px; }
+.pstickp { margin: -4px 0 12px; max-width: 58ch; font-size: var(--t-sm); }
+.pret.locked { border-style: dashed; background: transparent; opacity: 1; }
+.pret.locked > div:first-child { opacity: .65; }
+.pret.done { border-color: color-mix(in srgb, var(--ok) 40%, var(--ln)); }
+
+/* Lesson steps: four equal tabs that stay on one row on a phone */
+.pstb { transition: background-color .15s, border-color .15s; }
+.pstb.cur { border-color: var(--sc, var(--ac)); }
+
+@media (max-width: 560px) {
+  .pstage { grid-template-columns: 36px 1fr; padding: 14px; }
+  .pstage::before, .pstage::after { left: 31px; }
+  .pstage::after { top: 52px; }
+  .pstage .pact { min-width: 0; grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; }
+  .pstage .pact .btn.primary { flex: 1 1 140px; }
+  .pstage .pact .btn.sm { flex: 0 0 auto; }
+  .pstage.done .pact { grid-column: 2; align-items: flex-start; }
+  .pstage.done { row-gap: 0; }
+  .pherofoot { grid-template-columns: 1fr auto; }
+  .pherofoot .ptrack { grid-column: 1 / -1; max-width: none; }
+  .pherofoot .btn { grid-column: 1 / -1; width: 100%; }
+  .pstep { grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .pstb { flex-direction: column; gap: 3px; min-height: 54px; padding: 6px 2px; font-size: 11.5px; line-height: 1.2; }
+}
+@media (prefers-reduced-motion: reduce) { .pstb { transition: none; } }
+[data-motion=reduce] .pstb { transition: none; }
+
+/* ===== Learn: one steady header, the switch under it, only the content below changes ===== */
+.learnhd { display: flex; align-items: center; justify-content: space-between; gap: 10px 16px; margin: 0 0 14px; }
+.learnhd h1 { margin: 0; display: flex; align-items: center; gap: 8px; }
+.learnhd #learnai { flex: none; display: inline-flex; }
+.learnai { white-space: nowrap; }
+.learnseg { display: flex; width: 100%; max-width: 440px; }
+.learnseg button { flex: 1 1 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; }
+.learnlede { margin: 14px 0 18px; max-width: 60ch; color: var(--mu); font-size: var(--t-sm); line-height: 1.55; text-wrap: pretty; }
+.learnbody { min-width: 0; }
+.learnbody.swap { animation: learnin .22s var(--ease, ease) both; }
+.learnbody > .chips { margin-top: 0; }
+@keyframes learnin { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .learnbody.swap { animation: none; } }
+[data-motion=reduce] .learnbody.swap { animation: none; }
+@media (max-width: 480px) {
+  .learnai { padding-inline: 10px; font-size: 12.5px; }
+  .learnseg { max-width: none; }
+}
+.ppath .phead { flex-wrap: nowrap; }
+.ppath .pht { flex: 1 1 0; min-width: 0; }
+.ppath .kc { row-gap: 4px; }
+
+/* ===== v14.77 UI pass 2: lesson, timed run, result, mastery and the Home path card =====
+   Same language as the path map: the skill colour (--sc) leads, one clear action per screen, numbers get room. */
+
+/* Home: the guided-path card carries the skill ring and the seven-step route, like the Learn cards. */
+.hpath { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-items: stretch; justify-content: stretch; padding: 18px 20px; border-color: color-mix(in srgb, var(--sc) 30%, var(--ln)); background: linear-gradient(135deg, color-mix(in srgb, var(--sc) 9%, var(--c)), var(--c) 70%); }
+.hpath .phead { margin: 0; flex-wrap: nowrap; gap: 14px; }
+.hpath .pht { flex: 1 1 0; gap: 3px; }
+.hpath .pht > b { font-size: var(--t-md); line-height: 1.35; font-weight: 650; text-wrap: balance; }
+.hpath .pht .mu { font-size: var(--t-sm); }
+.hpath .ptrack { max-width: none; }
+.hpath > .btn { justify-self: start; align-self: end; }
+@media (max-width: 560px) { .hpath > .btn { justify-self: stretch; } }
+
+/* Lesson: each step is a card with a skill-coloured edge, so the page reads as a sequence rather than a wall of text. */
+.ptch, .pdemo { position: relative; overflow: hidden; }
+.ptch { --sc: var(--ac); padding: 20px 22px; }
+.ptch::before, .pdemo::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--sc, var(--ac)); }
+.pdemo { --sc: var(--ac); padding: 18px 20px 18px 24px; }
+.pdemo.old::before { background: var(--ln2); }
+.ptch > .eyebrow { margin-bottom: 10px; color: color-mix(in srgb, var(--sc) var(--ink-mix), var(--ink-base)); }
+.ptch p { font-size: var(--t-md); line-height: 1.65; }
+.ptch .prules { gap: 8px; font-size: var(--t-md); line-height: 1.55; }
+.ptch .prules li::marker { color: var(--sc); }
+.pkey { border-left-color: var(--sc, var(--ac)); background: color-mix(in srgb, var(--sc, var(--ac)) 11%, var(--c2)); }
+.pkey b { font-size: var(--t-md); line-height: 1.5; font-weight: 650; }
+.ptrick { transition: border-color .15s; }
+.ptrick:hover { border-color: var(--ln2); }
+.ptrick > b { display: block; font-size: var(--t-md); }
+.pdemo > .mu { font-size: var(--t-xs); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.pq0 { font-size: clamp(26px, 6vw, 34px); margin: 6px 0 14px; }
+.psteps { counter-reset: st; list-style: none; padding-left: 0; gap: 10px; }
+.psteps li { counter-increment: st; position: relative; padding: 8px 12px 8px 42px; border-radius: var(--r2); background: var(--c2); min-height: 38px; display: flex; align-items: center; }
+.psteps li::before { content: counter(st); position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font: 700 12px var(--sans); background: color-mix(in srgb, var(--sc, var(--ac)) 20%, var(--c)); color: color-mix(in srgb, var(--sc, var(--ac)) var(--ink-mix), var(--ink-base)); }
+.psteps li:last-child { background: color-mix(in srgb, var(--ok) 12%, var(--c2)); }
+.psteps li:last-child::before { background: color-mix(in srgb, var(--ok) 24%, var(--c)); color: var(--ok); }
+.pyou { padding: 14px 16px; border: 1px dashed var(--ln2); background: transparent; }
+.pyou .btns { gap: 10px; }
+.pnav { gap: 10px; }
+@media (max-width: 560px) {
+  .ptch { padding: 18px 16px; }
+  .pdemo { padding: 16px 14px 16px 20px; }
+  .pnav .btn { flex: 1 1 100%; }
+  .pyou .pin { max-width: none; flex: 1 1 100%; }
+  .pyou .btn { flex: 1 1 140px; }
+}
+
+/* Timed run: the question is the whole screen. Thick skill-coloured progress, a big answer field, par as a quiet chip. */
+.prun { max-width: 640px; margin-inline: auto; }
+.prun .phead { margin-bottom: 12px; }
+.prun .bar { height: 8px; border-radius: 4px; margin-bottom: 16px; }
+.prun .bar > i { border-radius: 4px; transition: width .3s ease-out; }
+.prun > .card { padding: 20px 20px 22px; border-color: color-mix(in srgb, var(--sc) 24%, var(--ln)); }
+.prun .pq { font-size: clamp(44px, 12vw, 72px); font-weight: 650; font-variant-numeric: tabular-nums; padding: 22px 0 10px; overflow-wrap: anywhere; }
+.prun #ppar:not(:empty) { display: block; width: fit-content; margin: 0 auto 10px; padding: 2px 12px; border-radius: 999px; font: 600 var(--t-sm) var(--mono); box-shadow: inset 0 0 0 1px var(--ln2); }
+.prun .pin { max-width: 300px; min-height: 64px; font-size: 32px; font-weight: 600; border-radius: var(--r3); border-width: 2px; }
+.prun .pin:focus { border-color: var(--sc); outline: none; box-shadow: 0 0 0 4px color-mix(in srgb, var(--sc) 20%, transparent); }
+.prun .pmeth { border-left: 3px solid var(--sc); background: color-mix(in srgb, var(--sc) 11%, var(--c2)); font-size: var(--t-sm); line-height: 1.5; }
+.prun .pmsg { font-size: var(--t-md); }
+.prun .pmsg .ok { font-weight: 700; }
+.prun .btns { gap: 10px; }
+@media (max-width: 560px) { .prun .btns .btn { flex: 1 1 120px; } .prun .pin { max-width: none; } }
+
+/* Result: a clear verdict on top (green edge for a pass, red for a miss), the score large, the answer list easy to scan. */
+.pres { --sc: var(--ac); position: relative; overflow: hidden; padding: 22px 22px 20px; }
+.pres::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 4px; background: var(--sc); }
+.pres.pass::before { background: var(--ok); }
+.pres.fail { border-color: color-mix(in srgb, var(--bad) 40%, transparent); }
+.pres.fail::before { background: var(--bad); }
+.pres > .eyebrow { color: color-mix(in srgb, var(--sc) var(--ink-mix), var(--ink-base)); }
+.pres h1 { margin: 6px 0 14px; text-wrap: balance; }
+.pscore { align-items: baseline; gap: 12px; margin-bottom: 8px; }
+.pscore b { font-size: clamp(40px, 11vw, 56px); line-height: 1; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.pres.pass .pscore b { color: var(--ok); }
+.pres.fail .pscore b { color: var(--bad); }
+.pace { display: inline-block; padding: 3px 12px; border-radius: 999px; font-size: var(--t-sm); background: color-mix(in srgb, var(--ok) 14%, transparent); color: var(--ok); }
+.pace.bad { background: color-mix(in srgb, var(--bad) 14%, transparent); color: var(--bad); }
+.pres .pnav { margin-top: 18px; }
+@media (max-width: 560px) { .pres .pnav .btn { flex: 1 1 100%; } }
+.pres + h2 { margin-top: 28px; }
+.plist .prow { align-items: center; padding: 11px 4px; }
+.plist .prow:first-child { border-top: 0; }
+.plist .prow > span:first-child { min-width: 0; overflow-wrap: anywhere; line-height: 1.5; }
+.plist .prow > span:last-child { flex: none; display: flex; align-items: baseline; gap: 8px; }
+.plist .prow .ok, .plist .prow .bad { font-weight: 800; font-size: var(--t-md); }
+
+/* Mastery: a proper moment. Soft skill-coloured glow, a larger mark with a ring, the three numbers as tiles. */
+.pmast { position: relative; overflow: hidden; padding: 40px 22px 28px; background: radial-gradient(120% 70% at 50% 0%, color-mix(in srgb, var(--sc) 20%, transparent), transparent 70%), var(--c); border-color: color-mix(in srgb, var(--ok) 45%, var(--ln)); }
+.pmast .pmark { width: 88px; height: 88px; margin-bottom: 18px; box-shadow: 0 0 0 8px color-mix(in srgb, var(--ok) 12%, transparent), 0 0 0 16px color-mix(in srgb, var(--ok) 6%, transparent); }
+.pmast .pmark svg { width: 44px; height: 44px; }
+.pmast h1 { font-size: clamp(28px, 7vw, 38px); margin-bottom: 8px; text-wrap: balance; }
+.pmast .lede { font-size: var(--t-md); line-height: 1.6; }
+.pmstats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; max-width: 460px; margin: 0 auto 24px; }
+.pmstats > div { min-width: 0; padding: 14px 8px; border-radius: var(--r3); background: color-mix(in srgb, var(--c) 70%, var(--c2)); border: 1px solid var(--ln); align-items: center; }
+.pmstats b { font-size: clamp(22px, 6vw, 30px); font-variant-numeric: tabular-nums; }
+.pmstats .mu { font-size: var(--t-xs); line-height: 1.3; text-wrap: balance; }
+.pmast .btns { gap: 10px; }
+@media (max-width: 560px) { .pmast .btns .btn { flex: 1 1 100%; } }
+
+/* Phones: .nextup stacks into a column (style.css), but .pcard's centring came later and pulled the text block into the middle of the card.
+   Keep the text flush left and the button full width, as the stacked layout intends. */
+@media (max-width: 560px) { .nextup.pcard { flex-direction: column; align-items: stretch; } .nextup.pcard > .btn { width: 100%; } }
+
+/* ===== v14.77 audit fixes ===== */
+/* Progress: the two insights are rows, not one run-on sentence with a dot stranded at a line end. */
+.insight { display: grid; gap: 8px; }
+.insight .irow { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.insight .lnk { padding: 2px 0; min-height: 0; }
+
+/* Lesson: the intro card and the worked example are separate cards; give them air, and keep the example's accent the skill's colour. */
+.ptch + .pdemo, .pdemo + .pdemo { margin-top: 12px; }
+
+/* Path map on phones: the connector used to run down through the Start button and the lock row. Draw it only in the gap between cards. */
+@media (max-width: 560px) {
+  .pstage::after { top: 100%; bottom: auto; height: 14px; }
+  .pstage::before { top: -14px; height: 14px; }
+  .pstage.locked .pact > .mu { display: flex; align-items: center; gap: 6px; }
+}
+
+/* Settings jump chips scroll sideways on phones: say so with the same fade the other swipe rows have. */
+@media (max-width: 700px) { .sjump { padding-inline-end: 44px; -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); } .sjump > .chip { flex: none; } }
+
+/* A path run is a focused task: on phones the tab bar steps aside (as it does in a training session) so a stray tap cannot abandon the run. */
+@media (max-width: 760px) { body:has(.prun) #tabs { display: none; } }
+
+/* ===== v14.77 polish: tab bar, light-theme controls, bottom clearance ===== */
+/* Tab bar: nearly opaque so scrolling labels no longer show through (the blur stays for the soft edge). */
+@media (max-width: 760px) {
+  #tabs { background: color-mix(in srgb, var(--bg) 96%, transparent); }
+  /* Content clears the bar with room to spare, and anything scrolled into view (a focused field, an anchor) stops above it. */
+  #main { padding-bottom: calc(124px + env(safe-area-inset-bottom)); }
+  html { scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+}
+
+/* Light theme: the page (#f4f4f1) and the tinted button fill (#efeee9) were nearly the same, with hairline borders, so chips and
+   buttons read as flat text. Give them a visible edge and lift chips onto the white card colour. Dark themes are untouched. */
+[data-theme=light] .chip { background: var(--c); border-color: color-mix(in srgb, var(--tx) 30%, transparent); color: color-mix(in srgb, var(--tx) 82%, var(--mu)); }
+@media (hover: hover) { [data-theme=light] .chip:hover { border-color: color-mix(in srgb, var(--tx) 48%, transparent); color: var(--tx); } }
+[data-theme=light] .chip[aria-pressed=true], [data-theme=light] .chip[aria-checked=true] { background: color-mix(in srgb, var(--ac) 18%, var(--c)); border-color: color-mix(in srgb, var(--ac) 70%, #000 8%); color: var(--tx); }
+[data-theme=light] .btn:not(.primary):not(.ghost):not(.tonal) { border-color: color-mix(in srgb, var(--tx) 24%, transparent); background: color-mix(in srgb, var(--c2) 70%, var(--c)); }
+[data-theme=light] .btn.ghost { color: color-mix(in srgb, var(--tx) 78%, var(--mu)); }
+@media (hover: hover) { [data-theme=light] .btn.ghost:hover { background: var(--c3); } }
+[data-theme=light] .btn.tonal { border-color: color-mix(in srgb, var(--ac) 45%, transparent); }
+[data-theme=light] .seg { border-color: color-mix(in srgb, var(--tx) 18%, transparent); }
+
+/* 14.77: three-character glyphs (mod, 0.5) fit inside the ring */
+.pring b.g3 { font-size: 12px; letter-spacing: -.04em; }
+.pring.lg b.g3 { font-size: 15px; }
+
+/* 14.77: charts with nothing to draw yet read as a state, not as a broken flat line */
+.chwait { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 14px 12px; text-align: center; border: 1px dashed var(--ln2); border-radius: 12px; background: color-mix(in srgb, var(--c2) 60%, transparent); }
+.chwait b { font-size: 14px; font-weight: 650; color: var(--tx); }
+.chwait span { font-size: var(--t-xs, 12px); color: var(--mu); font-variant-numeric: tabular-nums; }
+
+/* 14.77: result and mastery entrances (Learn paths). Reduce motion silences all of it through the blanket rule in style.css. */
+@keyframes pscorepop { 0% { opacity: 0; transform: translateY(8px) scale(.82); } 60% { opacity: 1; transform: translateY(0) scale(1.08); } 100% { transform: scale(1); } }
+@keyframes pscoredrop { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
+@keyframes passglow { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 38%, transparent); } 100% { box-shadow: 0 0 0 14px transparent; } }
+@keyframes missnudge { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-5px); } 45% { transform: translateX(4px); } 70% { transform: translateX(-2px); } }
+@keyframes pmring { from { opacity: .55; transform: scale(1); } to { opacity: 0; transform: scale(1.9); } }
+#main.enter .pres.pass:not(.pmast) { animation: passglow .9s var(--ease, ease-out) .25s both; }
+#main.enter .pres.pass:not(.pmast) .pscore b { animation: pscorepop .6s var(--spring, cubic-bezier(.34, 1.3, .64, 1)) .15s both; transform-origin: left bottom; }
+#main.enter .pres.fail { animation: missnudge .45s ease-out .2s both; }
+#main.enter .pres.fail .pscore b { animation: pscoredrop .5s var(--ease, ease-out) .15s both; }
+#main.enter .pres > .eyebrow, #main.enter .pres > h1 { animation: settle .5s var(--ease, ease-out) both; }
+#main.enter .pres > h1 { animation-delay: .06s; }
+.pmast .pmark { position: relative; }
+.pmast .pmark::after { content: ""; position: absolute; inset: -2px; border-radius: 50%; border: 2px solid var(--ok); opacity: 0; pointer-events: none; }
+#main.enter .pmast .pmark::after { animation: pmring 1.1s ease-out .35s both; }
+#main.enter .pmast .pmstats > div { animation: settle .55s var(--ease, ease-out) both; }
+#main.enter .pmast .pmstats > div:nth-child(1) { animation-delay: .45s; } #main.enter .pmast .pmstats > div:nth-child(2) { animation-delay: .55s; } #main.enter .pmast .pmstats > div:nth-child(3) { animation-delay: .65s; }

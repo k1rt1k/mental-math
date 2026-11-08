@@ -7,6 +7,7 @@ import { ib } from '../info.js';
 import { applyTheme, ACC, FONTS, padOn, isTouch } from '../theme.js';
 import { boardHint, setBoardHint, boardWhy, loadBoard, boardHtml } from '../board.js';
 import { rankLine } from '../boardlogic.js';
+import { DEMO, leaveDemo } from '../demoflag.js';
 import { boardApi, syncKey, setSyncKey, pull, syncNow, statusText, status, fetchBackup, keyProblem, isWeakKey, keysApi, MIN_KEY_LENGTH } from '../sync.js';
 import { state as remState, enable as remEnable, disable as remDisable, test as remTest, rem as remGet, setRem, isStandalone, isIOS } from '../notify.js';
 
@@ -90,7 +91,7 @@ function settings() {
       <div class="btns" style="margin-top:12px"><button class="btn sm" data-act="aiStatus">${icon('sparkle')} Check AI status</button></div>
     </section>`, `<section class="card"><h3>Cloud sync${ib('s.sync')}</h3>
       <p class="mu" style="margin:6px 0 12px;max-width:56ch">${syncKey() ? "Your progress syncs to the personal cloud account selected by this device's key. Your settings (theme, accent, keypad, sound, goal and saved setups) sync too, so a new browser looks and behaves like your others. Reminders stay per device. Use your own key on your devices; the other learner must use a different key." : "Set this learner's personal sync password. Use the same password on other devices belonging to this learner and your settings will follow you. Another person must use their own different password."}</p>
-      <div class="set"><div><div class="t">${syncKey() ? esc(statusText()) : 'Sync is off'}</div><div class="d">${syncKey() ? 'Key set on this device' : 'No key set'}</div></div><div class="btns"><button class="btn sm" data-act="syncKey">${syncKey() ? 'Change key' : 'Set up sync'}</button>${syncKey() ? '<button class="btn sm" data-act="syncNow">Sync now</button>' : ''}</div></div>
+      <div class="set"><div><div class="t">${syncKey() ? esc(statusText()) : DEMO ? 'Synced (sample)' : 'Sync is off'}</div><div class="d">${syncKey() ? 'Key set on this device' : DEMO ? 'Simulated in sample mode; nothing leaves this tab' : 'No key set'}</div></div><div class="btns"><button class="btn sm" data-act="syncKey">${syncKey() ? 'Change key' : 'Set up sync'}</button>${syncKey() ? '<button class="btn sm" data-act="syncNow">Sync now</button>' : ''}</div></div>
       ${syncKey() && isWeakKey() ? `<div class="notice" role="status" style="margin:0 0 12px"><span>This sync key is shorter than ${MIN_KEY_LENGTH} characters, so it is easier to guess. Replace it with a longer one: set a new SYNC_KEY in Netlify, or ask the main account for a new key under Learners and keys.</span></div>` : ''}
       ${syncKey() ? `<div class="set"><div><div class="t">Learners and keys</div><div class="d">Make a key for another person, or turn one off. Main account only.</div></div><button class="btn sm" data-act="learners">Manage</button></div>` : ''}
       ${syncKey() ? `<div class="set"><div><div class="t">Daily leaderboard</div><div class="d">${bd && bd.member ? `On, as <b>${esc(bd.name)}</b>. ${esc(rankLine(bd))} Learners who joined see each other's Daily points.` : 'Off. Compare each day\u2019s Daily score with the other learners on this server. Shares only the display name you choose, your Daily points and how many you answered; leaving deletes it.'}</div></div><div class="btns">${bd && bd.member ? `<button class="btn sm" data-act="boardView">Today</button><button class="btn sm" data-act="boardJoin">Rename</button><button class="btn sm danger" data-act="boardLeave">Leave</button>` : `<button class="btn sm" data-act="boardJoin">Join\u2026</button>`}</div></div>` : ''}
@@ -175,6 +176,7 @@ export async function placement() {
 }
 
 A.syncKey = async () => {
+  if (DEMO) return demoNote();
   const o = syncKey();
   let n = '', problem = '';
   // Ask again until the key is long enough (or empty, which turns sync off). The key already on this device is never re-judged,
@@ -268,6 +270,7 @@ const SYNC_HINT = {
   locked: 'Too many wrong keys. Wait a little, then try again.',
 };
 A.sync = async (_d, el) => {
+  if (DEMO) return demoNote();
   if (!syncKey()) { go('settings'); setTimeout(() => A.syncKey(), 50); return; }
   const label = el && el.querySelector && el.querySelector('#sy');
   if (!label || getComputedStyle(label).display != 'none') return A.syncNow();   // the status is already readable beside the cloud
@@ -415,3 +418,7 @@ A.help = () => helpDialog();
 
 register('settings', settings);
 export { settings };
+
+/** Sample mode: sync is a simulation, so the password prompt would mislead. Offer the way out instead. */
+export function demoNote() { toast('Sample mode: sync is simulated and nothing is saved.', { label: 'Start fresh', ms: 9000, onClick: leaveDemo }); }
+A.demoExit = () => leaveDemo();

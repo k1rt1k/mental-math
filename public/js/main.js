@@ -4,6 +4,7 @@ import { $, esc } from './util.js';
 import { icon, toast, dialog, choiceDlg, dialogOpen } from './ui.js';
 import { A, go, fromHash, view, rerender } from './nav.js';
 import { applyTheme, themeNow } from './theme.js';
+import { DEMO, enterDemo, leaveDemo } from './demoflag.js';
 import { configure, startSync, onStatus, syncKey, statusText, status } from './sync.js';
 import { IDS, SK } from './engine.js';
 import { streak } from './stats.js';
@@ -39,26 +40,6 @@ function drawNav() {
   document.querySelectorAll('[data-go]').forEach((b) => b.dataset.go == view.scr && b.setAttribute('aria-current', 'page'));
 }
 onSave(drawNav);
-
-/* ---------- onboarding (first run only) ---------- */
-async function onboard() {
-  S.onb = 1; save();
-  const v = await dialog({
-    title: 'Welcome to Mental Math',
-    body: `<p>Short timed sessions that adapt to you. Type the answer and it submits itself: no Enter needed.</p><p>Every skill has a rating that rises as you get faster and more accurate. Questions you miss come back later, with the method to solve them.</p>`,
-    actions: [{ label: 'Skip', value: 'skip' }, { label: 'Set my starting level', value: 'go', primary: true }],
-  });
-  if (v == 'go') {
-    await placement();
-    const g = await choiceDlg('How much will you practise?', '<p>A session is 2 minutes or more. Your goal drives the streak and the daily plan on Home. You can change it any time in Settings.</p>', [
-      { value: 1, title: 'Light', desc: '1 session a day, about 2 minutes' },
-      { value: 2, title: 'Steady', desc: '2 sessions a day (recommended)' },
-      { value: 3, title: 'Serious', desc: '3 sessions a day' },
-    ]);
-    if (g) { S.goal = g; save(); }
-    home();
-  }
-}
 
 /* ---------- keyboard ---------- */
 const typing = (t) => t && t.matches && t.matches('input,textarea,select');
@@ -108,7 +89,7 @@ addEventListener('online', () => { netState(); sendQueued(); }); addEventListene
 configure({ guard: isPlaying, onChange: () => { applyTheme(); drawNav(); rerender(); } });
 onStatus(() => {
   const el = $('.syncdot');
-  if (el) { el.className = 'syncdot ' + (syncKey() ? status.kind : 'off'); const s = el.querySelector('#sy'); if (s) s.textContent = syncKey() ? statusText() : 'Set up sync'; el.setAttribute('aria-label', syncKey() ? 'Sync status: ' + statusText() : 'Sync is off. Set up sync'); }
+  if (el) { el.className = 'syncdot ' + (syncKey() || DEMO ? status.kind : 'off'); const s = el.querySelector('#sy'); if (s) s.textContent = syncKey() || DEMO ? statusText() : 'Set up sync'; el.setAttribute('aria-label', syncKey() ? 'Sync status: ' + statusText() : 'Sync is off. Set up sync'); }
 });
 
 /* ---------- PWA ---------- */
@@ -184,5 +165,38 @@ async function recalPrompt() {
   if (v == 'restore') restoreRatings();
   finishCal(); save(); rerender();
 }
-if (!S.onb && !S.sessions.length) onboard(); else setTimeout(recalPrompt, 700);
+/* ---------- first visit: after 8-15 s of looking around, offer a start or a sample (never while they are doing something) ---------- */
+function firstVisitOffer() {
+  if (DEMO || S.onb || S.sessions.length) return;
+  const wait = 8000 + Math.floor(Math.random() * 7000);
+  const tryOffer = async () => {
+    if (S.onb || S.sessions.length) return;                                   // they got going on their own
+    if (isPlaying() || dialogOpen() || document.hidden) return void setTimeout(tryOffer, 4000);
+    S.onb = 1; save();
+    const v = await choiceDlg('Welcome to Mental Math', '<p>Short timed sessions that adapt to you. How do you want to start?</p>', [
+      { value: 'go', title: 'Set my starting level', desc: 'A quick check so ratings start where you are (about 2 minutes)' },
+      { value: 'demo', title: 'Explore with sample data', desc: 'Five weeks of made-up practice: streaks, charts, Coach and sync, all filled in. Nothing is saved.' },
+      { value: 'look', title: 'Just let me look around', desc: 'Close this and play whenever you like' },
+    ]);
+    if (v == 'demo') return enterDemo();
+    if (v == 'go') {
+      await placement();
+      const g = await choiceDlg('How much will you practise?', '<p>A session is 2 minutes or more. Your goal drives the streak and the daily plan on Home. You can change it any time in Settings.</p>', [
+        { value: 1, title: 'Light', desc: '1 session a day, about 2 minutes' },
+        { value: 2, title: 'Steady', desc: '2 sessions a day (recommended)' },
+        { value: 3, title: 'Serious', desc: '3 sessions a day' },
+      ]);
+      if (g) { S.goal = g; save(); }
+      home();
+    }
+  };
+  setTimeout(tryOffer, wait);
+}
+if (DEMO) {
+  const bar = document.createElement('div');
+  bar.id = 'demobar'; bar.setAttribute('role', 'region'); bar.setAttribute('aria-label', 'Sample mode');
+  bar.innerHTML = `<span><b>Sample data.</b> A made-up learner, so you can see every screen filled in. Nothing is saved and sync is simulated.</span><button type="button" class="btn sm" data-act="demoExit">Start fresh</button>`;
+  document.body.prepend(bar); document.documentElement.dataset.demo = '1';
+  setTimeout(recalPrompt, 700);
+} else if (!S.onb && !S.sessions.length) firstVisitOffer(); else setTimeout(recalPrompt, 700);
 window.__mm = { S, go, get sess() { return liveSession(); } };   // handy for debugging in the console

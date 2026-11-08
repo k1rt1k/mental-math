@@ -432,13 +432,14 @@ export function ansMatch(buf, ans) {
 
 /**
  * What kind of slip was a wrong entry? '' when it is right.
- * swap = same digits, wrong order (12 vs 21) · off1 = one away · place = a power of ten away (a carry or place-value slip)
+ * swap = same digits, wrong order (12 vs 21) · sign = right size, wrong sign (−5 vs 5) · off1 = one away · place = a power of ten away (a carry or place-value slip)
  * digit = exactly one digit differs · other = anything else.
  */
 export function errKind(a, typed) {
   a = String(a); typed = String(typed);
   if (a === typed) return '';
   const d = Math.abs(+typed - +a), same = a.length == typed.length;
+  if (+a !== 0 && +typed === -+a) return 'sign';                 // right size, wrong sign (−5 typed as 5): a sign slip, not a place-value slip
   if (same && [...a].sort().join('') == [...typed].sort().join('')) return 'swap';
   if (d == 1) return 'off1';
   if (d >= 10 && /^10*$/.test(String(d))) return 'place';

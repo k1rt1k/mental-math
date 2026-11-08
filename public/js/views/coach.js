@@ -33,6 +33,7 @@ import { start } from './play.js';
 import { drill } from './home.js';
 import { weakestSkills, ERRL } from '../stats.js';
 import { syncKey } from '../sync.js';
+import { DEMO } from '../demoflag.js';
 
 /* ---------- small building blocks ---------- */
 const ago = (t) => {
@@ -48,6 +49,7 @@ const SEND = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M1
 
 /** Skill ratings as bars, weakest first (the two the coach would drill are marked). Rating is level x 100 on a 12-level scale. */
 const skillBars = () => {
+  if (!(S.sessions && S.sessions.length)) return '<div class="cempty"><b>No ratings yet</b><span>Every skill starts at a default level. Your real ratings appear after your first session.</span></div>';
   const weak = new Set(weakestSkills(2));
   return `<div class="cskills" role="list">${IDS.map((k) => ({ k, v: Math.round(S.sk[k].lv * 100) })).sort((a, b) => a.v - b.v).map(({ k, v }) =>
     `<div class="csk${weak.has(k) ? ' weak' : ''}" role="listitem" style="--sc:${COL[k]}"><span class="nm"><i class="dot"></i>${esc(SK[k].n)}${weak.has(k) ? '<em>focus</em>' : ''}</span><span class="trk" aria-hidden="true"><i style="width:${Math.max(3, Math.min(100, v / 12))}%"></i></span><b class="num">${v}</b></div>`).join('')}</div>`;
@@ -131,7 +133,7 @@ function coachView() {
   if (aiQuota.isExhausted && aiQuota.resetAt && Date.now() >= aiQuota.resetAt) { aiQuota.isExhausted = false; aiQuota.resetAt = 0; }
   const quotaPill = aiQuota.isExhausted
     ? `<span class="pill bad" title="Resets at midnight Pacific time">${icon('lock')} AI paused · resets Pacific midnight</span>`
-    : `<span class="pill ok" id="ai-pill" title="Google AI Studio free tier; this is the shared daily allowance for the app">${icon('sparkle')} Gemini · ${aiBudgetLeft() == null ? 'free tier' : aiBudgetLeft() + ' left today'}</span>`;
+    : DEMO ? `<span class="pill ok" id="ai-pill" title="Sample mode">${icon('sparkle')} Sample mode · local guide</span>` : `<span class="pill ok" id="ai-pill" title="Google AI Studio free tier; this is the shared daily allowance for the app">${icon('sparkle')} Gemini · ${aiBudgetLeft() == null ? 'free tier' : aiBudgetLeft() + ' left today'}</span>`;
 
   const tabs = [['coach', 'chart', 'Analysis'], ['recommend', 'target', 'Recommend'], ['plan', 'cal', 'Plans'], ['tutor', 'bulb', 'Tutor']];
 
@@ -151,7 +153,7 @@ function coachView() {
     ${tabs.map(([v, ic, t]) => `<button class="ctab" role="tab" type="button" aria-selected="${activeTab === v}" data-act="coachTab" data-v="${esc(v)}">${icon(ic)}<span>${t}</span></button>`).join('')}
   </div>
 
-  ${syncKey() ? '' : `<div class="notice" style="margin-bottom:14px"><span>AI is off until sync is set up. Local summaries for now.</span><span class="btns"><button class="btn sm" data-go="settings">Set up</button></span></div>`}
+  ${syncKey() || DEMO ? '' : `<div class="notice" style="margin-bottom:14px"><span>You are seeing local summaries. Add a sync password (one field, it also backs up your progress) to switch on Gemini.</span><span class="btns"><button class="btn sm" data-act="coachSync">Add password</button></span></div>`}
   <div id="coach-content" class="coach-content" role="tabpanel">
     ${renderTabContent(summary, chat, uName)}
   </div>
@@ -172,15 +174,15 @@ function renderCoachTab(summary, uName) {
   const weakKey = weakestSkills(1)[0] || '';
   const busy = isLoading && loadingKind === 'analysis';
   const stats = [
-    ['target', summary.avgRating, 'avg rating'],
-    ['check', `${summary.accuracy}%`, 'accuracy'],
+    ['target', summary.sessionsCount ? summary.avgRating : '–', 'avg rating'],
+    ['check', summary.totalAnswers ? `${summary.accuracy}%` : '–', 'accuracy'],
     ['bolt', summary.avgSpeed ? `${summary.avgSpeed}s` : '–', 'avg speed'],
     ['flame', `${summary.streak}d`, 'streak'],
   ];
   return `
   ${summary.sessionsCount === 0 ? `
   <div class="cwelcome">
-    <div><h2>Welcome, ${esc(uName)}. Let's find your baseline.</h2>
+    <div><h2>${uName && uName !== 'you' ? 'Welcome, ' + esc(uName) + '. ' : 'Welcome. '}Let's find your baseline.</h2>
     <p>No sessions on this device yet. A 2-minute run calibrates your ratings and speed, and then the coach has something real to work with.</p></div>
     <button class="btn primary" data-act="startFirst">${icon('play', 'fill')} Start first 2-min session</button>
   </div>` : ''}
@@ -194,10 +196,10 @@ function renderCoachTab(summary, uName) {
   </section>
 
   <div class="cgrid">
-    <section class="cpanel">
+    ${summary.sessionsCount === 0 ? `<details class="cpanel cfold"><summary><span class="eyebrow">Skill ratings${ib('c.slips')}</span><span class="mu">fills in after your first run</span></summary>${skillBars()}</details>` : `<section class="cpanel">
       <div class="cpanel-h"><span class="eyebrow">Skill ratings${ib('c.slips')}</span></div>
       ${skillBars()}
-    </section>
+    </section>`}
     <section class="cpanel">
       <div class="cpanel-h"><span class="eyebrow">Common slips</span><span class="mu">times seen</span></div>
       ${slipList()}
@@ -456,6 +458,8 @@ A.startAiDrill = (d) => {
   drill(sk);
 };
 
+/** Straight to the password prompt, not just to Settings. */
+A.coachSync = () => { go('settings'); setTimeout(() => A.syncKey && A.syncKey(), 50); };
 A.startFirst = () => {
   start(undefined, { dur: 120, only: 'all' });
 };

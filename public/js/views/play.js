@@ -34,8 +34,8 @@ function sound(ok) {
 }
 
 const padKeys = () => (S.padFlip ? [7, 8, 9, 4, 5, 6, 1, 2, 3, '', 0, '⌫'] : [1, 2, 3, 4, 5, 6, 7, 8, 9, '', 0, '⌫']);
-const padHtml = () => '<div class="pad" role="group" aria-label="Number pad">' + padKeys().map((k) => k === '' ? '<button type="button" class="fn sym off" id="symk" data-act="key" data-v="" tabindex="-1" aria-hidden="true"></button>' : `<button type="button" class="${k === '⌫' ? 'fn' : ''}" data-act="key" data-v="${esc(k === '⌫' ? 'Backspace' : k)}" aria-label="${esc(k === '⌫' ? 'Backspace' : k)}">${k === '⌫' ? icon('back') : k}</button>`).join('') + '</div>'
-  + `<div class="padact"><button type="button" class="btn" data-act="key" data-v="h" aria-label="Show the method (half points)">${icon('bulb')} Hint</button>${S.ent ? '<button type="button" class="btn primary" data-act="key" data-v="Enter" aria-label="Submit answer">Submit</button>' : ''}<button type="button" class="btn" data-act="key" data-v="Skip" aria-label="Skip question">Skip</button></div>`;
+const padHtml = () => '<div class="pad" role="group" aria-label="Number pad">' + padKeys().map((k) => k === '' ? `<button type="button" class="fn sym hintk" id="symk" data-act="key" data-v="h" aria-label="Show the method (half points)">${icon('bulb')}</button>` : `<button type="button" class="${k === '⌫' ? 'fn' : ''}" data-act="key" data-v="${esc(k === '⌫' ? 'Backspace' : k)}" aria-label="${esc(k === '⌫' ? 'Backspace' : k)}">${k === '⌫' ? icon('back') : k}</button>`).join('') + '</div>'
+  + `<div class="padact one"><button type="button" class="btn" id="hintb" data-act="key" data-v="h" aria-label="Show the method (half points)" hidden>${icon('bulb')} Hint</button>${S.ent ? '<button type="button" class="btn primary" data-act="key" data-v="Enter" aria-label="Submit answer">Submit</button>' : ''}<button type="button" class="btn" id="skipb" data-act="key" data-v="Skip" aria-label="Skip question">Skip</button></div>`;
 const PAD = () => padHtml();
 
 /** opt: see Session. cfg: optional config override for this run only; it is never saved, so a drill can't leave hidden state behind. */
@@ -57,7 +57,7 @@ export function start(opt, cfg) {
       <div class="pts"><div class="big" id="pt">0</div><div class="lbl" id="acc">points</div></div>
     </div>
     <div class="bar tbar" ${sess.un || sv ? 'hidden' : ''}><i id="tb" style="width:100%;background:var(--ac)"></i></div>
-    <div class="bar tbar pbar" id="pbw" ${sess.kind == 'sprint' || sess.kind == 'review' ? '' : 'hidden'} role="progressbar" aria-label="Questions done" aria-valuemin="0" aria-valuemax="100"><i id="pb" style="width:0;background:var(--ok)"></i></div>
+    <div class="bar tbar pbar" id="pbw" ${sess.kind == 'sprint' || sess.kind == 'review' ? '' : 'hidden'} role="progressbar" aria-label="Questions done" aria-valuemin="0" aria-valuemax="100"><i id="pb" style="width:4%;background:var(--ok)"></i></div>
     <div class="race" ${sess.kind == 'sprint' || !sess.ghost ? 'hidden' : ''}><div class="lg"><span>You <b id="yp" class="num">0</b></span><span id="gh"></span><span>Ghost <b id="gp" class="num">–</b></span></div><div class="bar"><i class="gh" id="gb"></i><i class="me" id="yb"></i></div></div>
     <div class="board cd" id="qc"><div class="tag"><span class="pill" id="sk">Get ready</span><span class="tagr"><span id="pr" class="mu"></span><span id="bn" class="gd"></span><span id="cc" class="cmbchip" hidden></span>${S.pace ? '<span id="pcv" class="pcv num" aria-hidden="true"></span>' : ''}</span></div>
       <div class="q" id="q" aria-live="polite">3</div><div class="bf" id="bf" aria-label="Your answer"></div><span class="qtl" aria-hidden="true">Pace vs par</span><div class="qt" title="Your time on this question against its par time"><i id="qt"></i></div></div>
@@ -123,23 +123,41 @@ function leave() {
 }
 const still = () => document.documentElement.dataset.motion === 'reduce' || matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+/** First question you ever see: say what "par 4.4s" and "Multi-step · 400" mean, once, in the message line (no layout shift). Stored on this device only. */
+function termsNote(rating) {
+  if (S.tipPar) return;
+  S.tipPar = 1; save();
+  $('#ms').innerHTML = `<div class="cmark"><span><b>par</b> is the target time for this question.${rating ? ` <b>${esc(rating)}</b> is your rating in this skill.` : ''}</span><button type="button" class="lnk2" data-act="cmOk">Got it</button></div>`;
+}
+A.cmOk = () => { const el = $('#ms'); if (el) el.innerHTML = ''; };
+
 function nextQ() {
   if (!sess.next()) return end();
   locked = false;
   leave();
   const p = sess.cur, c = COL[p.sk];
   $('#bn').textContent = p.bonus ? 'Bonus ×2 points' : sess.kind == 'sprint' ? Math.min(SPRINT, sess.n + 1) + ' / ' + SPRINT : sess.kind == 'review' ? 'Question ' + Math.min(sess.total, Object.keys(sess.done).length + 1) + ' of ' + sess.total : '';
-  $('#q').textContent = p.q;
+  $('#q').textContent = p.q; $('#q').classList.toggle('wordy', p.q.length > 22);   // word problems (Real-life ratios) are sentences: smaller type so they sit in two lines
   const pw = $('#pbw');
-  if (pw && !pw.hidden) { const f = sess.kind == 'sprint' ? sess.n / SPRINT : Object.keys(sess.done).length / Math.max(1, sess.total), w = Math.round(100 * Math.min(1, f)); $('#pb').style.width = w + '%'; pw.setAttribute('aria-valuenow', w); }
+  if (pw && !pw.hidden) { const f = sess.kind == 'sprint' ? sess.n / SPRINT : Object.keys(sess.done).length / Math.max(1, sess.total), w = Math.round(100 * Math.min(1, f)); $('#pb').style.width = Math.max(4, w) + '%'; pw.setAttribute('aria-valuenow', w); }   // 4% floor is visual only: a bar that starts with a sliver reads as begun, and aria-valuenow stays the true figure
   $('#pr').textContent = 'par ' + T0(p).toFixed(1) + 's';
+  $('#pr').title = 'Par: the target time for this question. Answer faster and your pace bar stays green.';
   const lv = sess.kind == 'daily' || sess.kind == 'survival' || sess.kind == 'sprint' ? '' : ' · ' + Math.round(S.sk[p.sk].lv * 100);
   $('#sk').textContent = SK[p.sk].n + lv + (p.rt ? ' · review' : '');
+  $('#sk').title = lv ? SK[p.sk].n + ' · your rating in this skill (100 to 1200). Higher means harder questions.' : SK[p.sk].n;
+  termsNote(lv.replace(/^ · /, ''));
   $('#qc').style.setProperty('--cc', c);
   $('#qc').style.borderColor = c + '88';
   $('#bf').innerHTML = '<span class="cur"></span>'; bl = 0;
   const sym = symFor(p.sk), sk = $('#symk'), kin = $('#kin');
-  if (sk) { sk.classList.toggle('off', !sym); sk.dataset.v = sym; sk.textContent = showAns(sym); sk.tabIndex = sym ? 0 : -1; sk.setAttribute('aria-hidden', sym ? 'false' : 'true'); sk.setAttribute('aria-label', { '-': 'Minus sign', '/': 'Fraction slash', '.': 'Decimal point' }[sym] || ''); }
+  if (sk) {   // the slot is the symbol key when the question needs one; otherwise it is the Hint key, so it is never dead space
+    const hintB = $('#hintb');
+    sk.classList.toggle('hintk', !sym);
+    if (sym) { sk.dataset.v = sym; sk.textContent = showAns(sym); sk.setAttribute('aria-label', { '-': 'Minus sign', '/': 'Fraction slash', '.': 'Decimal point' }[sym] || ''); }
+    else { sk.dataset.v = 'h'; sk.innerHTML = icon('bulb'); sk.setAttribute('aria-label', 'Show the method (half points)'); }
+    sk.tabIndex = 0; sk.removeAttribute('aria-hidden');
+    if (hintB) { hintB.hidden = !sym; hintB.parentNode.classList.toggle('one', !sym && !S.ent); }   // Hint moves to the action row only while the slot is busy with a symbol
+  }
   if (kin) kin.inputMode = sym ? 'text' : 'numeric';   // the number keyboard has no minus or slash
   const q = $('#q'); q.classList.remove('in'); void q.offsetWidth; q.classList.add('in');
 }
@@ -320,7 +338,11 @@ function restart() {
   start(r && r.opt, r && r.cfg);
 }
 
-addEventListener('blur', () => { if (!S.noBlur) pause(); });
+// Auto-pause on blur is debounced: a notification shade, a permission prompt or a click into devtools gives focus back within a moment and must not stop the clock.
+// Switching tabs or minimising pauses at once through visibilitychange below; leaving the window for longer than BLUR_MS pauses here.
+const BLUR_MS = 1500; let blurId = 0;
+addEventListener('blur', () => { if (S.noBlur) return; clearTimeout(blurId); blurId = setTimeout(() => { if (!document.hasFocus()) pause(); }, BLUR_MS); });
+addEventListener('focus', () => clearTimeout(blurId));
 document.addEventListener('visibilitychange', () => { if (document.hidden) { if (sess && sess.n) sess.checkpoint(); pause(); } else if (sess) wake(true); });
 
 /** Keyboard/keypad input while on this screen. */

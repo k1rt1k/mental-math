@@ -6,7 +6,7 @@ import { TRICKS } from '../tricks.js';
 import { esc } from '../util.js';
 import { weakestSkills, streak, learnToday } from '../stats.js';
 import { shareCard } from '../share.js';
-import { A, register, go, view, mark } from '../nav.js';
+import { A, register, go, view, mark, enter } from '../nav.js';
 import { icon, toast, burst, dialogOpen } from '../ui.js';
 import { showAiSheet, showAiExplanation } from '../ai.js';
 import { lessonAiContext, runAiContext, pathsAiContext, skillsInReply } from '../pathAi.js';
@@ -34,15 +34,30 @@ export function statusLine(k) {
 const bar = (pct, k) => `<div class="bar pbar2" style="--sc:${COL[k]}" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct * 100)}"><i style="width:${Math.round(pct * 100)}%"></i></div>`;
 const cta = (k) => { const p = progress(k); return p.mastered ? 'Review' : p.dueRet >= 0 ? 'Take the check' : !p.started ? 'Start' : p.assessed ? 'Open' : 'Continue'; };
 
+/** One mark per skill, shown inside its progress ring. */
+export const GLYPH = { add: '+', sub: '−', mul: '×', div: '÷', sq: 'x²', pw: '√', pct: '%', ops: '( )', mod: 'mod', dec: '0.5', neg: '±', frac: '½', life: '$' };
+/** Glyph markup for the path ring; 3+ character glyphs (mod, 0.5; spaces do not count, so "( )" keeps full size) get a smaller size so they sit inside the circle. */
+const gly = (k) => { const g = GLYPH[k] || '?'; return `<b aria-hidden="true"${g.replace(/\s/g, '').length >= 3 ? ' class="g3"' : ''}>${g}</b>`; };
+
 /** The Paths tab on Learn: one card per skill, with a suggested next step on top. */
+/** Seven small segments, five stages then the two retention checks, so a card shows exactly where the learner is on the route. */
+const track = (k) => {
+  const p = progress(k);
+  const seg = [...p.stages.map((s) => s.state), ...p.ret.map((r) => (r.state == 'done' ? 'done' : r.state == 'locked' ? 'locked' : r.state == 'waiting' ? 'open' : 'current'))];
+  return `<span class="ptrack" role="img" aria-label="${esc(p.done)} of ${esc(p.total)} milestones done">${seg.map((x, i) => `<i class="${x}${i == PATH_STAGES ? ' gap' : ''}"></i>`).join('')}</span>`;
+};
+
 export function pathsGrid() {
   const nu = nextUp(S.sessions.length ? weakestSkills(1)[0] : 'mul');
   const top = nu ? `<div class="card nextup pcard"><div><div class="eyebrow">${nu.kind == 'retain' ? 'Ready now' : nu.kind == 'start' ? 'Suggested start' : 'Pick up where you left off'}</div><b>${esc(SK[nu.k].n)}: ${esc(nu.kind == 'retain' ? RET[nu.ret].label : PATHS[nu.k].stages[Math.max(0, nu.p.cur)].t)}</b><div class="mu">${esc(statusLine(nu.k))}</div></div><button class="btn primary" data-act="pathOpen" data-v="${esc(nu.k)}">${esc(cta(nu.k))}</button></div>` : '';
   return `${top}<h2 class="phd">All ${IDS.length} paths${IDS.filter((x) => progress(x).mastered).length ? ` <span class="mu" style="font-weight:500;font-size:.7em">· ${IDS.filter((x) => progress(x).mastered).length} mastered</span>` : ''}</h2><div class="pgrid">${IDS.map((k) => {
     const p = progress(k);
-    return `<article class="card ppath" style="--sc:${COL[k]}"><div class="kc">${esc(SK[k].n)}${p.mastered ? ' <span class="pill ok2">Mastered ✓</span>' : p.assessed ? ' <span class="pill ok2">Assessed ✓</span>' : ''}</div>
-      <h3>${esc(PATHS[k].blurb)}</h3>${bar(p.pct, k)}
-      <div class="trick-foot"><span class="mu">${esc(statusLine(k))}</span><button class="btn sm ${p.started ? '' : 'primary'}" data-act="pathOpen" data-v="${esc(k)}" aria-label="${esc(cta(k) + ' ' + SK[k].n + ' path')}">${esc(cta(k))}</button></div></article>`;
+    const pc = Math.round(p.pct * 100);
+    return `<article class="card ppath ${p.mastered ? 'is-mastered' : p.started ? 'is-started' : ''}" style="--sc:${COL[k]}"><div class="phead"><span class="pring ${p.mastered ? 'full' : ''}" style="--p:${pc}" role="progressbar" aria-label="${esc(SK[k].n + ' path progress')}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pc}">${gly(k)}</span>
+      <div class="pht"><div class="kc">${esc(SK[k].n)}${p.mastered ? ' <span class="pill ok2">Mastered ✓</span>' : p.assessed ? ' <span class="pill ok2">Assessed ✓</span>' : ''}</div><span class="mu">${esc(statusLine(k))}</span></div></div>
+      <h3>${esc(PATHS[k].blurb)}</h3>
+      ${track(k)}
+      <div class="trick-foot"><span class="mu pct">${p.mastered ? 'All ' + p.total + ' milestones done' : p.done + ' of ' + p.total + ' milestones'}</span><button class="btn sm ${nu && nu.k == k ? 'primary' : ''}" data-act="pathOpen" data-v="${esc(k)}" aria-label="${esc(cta(k) + ' ' + SK[k].n + ' path')}">${esc(cta(k))}</button></div></article>`;
   }).join('')}</div>`;
 }
 
@@ -52,7 +67,8 @@ export function pathCard() {
   if (!nu) return '';
   const k = nu.k, st = PATHS[k].stages[Math.max(0, nu.p.cur)];
   const title = nu.kind == 'retain' ? RET[nu.ret].label + ': ' + SK[k].n : (nu.kind == 'start' ? 'Learn ' : '') + SK[k].n + ' · ' + (nu.p.cur >= 0 ? 'Stage ' + (nu.p.cur + 1) + ', ' + st.t : st.t);
-  return `<section class="card nextup pcard hpath" aria-label="Guided path"><div><div class="eyebrow">${nu.kind == 'retain' ? 'Retention check ready' : nu.kind == 'start' ? 'Guided path' : 'Continue your path'}</div><b>${esc(title)}</b><div class="mu">${nu.kind == 'retain' ? 'A short test that shows what stuck.' : esc(nu.kind == 'start' ? 'Teach, demonstrate, practise, check: five stages.' : statusLine(k))}</div></div><button class="btn" data-act="pathOpen" data-v="${esc(k)}">${esc(cta(k))}</button></section>`;
+  const pc = Math.round(nu.p.pct * 100), sub = nu.kind == 'retain' ? 'A short test that shows what stuck.' : nu.kind == 'start' ? 'Teach, demonstrate, practise, check: five stages.' : statusLine(k);
+  return `<section class="card nextup pcard hpath" style="--sc:${COL[k]}" aria-label="Guided path"><div class="phead"><span class="pring ${nu.p.mastered ? 'full' : ''}" style="--p:${pc}" aria-hidden="true">${gly(k)}</span><div class="pht"><div class="eyebrow">${nu.kind == 'retain' ? 'Retention check ready' : nu.kind == 'start' ? 'Guided path' : 'Continue your path'}</div><b>${esc(title)}</b><div class="mu">${esc(sub)}</div></div></div>${track(k)}<button class="btn primary" data-act="pathOpen" data-v="${esc(k)}">${esc(cta(k))}</button></section>`;
 }
 
 /* ---------- screens ---------- */
@@ -61,8 +77,9 @@ function map() {
   const stage = (s, i) => {
     const t = P.stages[i], dn = s.done ? 4 : s.ph;
     const btn = s.state == 'locked' ? `<span class="mu">${icon('lock')} Pass stage ${i}’s check first</span>` : `<button class="btn ${s.state == 'done' ? 'sm ghost' : 'primary'}" data-act="pathStage" data-v="${i}">${s.state == 'done' ? 'Review' : s.state == 'current' ? 'Continue' : 'Start'}</button>${s.state != 'done' ? `<button class="btn sm ghost" data-act="pathTestOut" data-v="${i}" title="Skip the lesson and take the check">Take the check</button>` : ''}`;
-    return `<article class="card pstage ${s.state}" style="--sc:${COL[k]}"><div class="pnum" aria-hidden="true">${s.done ? icon('check') : i + 1}</div>
-      <div class="pbody"><div class="kc">Stage ${i + 1} · ${KINDS[i]}${s.done ? ` <span class="pill ok2">Passed${s.sc ? ' · best ' + Math.round(s.sc * 100) + '%' : ''}</span>` : ''}</div><h3>${esc(t.t)}</h3><p class="mu">${esc(t.g)}</p>
+    const now1 = i == p.cur && s.state != 'locked';
+    return `<article class="card pstage ${s.state}${now1 ? ' now' : ''}" style="--sc:${COL[k]}"${now1 ? ' aria-current="step"' : ''}><div class="pnum" aria-hidden="true">${s.done ? icon('check') : s.state == 'locked' ? icon('lock') : i + 1}</div>
+      <div class="pbody"><div class="kc">Stage ${i + 1} · ${KINDS[i]}${s.done ? ` <span class="pill ok2">Passed${s.sc ? ' · best ' + Math.round(s.sc * 100) + '%' : ''}</span>` : now1 ? ` <span class="pill">${s.state == 'current' ? 'In progress' : 'Up next'}</span>` : ''}</div><h3>${esc(t.t)}</h3><p class="mu">${esc(t.g)}</p>
         <div class="pmeta"><span class="pdots" role="img" aria-label="${esc(dn)} of 4 lesson steps done">${PHASES.map((n, j) => `<span class="pdot ${j < dn ? 'on' : ''}"></span>`).join('')}</span><span class="mu">${dn} of 4 steps</span></div></div>
       <div class="pact">${btn}</div></article>`;
   };
@@ -73,12 +90,18 @@ function map() {
       : `<button class="btn primary" data-act="retStart" data-v="${esc(r.i)}">Take the check</button>`;
     return `<article class="card pret ${r.state}" style="--sc:${COL[k]}"><div><div class="kc">Retention · ${r.i == 0 ? 'a day later' : 'a week later'}</div><b>${esc(r.label)}</b><p class="mu">${r.i == 0 ? '6 fresh questions, no hints, the day after your mastery test.' : '6 more questions a week on: the real test of what stuck.'}${r.state == 'retry' ? ' You can retake it after a refresher.' : ''}</p></div><div>${body}</div></article>`;
   }).join('');
+  const nextBtn = p.dueRet >= 0 ? `<button class="btn primary" data-act="retStart" data-v="${esc(p.dueRet)}">Take the ${esc(RET[p.dueRet].label.toLowerCase())}</button>`
+    : p.cur > 0 && p.stages[p.cur].state != 'locked' ?   // stage 1 sits right under the header with its own Start button, so only later stages (further down the page) get the shortcut
+      `<button class="btn primary" data-act="pathStage" data-v="${esc(p.cur)}">${p.stages[p.cur].state == 'open' ? 'Start' : 'Continue'} stage ${p.cur + 1}</button>` : '';
+  const pcHero = Math.round(p.pct * 100);
   main().innerHTML = `
-  <div class="hd"><div><button class="btn sm ghost" data-act="pathExit">${icon('chev', 'flip')} Learn</button><h1 style="margin-top:8px">${esc(SK[k].n)} path</h1><p class="lede">${esc(P.blurb)}</p></div>
-    <div class="pprog"><b class="num">${p.done}</b><span class="mu"> of ${p.total} milestones</span>${bar(p.pct, k)}</div></div>
-  ${p.mastered ? `<div class="card nextup pcard pmbanner" style="--sc:${COL[k]}"><div><b>${esc(SK[k].n)} is mastered</b><div class="mu">Every check passed. Show it off.</div></div><button class="btn primary" data-act="pathShare">Share mastery card</button></div>` : ''}
+  <header class="phero" style="--sc:${COL[k]}"><button class="btn sm ghost" data-act="pathExit">${icon('chev', 'flip')} Learn</button>
+    <div class="phead"><span class="pring lg ${p.mastered ? 'full' : ''}" style="--p:${pcHero}" aria-hidden="true">${gly(k)}</span><div class="pht"><h1>${esc(SK[k].n)} path</h1><div class="mu">${esc(statusLine(k))}</div></div></div>
+    <p class="lede">${esc(P.blurb)}</p>
+    <div class="pherofoot">${track(k)}<span class="mu num">${p.done} of ${p.total} milestones</span>${nextBtn}</div></header>
+    ${p.mastered ? `<div class="card nextup pcard pmbanner" style="--sc:${COL[k]}"><div><b>${esc(SK[k].n)} is mastered</b><div class="mu">Every check passed. Show it off.</div></div><button class="btn primary" data-act="pathShare">Share mastery card</button></div>` : ''}
   ${canPlace(k) ? placeCard(p) : ''}
-  <div class="pstages">${p.stages.map(stage).join('')}</div><h2>Does it stick?</h2><div class="prets">${ret}</div>
+  <div class="pstages">${p.stages.map(stage).join('')}</div><h2 class="pstick">Does it stick?</h2><p class="mu pstickp">Two short checks after mastery, a day later and a week later, show what you still remember.</p><div class="prets">${ret}</div>
   <p class="mu" style="margin-top:18px;max-width:62ch">${sk(k)} Prefer to browse? The <button class="lnk2" data-act="pathLib" data-v="${esc(k)}">trick library</button> has every shortcut as a stand-alone card.</p>`;
 }
 
@@ -136,7 +159,7 @@ function demoBody(st) {
       else if (!dm.solved) ctl = `<div class="pyou"><label for="dans"><b>Your turn:</b> what is ${esc(d.q)}?</label><div class="btns" style="margin-top:10px;justify-content:flex-start"><input class="inp pin" id="dans" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Your answer" value="${esc(dm.val || '')}" style="margin:0"><button class="btn primary" data-act="demoCheck" data-primary>Check</button><button class="btn ghost" data-act="demoShow">Show answer</button></div><div class="pmsg" role="status" aria-live="polite" style="min-height:0;text-align:left;margin-bottom:0">${dm.tried ? '<span class="bad">Not quite.</span> <span class="mu">Re-read the steps above and try again.</span>' : ''}</div></div>`;
       else ctl = `<div class="pmsg" role="status" style="min-height:0"><span class="ok">${dm.gaveUp ? 'There it is.' : 'Correct.'}</span> <span class="mu">Now try some yourself.</span></div><div class="btns pnav"><button class="btn primary" data-act="pathNext" data-primary>Next: practise ${icon('chev')}</button></div>`;
     }
-    h += `<div class="card pdemo ${cur ? '' : 'old'}"><div class="mu">Example ${j + 1} of ${st.demo.length}</div><div class="pq0">${esc(d.q)}</div><ol class="psteps">${lines.join('')}</ol>${ctl}</div>`;
+    h += `<div class="card pdemo ${cur ? '' : 'old'}" style="--sc:${COL[ctx.k]}"><div class="mu">Example ${j + 1} of ${st.demo.length}</div><div class="pq0">${esc(d.q)}</div><ol class="psteps">${lines.join('')}</ol>${ctl}</div>`;
   }
   return h;
 }
@@ -273,6 +296,7 @@ function placeResult() {
   const title = top ? 'Straight to the mastery test' : cleared ? 'Start at stage ' + (at + 1) : 'Stage ' + (at + 1) + ' is the right place to start';
   const body = cleared ? `${cleared == 1 ? 'Stage ' + (from + 1) + ' is' : 'Stages ' + (from + 1) + ' to ' + to + ' are'} marked passed. ${top ? 'The timed mastery test is next, and the retention checks follow it.' : 'Stage ' + (at + 1) + ' is where the path opens now.'}` : 'Nothing was skipped. A missed answer in a quiz this short is not a verdict: you can still take the check on any stage you know.';
   const go2 = top ? 'Open the mastery test' : cleared ? 'Open stage ' + (at + 1) : 'Start stage ' + (at + 1);
+  enter();   // same cascade and count-ups as every other screen
   main().innerHTML = `<div class="card pres ${cleared ? 'pass' : ''}" style="--sc:${COL[k]}"><div class="eyebrow">${esc(SK[k].n)} · Level check</div><h1>${esc(title)}</h1>
     <p>${esc(body)}</p>${ctx.res.logged ? learnLine() : ''}<div class="btns pnav"><button class="btn primary" data-act="pathStage" data-v="${esc(at)}" data-primary>${esc(go2)}</button><button class="btn ghost" data-act="pathMap">Path map</button></div>${aiRunBtn()}</div>
     <h2>Every answer</h2><div class="card"><div class="plist">${rows.map((x) => `<div class="prow"><span>${esc(x.q)} = <b>${esc(x.a)}</b>${x.ok ? '' : `<br><span class="mu">${esc(howTo({ q: x.q, a: x.a, sk: k }))}</span>${aiBtn(x, k)}`}</span><span><span class="mu num">${x.tm.toFixed(1)}s</span> <span class="${x.ok ? 'ok' : 'bad'}">${x.ok ? '✓' : '✗'}</span></span></div>`).join('')}</div></div>`;
@@ -292,6 +316,7 @@ function result() {
   else if (v.pass) next = `<button class="btn primary" data-act="pathMap" data-primary>See the retention checks</button>`;
   else next = `<button class="btn primary" data-act="runStart" data-v="${esc(mode)}" data-primary>Try again</button><button class="btn" data-act="pathPhase" data-v="0">Review the lesson</button><button class="btn ghost" data-act="pathMap">Path map</button>`;
   const note = v.pass && last && mode != 'retain' ? `<p class="ok" style="margin-top:10px">Your next-day check opens ${esc(when(P.ret[0].dueAt))}. Come back then: the point is to see what you still remember.</p>` : v.pass && mode == 'retain' && ret == 0 && P.ret[1] && P.ret[1].dueAt ? `<p class="mu" style="margin-top:10px">The one-week check opens ${esc(when(P.ret[1].dueAt))}.</p>` : '';
+  enter();   // same cascade and count-ups as every other screen; the pass/miss entrance is CSS on .pres.pass / .pres.fail
   main().innerHTML = `<div class="card pres ${mode == 'practise' || v.pass ? 'pass' : 'fail'}" style="--sc:${COL[k]}"><div class="eyebrow">${esc(SK[k].n)} · ${esc(KINDS[si])}</div><h1>${esc(title)}</h1>
     <div class="pscore"><b class="num">${v.correct}/${v.n}</b><span class="mu">${mode == 'practise' ? 'first try' : 'first-try correct'}${R.need ? ' · ' + R.need + ' needed' : ''}</span></div>
     ${v.pace && R.pace ? `<div class="pace ${R.pace && v.pace > R.pace ? 'bad' : ''}">Pace ${v.pace}× par${R.pace ? ' (limit ' + R.pace + '×)' : ''}</div>` : ''}
@@ -312,6 +337,7 @@ const masteryCard = (k) => { const m = masteryInfo(k); return { tag: 'Path maste
 /** The payoff for finishing a path: shown once, when the last retention check is passed. Also reachable from a mastered path's map. */
 function celebrate() {
   const k = ctx.k, m = masteryInfo(k), nu = nextUp(null), other = nu && nu.k != k ? nu : null;
+  enter();
   main().innerHTML = `<div class="card pres pass pmast" style="--sc:${COL[k]}"><div class="pmark" aria-hidden="true">${icon('check')}</div>
     <div class="eyebrow">${esc(SK[k].n)} path</div><h1>${esc(SK[k].n)} mastered</h1>
     <p class="lede">All five stages, the timed test and both retention checks. It was still there a week later.</p>

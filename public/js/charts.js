@@ -14,10 +14,17 @@ const pts = (P, T) => esc(JSON.stringify(P.map((p, i) => [+p[0].toFixed(1), +p[1
 const ink = (c) => (String(c).startsWith('#') ? `color-mix(in srgb, ${c} var(--fill-mix), var(--ink-base))` : c);
 
 /** Line chart with area fill, best point highlighted and end value labelled. */
+/** Placeholder for a chart with nothing to draw yet: a dashed baseline, a plain headline and one line of detail. Same height as the chart so the card does not jump when data arrives. */
+const waiting = (h, head, sub) => `<div class="chwait" style="min-height:${Math.round(h * 0.9)}px" role="img" aria-label="${esc(head + '. ' + sub)}"><b>${esc(head)}</b><span>${esc(sub)}</span></div>`;
+
+/** Sessions a trend needs before a line says anything. */
+export const SPARK_MIN = 3;
+
 export function spark(v, col0, { w = 420, h = 96, fmt = (x) => Math.round(x), unit = '', labels = [] } = {}) {
   const col = ink(col0), uid = ++sparkN;
-  if (v.length < 2) return '<div class="mu" style="padding:8px 0">Needs 2+ sessions</div>';
+  if (v.length < SPARK_MIN) return waiting(h, 'Needs more sessions', v.length + ' of ' + SPARK_MIN + ' so far');
   const mn = Math.min(...v), mx = Math.max(...v), sp = mx - mn || 1, bi = v.indexOf(mx), pad = 10;
+  if (mx - mn < 1e-9) return waiting(h, 'No change yet', 'Steady at ' + fmt(mx) + unit + ' over ' + v.length + ' sessions');
   const P = v.map((y, i) => [pad + (i * (w - pad * 2)) / (v.length - 1), h - pad - ((y - mn) / sp) * (h - pad * 2 - 6)]);
   const line = P.map((p) => p.map((n) => n.toFixed(1)).join(',')).join(' ');
   const last = P[P.length - 1];
@@ -32,6 +39,7 @@ export function spark(v, col0, { w = 420, h = 96, fmt = (x) => Math.round(x), un
 }
 
 export function bars(v, col, labels) {
+  if (!v.some((y) => y > 0)) return waiting(100, 'No answers yet', 'The last ' + v.length + ' days are empty');
   const w = 420, h = 100, mx = Math.max(1, ...v), bw = w / v.length;
   const P = v.map((y, i) => [i * bw + bw / 2, h - Math.max(y ? 2 : 0, (y / mx) * h)]), tips = v.map((y, i) => [new Date(labels[i] + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }), y + (y == 1 ? ' answer' : ' answers')]);
   return `<div class="chw"><svg viewBox="0 0 ${w} ${h + 18}" class="sp ix" tabindex="0" data-ch="x" data-pts='${pts(P, tips)}' role="img" aria-label="Answers per day">${v.map((y, i) => {

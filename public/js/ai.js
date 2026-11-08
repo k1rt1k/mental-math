@@ -3,6 +3,7 @@
 
 import { S, avgLv, LEGACY_ACTIVE_USER } from './state.js';
 import { syncKey } from './sync.js';
+import { DEMO } from './demoflag.js';
 import { IDS, SK, how } from './engine.js';
 import { weakestSkills, weakFacts, streak, longest, ERRL, todayCount } from './stats.js';
 import { A } from './nav.js';
@@ -71,6 +72,7 @@ export const aiQuota = {
 /** Learn how much of today's shared free budget is left (GET /api/ai). Cached for a minute. */
 let budgetCheckedAt = 0;
 export async function refreshAiBudget() {
+  if (DEMO) return aiQuota;
   if (Date.now() - budgetCheckedAt < 60000) return aiQuota;
   budgetCheckedAt = Date.now();
   try {
@@ -376,6 +378,7 @@ export async function callAi({ action = 'coach', question = null, message = '', 
     }
   }
 
+  if (DEMO) return { ok: true, fallback: true, source: 'local', demo: true, text: generateClientOfflineFallback(action, summary, requestQuestion, message, context), message: 'Sample mode: this is the built-in local guide. With your own sync password, Gemini writes these.' };
   if (!personalSyncKey) {
     return {
       ok: true, fallback: true, source: 'local', authRequired: true,

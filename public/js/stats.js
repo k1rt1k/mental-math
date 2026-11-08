@@ -225,6 +225,7 @@ export function recommend(now = Date.now()) {
 /** Slip kinds: [label, what to do about it]. */
 export const ERRL = {
   swap: ['Swapped digits', 'You had the right digits in the wrong order. Say the answer once in your head before typing.'],
+  sign: ['Sign slip', 'Right size, wrong sign. Decide positive or negative first, then work out the size.'],
   off1: ['Off by one', 'Usually a dropped carry or borrow in the last step. Re-check it before you type.'],
   place: ['Carry or place slip', 'Off by a 10, 100 or 1000: line the place values up before adding or subtracting.'],
   digit: ['One wrong digit', 'Right method, one digit off. Slow down on the final step.'],

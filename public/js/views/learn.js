@@ -15,7 +15,7 @@ let filter = 'all', tab = 'paths';
 /** Opening Learn on one skill's shortcuts (from a skill sheet, say) lands on the library, filtered. */
 export const setLearnFilter = (k) => { filter = k; tab = 'lib'; };
 
-function learn() {
+function learn(swap = false) {
   document.title = 'Learn · Mental Math';
   // "Suggested" only means something if it is rare: the three best next steps, from the weakest skills first, least practised first.
   const wkOrder = weakestSkills(3), tries = (t) => { const o = t.pt && S.pat[SK[t.sk].n + ' · ' + t.pt]; return o ? o.n : 0; };
@@ -29,30 +29,38 @@ function learn() {
     return `${mastered ? '<span class="pill ok2">Mastered ✓</span> ' : ''}<span class="mu">You: ${o.n} tries · <span class="${acc >= 90 ? 'ok' : acc < 75 ? 'bad' : ''}">${acc}%</span> accurate${sp ? ' · ' + sp.toFixed(2) + '× par time' : ''}${sp ? ib('l.par') : ''}</span>`;
   };
   const nChk = dueChecks().length;
-  const seg = `<div class="seg learnseg" role="group" aria-label="Learn"><button aria-pressed="${tab == 'paths'}" data-act="learnTab" data-v="paths">Guided paths${nChk ? ` <span class="badge-inline" aria-label="${esc(nChk + (nChk == 1 ? ' retention check ready' : ' retention checks ready'))}">${nChk}</span>` : ''}</button><button aria-pressed="${tab == 'lib'}" data-act="learnTab" data-v="lib">Shortcut library</button></div>`;
-  if (tab == 'paths') {
-    document.querySelector('#main').innerHTML = `<div class="hd"><h1>Learn${ib('l.path')}</h1>${S.sessions.length ? `<div class="btns"><button class="btn" data-act="aiNextPath">${icon('sparkle')} AI: which path next?</button></div>` : ''}</div>${seg}
-    <p class="mu" style="margin:14px 0 16px;max-width:64ch">A path takes one skill from the basics to a timed mastery test. Every stage teaches, shows a worked example, lets you practise, then checks what you can do alone. Passing a check unlocks the next stage, and two later checks (a day and a week on) test what you still remember.</p>${pathsGrid()}`;
-    return;
-  }
-  document.querySelector('#main').innerHTML = `
-  <div class="hd"><h1>Learn${ib('l.intro')}</h1>${S.sessions.length ? `<div class="btns"><button class="btn" data-act="aiNextTrick">${icon('sparkle')} AI: which trick next?</button></div>` : ''}</div>
-  ${seg}
-  <h2 style="margin-top:18px">Shortcut library</h2>
-  <div class="chips fscroll" style="margin-bottom:16px" role="group" aria-label="Filter by skill"><button class="chip" aria-pressed="${filter == 'all'}" data-act="learnFilter" data-v="all">All</button>${IDS.filter((k) => TRICKS.some((t) => t.sk == k)).map((k) => `<button class="chip" aria-pressed="${filter == k}" data-act="learnFilter" data-v="${esc(k)}"><span class="dot" style="--sc:${COL[k]}"></span>${esc(SK[k].n)}</button>`).join('')}</div>
+  const segHtml = () => `<div class="seg learnseg" role="group" aria-label="Learn"><button aria-pressed="${tab == 'paths'}" data-act="learnTab" data-v="paths">Guided paths${nChk ? ` <span class="badge-inline" aria-label="${esc(nChk + (nChk == 1 ? ' retention check ready' : ' retention checks ready'))}">${nChk}</span>` : ''}</button><button aria-pressed="${tab == 'lib'}" data-act="learnTab" data-v="lib">Shortcut library</button></div>`;
+  const aiBtn = () => (S.sessions.length ? (tab == 'paths' ? `<button class="btn sm learnai" data-act="aiNextPath">${icon('sparkle')} Which path next?</button>` : `<button class="btn sm learnai" data-act="aiNextTrick">${icon('sparkle')} Which trick next?</button>`) : '');
+  const lede = () => (tab == 'paths' ? 'Take one skill from the basics to a timed mastery test. Each stage teaches, shows an example, lets you practise, then checks you on your own.' : 'Stand-alone shortcuts. Try one on a sample question, or practise it with real ones.') + (tab == 'paths' ? ib('l.path') : ib('l.intro'));
+  const body = () => tab == 'paths' ? pathsGrid() : `<div class="chips fscroll" style="margin-bottom:16px" role="group" aria-label="Filter by skill"><button class="chip" aria-pressed="${filter == 'all'}" data-act="learnFilter" data-v="all">All</button>${IDS.filter((k) => TRICKS.some((t) => t.sk == k)).map((k) => `<button class="chip" aria-pressed="${filter == k}" data-act="learnFilter" data-v="${esc(k)}"><span class="dot" style="--sc:${COL[k]}"></span>${esc(SK[k].n)}</button>`).join('')}</div>
   <div class="tricks">${list.map((t) => `<article class="card trick" style="--sc:${COL[t.sk]}">
     <div class="kc">${esc(SK[t.sk].n)}${S.sessions.length && sugg.has(t.id) ? ' <span class="pill sg2">Suggested for you</span>' : ''}</div><h3>${esc(t.title)}</h3>
     <p>${esc(t.rule)}</p>
     <div class="ex">${t.ex.map((x) => `<div>${esc(x)}</div>`).join('')}</div>
     <div class="trick-foot">${stat(t)}<span class="btns"><button class="btn sm ghost iconly" data-act="aiTrick" data-v="${esc(t.id)}" aria-label="Ask AI about ${esc(t.title)}" title="Ask AI about this trick">${icon('sparkle')}</button><button class="btn sm" data-act="tryTrick" data-v="${esc(t.id)}">Try one</button><button class="btn sm primary" data-act="practiceTrick" data-v="${esc(t.id)}">Practise this</button></span></div></article>`).join('')}</div>`;
+  const paint = () => {
+    const m = document.querySelector('#main'), bodyEl = m.querySelector('#learnbody');
+    if (!bodyEl) {   // first paint, or coming back from another screen: build the whole page once
+      m.innerHTML = `<div class="learnhd"><h1>Learn</h1><span id="learnai">${aiBtn()}</span></div>${segHtml()}<p class="learnlede" id="learnlede">${lede()}</p><div class="learnbody" id="learnbody">${body()}</div>`;
+      return;
+    }
+    // Switching tabs or filters: keep the header, the control and the scroll position, and only swap what is underneath.
+    m.querySelectorAll('.learnseg [data-act=learnTab]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v == (tab == 'lib' ? 'lib' : 'paths'))));
+    m.querySelector('#learnai').innerHTML = aiBtn();
+    m.querySelector('#learnlede').innerHTML = lede();
+    bodyEl.innerHTML = body();
+    if (swap) { bodyEl.classList.remove('swap'); void bodyEl.offsetWidth; bodyEl.classList.add('swap'); }
+    m.dispatchEvent(new Event('mm:paint'));   // lets the highlight glide to the new choice
+  };
+  paint();
 }
 A.aiNextTrick = () => {
   const tricks = TRICKS.slice(0, 30).map((t) => { const o = t.pt && S.pat[SK[t.sk].n + ' · ' + t.pt]; return { id: t.id, title: t.title, skill: SK[t.sk].n, tries: o ? o.n : 0, accuracyPct: o && o.n ? Math.round((100 * o.ok) / o.n) : null }; });
   const skillRatings = Object.fromEntries(IDS.map((k) => [SK[k].n, Math.round(S.sk[k].lv * 100)]));
   showAiSheet({ title: 'Which trick should you learn next?', action: 'nexttrick', context: { tricks, skillRatings }, extra: (res) => TRICKS.filter((t) => String(res.text || '').includes(t.title)).slice(0, 2).map((t) => ({ label: `Practise: ${t.title}`, run: () => drill(t.sk, t.pt) })) });
 };
-A.learnFilter = (d) => { filter = d.v; learn(); };
-A.learnTab = (d) => { tab = d.v == 'lib' ? 'lib' : 'paths'; learn(); };
+A.learnFilter = (d) => { filter = d.v; learn(false); };
+A.learnTab = (d) => { const next = d.v == 'lib' ? 'lib' : 'paths'; if (next == tab) return; tab = next; learn(true); };
 A.aiTrick = (d) => {
   const t = TRICKS.find((x) => x.id == d.v); if (!t) return;
   const o = t.pt && S.pat[SK[t.sk].n + ' · ' + t.pt];

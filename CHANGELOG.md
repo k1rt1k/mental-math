@@ -2,6 +2,29 @@
 
 Newest first. What is true of the app today is in [README.md](README.md). The release number is the `VERSION` file.
 
+## 14.77
+
+Five UI items from a screen review of 14.76. Front end only; no backend change.
+
+- **Notebook delete was already undoable.** The ✕ shows an *Undo* toast for at least 7 seconds (and *Clear all* has one too), so no change was needed. A test now pins that behaviour so it cannot be lost by accident.
+- **The "mod" ring fits.** Path rings (Learn list, Home card, path map) sized every glyph for one or two characters, so `mod` and `0.5` touched the edge of the 42 px inner circle. Glyphs of three or more characters now use a smaller size (12 px, 15 px on the large ring).
+- **Charts with nothing to show say so.** A trend with fewer than 3 sessions reads *Needs more sessions* with a count (*1 of 3 so far*); a trend that has not moved at all reads *No change yet* with the steady value (*Steady at 423 over 5 sessions*); *Answers per day* with no answers in 14 days reads *No answers yet*. The placeholder is the same height as the chart, so the card does not jump when data arrives. Applies to Progress, the skill sheet on Home and the per-skill charts.
+- **Run progress bar starts with a sliver.** Sprint and Review show a 4% fill at question 1 instead of an empty grey track. It is visual only: `aria-valuenow` still reports the true percentage.
+- **Result and mastery screens animate.** The Learn-path result and the placement result now enter with the same cascade as other screens and count the score up (the quiz result screen already did). A pass pops the score in with a soft green pulse around the card; a miss drops it in muted with one short sideways nudge. The mastery screen counts its three stats up, ripples a ring out from the check mark and staggers the stat tiles in. All of it is off under Reduce motion (the OS setting and the in-app switch).
+- Tests: `test/v1477-ui-pass.test.mjs`.
+
+## 14.76
+
+Six fixes from a review of 14.75. No backend change.
+
+- **Sign slips are their own kind.** Typing 5 for −5 (or the reverse) was filed under *Carry or place slip* because the two differ by 10. `errKind` now returns `sign` first, with its own label and advice in Why you missed, Mistake patterns and the Coach's Common slips; the offline explanation says "the right size with the opposite sign". Old saved counters are unaffected.
+- **Coach before the first session** no longer shows an invented 423 average rating, a 0% accuracy or a 13-row list of default ratings. Those read "–" and a short note until a session exists, and the welcome card says "Welcome." instead of "Welcome, you."
+- **Reduce motion (the in-app switch) now silences everything.** The OS setting always did, through one rule in `style.css`. The in-app switch (`data-motion=reduce`) was only wired to a handful of rules and to the JavaScript motion, so most of `motion.css` kept animating. It now has the same blanket rule as the OS setting. (The review's first reading, that the OS setting was ignored, was wrong.)
+- **Auto-pause on blur is debounced.** Clicking into devtools, a permission prompt or a pulled-down notification shade no longer stops the clock: the pause happens only if the window is still unfocused after 1.5 s, and regaining focus cancels it. Switching tabs or minimising still pauses at once. The Auto-pause switch still turns it off.
+- **Repeated questions at tiny pools.** Measured over 60 seeded 40-question sessions per skill at level 1, repeats inside 8 questions were already about 0.1% (roots and powers: 2 of 2400; every other skill 0). The review overstated this. As a safety net, when all 30 tries repeat something recent, the session now stretches the level slightly for a fresh question instead of re-asking one. Pattern drills are untouched.
+- **Word problems get smaller type.** Real-life ratio questions (up to 32 characters) wrapped to three lines at 45 px on large-text phones and crowded the skill chip. Questions over 22 characters now use the `wordy` class: smaller type, two lines, clear of the chip. Checked at 320 px and 360 px with large text and large answer digits; nothing overflows.
+- Tests: `test/v1476-fixes.test.mjs`.
+
 ## 14.75
 
 - **AI in the places that had none.** Guided paths had no AI at all; the week sheet neither. Four new actions, each grounded in numbers the app measured, with an honest offline fallback and the same 4-hour on-device cache as the other sheets:

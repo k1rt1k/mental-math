@@ -169,8 +169,8 @@ export class PathSession extends Session {
   verdict() { return judge(this.pmode, this.rows, this.stg); }
 }
 
-/** Can the placement quiz help here? Only while a stage before the mastery test is still to pass. */
-export const canPlace = (k) => { const c = progress(k).cur; return c >= 0 && c <= PLACE.last; };
+/** Can the placement quiz help here? Only on a path with no stage passed yet: once any stage is cleared (by a check or by the quiz) the path already has a starting point, so the offer goes away. */
+export const canPlace = (k) => { const p = progress(k); return p.cur >= 0 && p.cur <= PLACE.last && !p.stages.some((s) => s.done); };
 
 /**
  * The placement quiz: one run, one session. It starts at the first stage not yet passed and climbs, three questions per stage. One miss ends it

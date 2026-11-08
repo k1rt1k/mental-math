@@ -1,7 +1,7 @@
 // A practice session: question selection, answer handling, adaptive ratings, spaced review, results.
 // DOM-free so it can be tested in Node. The views in js/views/play.js drive it.
 import { S, save, persist, cfgNow, master, recordLapse, recordRecall, bump, reviewPlan, forget } from './state.js';
-import { IDS, CORE, SK, symFor, ansMatch, T, factOf, errKind, timeCap, worth, speedMult, gen, how, qk, perfScore, nextRating, weakness, INTERVALS, MASTER_BOX, genZeta, zNorm, zKey } from './engine.js';
+import { IDS, CORE, MAXLV, SK, symFor, ansMatch, T, factOf, errKind, timeCap, worth, speedMult, gen, how, qk, perfScore, nextRating, weakness, INTERVALS, MASTER_BOX, genZeta, zNorm, zKey } from './engine.js';
 import { clamp, ymd, seeded } from './util.js';
 import { ctx, MS, weakFacts } from './stats.js';
 
@@ -129,6 +129,14 @@ export class Session {
       this.retry.forEach((r, j) => (r.cd = cds[j]));
     }
     this.retry.forEach((r) => r.cd--);
+    // All 30 tries repeated something asked in the last few questions. That happens where the pool is tiny (level 1 has 9 squares and 7 roots).
+    // Stretch the level a touch for a fresh question rather than re-ask a recent one. Pattern drills stay on their pattern, so they are left alone.
+    if (best && bi >= hist.length - 8 && !this.patt && !this.pats && !best.rt && !best.nr && best.sk && this.kind != 'zeta') {
+      for (let j = 0; j < 24; j++) {
+        const c = gen(best.sk, Math.min(MAXLV, (best.d || 1) + 0.5 + j * 0.06), this.rand);
+        if (hist.lastIndexOf(qk(c.q)) < 0) { c.bonus = best.bonus || 0; return c; }
+      }
+    }
     return best;
   }
 

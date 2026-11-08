@@ -4,6 +4,7 @@ import { S, replaceState, mergeStates, migrate, persist, onSave, prefsSig, LEGAC
 
 // One sync credential per device. The credential itself selects the person's
 // isolated server-side store (SYNC_KEY, SYNC_KEY_SISTER, etc.).
+import { DEMO } from './demoflag.js';
 export function migrateLegacySyncKey(storage = localStorage, selectedUser = LEGACY_ACTIVE_USER) {
   const marker = 'mmTrainer.v14.singleUserSync.v1';
   if (storage[marker]) return false;
@@ -67,7 +68,7 @@ export async function packBody(json, can = typeof CompressionStream != 'undefine
 let weakKey = false, synced = false, busy = false, epoch = 0, conflicts = 0, pushT, fullNext = false, etag = '', gzipOk = true, dirty = true, saves = 0, guard = () => false, onChange = () => {};
 /** True when the server says this key is shorter than the current minimum (a key set up before the rule). */
 export const isWeakKey = () => weakKey;
-export let status = { kind: syncKey() ? 'busy' : 'off', msg: '', at: 0 };   // kind: off | busy | ok | offline | key | locked
+export let status = { kind: DEMO ? 'ok' : syncKey() ? 'busy' : 'off', msg: '', at: DEMO ? Date.now() : 0 };   // sample mode shows a healthy, simulated sync and never calls the server   // kind: off | busy | ok | offline | key | locked
 const subs = new Set();
 const emit = () => subs.forEach((f) => f(status));
 export const onStatus = (f) => { subs.add(f); return () => subs.delete(f); };
@@ -96,6 +97,7 @@ async function api(method, body, query = '') {
 const fail = (e) => set(e instanceof HttpError && e.code == 401 ? 'key' : e instanceof HttpError && e.code == 429 ? 'locked' : 'offline');
 
 export async function push() {
+  if (DEMO) return;
   if (!syncKey() || !synced || guard()) return;
   const ep = epoch, sv = saves, sentMax = maxT(S.sessions), sentWipe = S.wipe || 0;
   const { body, delta } = pushBody(S, readCursor(), fullNext);
@@ -118,6 +120,7 @@ export async function push() {
 export function pushSoon() { if (!syncKey() || !synced) return; clearTimeout(pushT); pushT = setTimeout(push, 1200); }
 
 export async function pull(afterConflict = false) {
+  if (DEMO) return;
   if (!syncKey() || guard() || (busy && !afterConflict)) return;
   const ep = epoch;
   busy = true;
@@ -147,6 +150,7 @@ export async function pull(afterConflict = false) {
 
 /** Manual "sync now" from the UI. */
 export async function syncNow() {
+  if (DEMO) { status = { kind: 'ok', at: Date.now() }; emit(); return true; }
   if (!syncKey()) return false;
   clearTimeout(pushT);
   if (synced) await push();
@@ -172,6 +176,7 @@ export async function fetchBackup() {
 
 onSave((ev) => { if (ev == 'saved') { saves++; dirty = true; pushSoon(); } });
 export function startSync() {
+  if (DEMO) return;
   addEventListener('focus', () => pull());
   addEventListener('online', () => pull());
   document.addEventListener('visibilitychange', () => { if (!document.hidden) pull(); });

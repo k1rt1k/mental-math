@@ -25,6 +25,7 @@ export function describeGap(correct, typed) {
       out.push(`only the ${names[pos] || 'leading'} digit differs (${ts[i]} instead of ${cs[i]})`);
     } else if ([...cs].sort().join('') === [...ts].sort().join('')) out.push('same digits in a different order');
   }
+  if (c !== 0 && t === -c) out.push('the right size with the opposite sign (a sign slip)');
   if (c !== 0 && (t === c * 10 || c === t * 10)) out.push('a factor of 10 away (place-value shift)');
   return out.join('; ');
 }
