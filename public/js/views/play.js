@@ -50,7 +50,7 @@ export function start(opt, cfg) {
   mark('play');
   document.title = 'Get ready · Mental Math';
   const sv = sess.kind == 'survival';
-  $('#main').innerHTML = `<div class="play"><div>
+  $('#main').innerHTML = `<div class="play${S.noTimer ? ' nt' : ''}${S.noQLine ? ' nq' : ''}${sv ? ' sv' : ''}"><div>
     <div class="hud">
       <button class="btn sm" data-act="pause" aria-label="Pause session">${icon('pause')} Pause<kbd>Esc</kbd></button>
       <div class="cl"><div class="big" id="t"></div><div class="lbl" id="tl"></div></div>
@@ -263,8 +263,8 @@ function tick() {
     if (!sess.un && left <= 10) pulse($('#t'), mmss(c), 1.1); else $('#t').textContent = mmss(c);   // the last ten seconds tick
     $('#t').style.color = !sess.un && left <= 10 ? 'var(--bad)' : '';
     if (!sess.un) $('#tb').style.width = (100 * left) / sess.dur + '%';
-    document.title = mmss(c) + ' · Mental Math';
-  } else $('#tl').textContent = 'lives · ' + mmss(el);
+    document.title = S.noTimer ? 'Mental Math' : mmss(c) + ' · Mental Math';
+  } else $('#tl').textContent = S.noTimer ? 'lives' : 'lives · ' + mmss(el);
   rollPts();
   if (sess.kind == 'sprint') $('#acc').textContent = sess.n + ' of ' + SPRINT + (sess.slips + sess.skips ? ' · +' + (3 * sess.slips + 5 * sess.skips) + ' s' : '');
   else $('#acc').textContent = sess.n ? sess.ok + ' correct · ' + Math.round((100 * sess.ok) / sess.n) + '%' + '' : 'points';

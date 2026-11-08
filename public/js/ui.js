@@ -48,6 +48,31 @@ export function toast(msg, { label, onClick, ms = 2600 } = {}) {
 }
 
 /* ---------- dialogs ---------- */
+/* Scroll lock: while any dialog/sheet is open the page behind it must not scroll (wheel, touch, keyboard, iOS rubber-band).
+   The page is pinned with position:fixed at its current offset and restored on close; a MutationObserver covers every dialog, however it is opened. */
+let lockY = null;
+function syncScrollLock() {
+  const open = !!document.querySelector('dialog[open]');
+  const root = document.documentElement, b = document.body;
+  if (open && lockY === null) {
+    lockY = window.scrollY || root.scrollTop || 0;
+    const sbw = window.innerWidth - root.clientWidth;
+    b.style.top = `-${lockY}px`;
+    b.classList.add('dlg-lock');
+    if (sbw > 0) b.style.paddingRight = `${sbw}px`;
+  } else if (!open && lockY !== null) {
+    const y = lockY; lockY = null;
+    b.classList.remove('dlg-lock');
+    b.style.top = ''; b.style.paddingRight = '';
+    const prev = root.style.scrollBehavior; root.style.scrollBehavior = 'auto';
+    window.scrollTo(0, y);
+    root.style.scrollBehavior = prev;
+  }
+}
+if (typeof MutationObserver !== 'undefined' && typeof document !== 'undefined') {
+  new MutationObserver(syncScrollLock).observe(document.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: ['open'] });
+}
+
 export const dialogOpen = () => !!document.querySelector('dialog[open]');
 
 /** Close on a click on the backdrop, but not when a text selection drag merely ended there. */
@@ -115,10 +140,52 @@ export function choiceDlg(title, intro, options) {
     d.className = 'dlg';
     d.setAttribute('aria-label', title);
     backdropClose(d);
-    d.innerHTML = `<form method="dialog"><h3>${esc(title)}</h3><div class="body">${intro}</div><div style="display:grid;gap:8px">${options.map((o, i) => `<button class="opt${o.danger ? ' danger' : ''}" value="${i}"><div><b>${esc(o.title)}</b><span>${esc(o.desc || '')}</span></div></button>`).join('')}</div><div class="acts"><button class="btn" value="x">Cancel</button></div></form>`;
+    d.innerHTML = `<form method="dialog"><h3>${esc(title)}</h3><div class="body">${intro}</div><div style="display:grid;gap:8px">${options.map((o, i) => `<button class="opt${o.danger ? ' danger' : ''}${o.primary ? ' feat' : ''}" value="${i}"><div>${o.tag ? `<em class="otag">${esc(o.tag)}</em>` : ''}<b>${esc(o.title)}</b><span>${esc(o.desc || '')}</span></div></button>`).join('')}</div><div class="acts"><button class="btn" value="x">Cancel</button></div></form>`;
     document.body.append(d);
     d.addEventListener('close', () => { const i = d.returnValue; d.remove(); resolve(i === '' || i === 'x' ? undefined : options[+i].value); });
     d.showModal();
+  });
+}
+
+/**
+ * The first-visit welcome. One signature moment (the question board answering itself), then three clear ways in.
+ * Resolves 'demo' | 'go' | 'look' (Esc, backdrop, swipe and "just look" all mean 'look').
+ */
+export function welcomeDlg() {
+  return new Promise((resolve) => {
+    const d = document.createElement('dialog');
+    d.className = 'dlg welcome';
+    d.tabIndex = -1;   // it opens unprompted: focus the dialog itself, not the first button, so no ring is drawn until someone presses Tab
+    d.setAttribute('aria-labelledby', 'wl-h');
+    backdropClose(d);
+    d.innerHTML = `<form method="dialog">
+      <div class="wl-hero" aria-hidden="true">
+        <div class="wl-board">
+          <div class="wl-tag"><span class="pill wl-pill">Multiplication</span><span class="wl-par">par 6.0s</span></div>
+          <div class="wl-q">47 × 38</div>
+          <div class="wl-a"><span>1</span><span>7</span><span>8</span><span>6</span><i class="wl-cur"></i></div>
+          <div class="wl-qt"><i></i></div>
+          <span class="wl-ok">${icon('check')}Right</span>
+        </div>
+      </div>
+      <div class="wl-main">
+        <h3 id="wl-h">Get faster at the math in your head</h3>
+        <p class="wl-sub">Timed sessions that adapt to you. Every miss comes back, with the method to solve it.</p>
+        <div class="wl-acts">
+          <button class="btn primary lg block wl-go" value="demo">${icon('play')}<span>Take the tour</span></button>
+          <p class="wl-note">Sample data, five weeks in. Nothing is saved.</p>
+          <div class="wl-two">
+            <button class="btn lg" value="go">Start practising</button>
+            <button class="btn ghost lg" value="look">Just look around</button>
+          </div>
+        </div>
+        <p class="wl-foot">Works offline. Progress stays on this device unless you turn on sync.</p>
+      </div>
+    </form>`;
+    document.body.append(d);
+    d.addEventListener('close', () => { const v = d.returnValue; d.remove(); resolve(v === 'demo' || v === 'go' ? v : 'look'); });
+    d.showModal();
+    d.focus({ preventScroll: true });
   });
 }
 

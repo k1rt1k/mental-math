@@ -29,9 +29,12 @@ test('sample mode never writes saved data or calls the sync server', () => {
   assert.match(src('js/demoflag.js'), /sessionStorage/);
 });
 
-test('first visit: the choice appears after 8 to 15 seconds, only to someone with nothing yet', () => {
-  const m = src('js/main.js');
-  assert.match(m, /8000 \+ Math\.floor\(Math\.random\(\) \* 7000\)/);
+test('first visit: the welcome appears straight away, only to someone with nothing yet, and the tour is the lead action', () => {
+  const m = src('js/main.js'), u = src('js/ui.js');
+  assert.match(m, /const wait = 400;/);
   assert.match(m, /if \(DEMO \|\| S\.onb \|\| S\.sessions\.length\) return;/);
-  assert.match(m, /Explore with sample data/);
+  assert.match(m, /await welcomeDlg\(\)/);
+  assert.ok(u.indexOf('value="demo"') < u.indexOf('value="go"'), 'the sample tour is the first and primary choice');
+  assert.match(u, /class="btn primary lg block wl-go" value="demo"/);
 });
+

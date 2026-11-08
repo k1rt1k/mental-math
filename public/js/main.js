@@ -1,7 +1,7 @@
 // Entry point: nav chrome, global keyboard shortcuts, onboarding, service worker, sync start.
 import { S, save, onSave, CAL, lowered, restoreRatings, finishCal } from './state.js';
 import { $, esc } from './util.js';
-import { icon, toast, dialog, choiceDlg, dialogOpen } from './ui.js';
+import { icon, toast, dialog, choiceDlg, welcomeDlg, dialogOpen } from './ui.js';
 import { A, go, fromHash, view, rerender } from './nav.js';
 import { applyTheme, themeNow } from './theme.js';
 import { DEMO, enterDemo, leaveDemo } from './demoflag.js';
@@ -165,19 +165,15 @@ async function recalPrompt() {
   if (v == 'restore') restoreRatings();
   finishCal(); save(); rerender();
 }
-/* ---------- first visit: after 8-15 s of looking around, offer a start or a sample (never while they are doing something) ---------- */
+/* ---------- first visit: the welcome appears straight away (a beat after first paint), with the sample tour first, since most visitors arrive from a link just to look (never while they are doing something) ---------- */
 function firstVisitOffer() {
   if (DEMO || S.onb || S.sessions.length) return;
-  const wait = 8000 + Math.floor(Math.random() * 7000);
+  const wait = 400;   // just long enough for the first paint, so the page does not jump under the dialog
   const tryOffer = async () => {
     if (S.onb || S.sessions.length) return;                                   // they got going on their own
     if (isPlaying() || dialogOpen() || document.hidden) return void setTimeout(tryOffer, 4000);
     S.onb = 1; save();
-    const v = await choiceDlg('Welcome to Mental Math', '<p>Short timed sessions that adapt to you. How do you want to start?</p>', [
-      { value: 'go', title: 'Set my starting level', desc: 'A quick check so ratings start where you are (about 2 minutes)' },
-      { value: 'demo', title: 'Explore with sample data', desc: 'Five weeks of made-up practice: streaks, charts, Coach and sync, all filled in. Nothing is saved.' },
-      { value: 'look', title: 'Just let me look around', desc: 'Close this and play whenever you like' },
-    ]);
+    const v = await welcomeDlg();
     if (v == 'demo') return enterDemo();
     if (v == 'go') {
       await placement();

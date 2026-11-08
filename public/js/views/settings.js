@@ -14,7 +14,7 @@ import { state as remState, enable as remEnable, disable as remDisable, test as 
 const seg = (act, cur, opts) => `<div class="seg" role="group">${opts.map(([v, l]) => `<button aria-pressed="${cur == v}" data-act="${esc(act)}" data-v="${esc(v)}">${l}</button>`).join('')}</div>`;
 const row = (t, d, key, on) => `<div class="set"><div><div class="t"><span id="l-${esc(key)}">${t}</span>${ib('s.' + key)}</div><div class="d">${d}</div></div><button class="sw" role="switch" aria-checked="${on}" aria-labelledby="l-${esc(key)}" data-act="tog" data-v="${esc(key)}"></button></div>`;
 // "noX" keys are stored inverted so existing data keeps its meaning.
-const INV = new Set(['noBlur', 'noCd', 'noHap', 'noGrace']);
+const INV = new Set(['noBlur', 'noCd', 'noHap', 'noGrace', 'noTimer', 'noQLine']);
 const get = (k) => (INV.has(k) ? !S[k] : !!S[k]);
 
 let bd = null;   // this learner's board membership as the server last said: null (unknown) | { member, name }
@@ -77,6 +77,8 @@ function settings() {
       <div class="field"><div class="mu">Keypad layout</div><div>${seg('padFlip', S.padFlip ? 'calc' : 'phone', [['phone', '1 2 3 on top'], ['calc', '7 8 9 on top']])}</div></div>
       ${row('Enter to submit', 'Answers are only judged when you press Enter or Submit. Slower, but a slip on the last digit can be fixed, and the answer length is not revealed.', 'ent', get('ent'))}
       ${row('Forgive near-miss typos', 'A last digit one key away from the right one gets a moment to fix before it counts as a slip. Once per question.', 'noGrace', get('noGrace'))}
+      ${row('Show session timer', 'The big clock and the shrinking time bar while you play. Turn off if a ticking clock adds pressure; the session still ends on time.', 'noTimer', get('noTimer'))}
+      ${row('Show question time line', 'The thin line under each question that runs down against its par time.', 'noQLine', get('noQLine'))}
       ${row('Pace readout', 'Show seconds on the current question against your target time.', 'pace', get('pace'))}
     </section>`, `<section class="card"><h3>Sessions</h3>
       ${row('3-2-1 countdown', 'A short countdown before each session.', 'noCd', get('noCd'))}
