@@ -170,7 +170,7 @@ export class Session {
     let p = gen(k, d, R);
     if (!this.patt && !this.pats && this.kind != 'survival' && (k == 'mul' || k == 'div') && R() < 0.12) p = this.factQ() || p;   // a weak table fact now and then
     const target = this.patt || (this.pats ? this.pats[this.n % this.pats.length] : '');   // shortcut stages rotate through every trick pattern
-    if (target) for (let i = 0; i < 60 && p.pt != target; i++) p = gen(k, i > 25 ? Math.max(d, 8) : d, R);   // some tricks only appear at high difficulty
+    if (target) for (let i = 0; i < 60 && p.pt != target; i++) p = gen(k, i > 25 ? Math.max(d, 8) : d, R, target);   // some tricks only appear at high difficulty (Real-life drills get their kinds directly)
     else for (let i = 0; i < 3; i++) { const c = gen(k, d, R); if (wt(c) > wt(p) && R() < 0.7) p = c; }   // lean toward patterns you struggle with
     p.bonus = bonus;
     return p;

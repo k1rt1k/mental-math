@@ -57,12 +57,24 @@ export const speedMult = (r) => (r <= 0.6 ? 1.25 : r >= 1 ? 1 : 1 + (0.25 * (1 -
 
 export const rank = (r) => (r < 400 ? 'Apprentice' : r < 600 ? 'Sharp' : r < 800 ? 'Elite' : r < 1000 ? 'Prodigy' : 'Savant');
 
+/** The currency symbol Real-life questions use. Set at start-up and when the learner picks one; the maths never depends on it. */
+export const CURRENCIES = ['$', '£', '€', '₹'];
+export const CUR = { sym: '$' };
+export const setCurrency = (c) => { CUR.sym = CURRENCIES.includes(c) ? c : '$'; };
+/** A sensible default from the browser language: rupees for India, pounds for the UK, euros for the common euro-zone languages, otherwise dollars. */
+export const localeCurrency = (lang = '') => (/-IN$/i.test(lang) ? '₹' : /-GB$/i.test(lang) ? '£' : /^(de|fr|es|it|nl|pt)(-|$)|-(DE|FR|ES|IT|NL|IE|AT|BE|FI|PT)$/i.test(lang) ? '€' : '$');
+/** [big unit, small unit, how many small make one big]. Every pair is exact, so answers never need rounding. */
+export const UNITS = [['km', 'm', 1000], ['h', 'min', 60], ['kg', 'g', 1000], ['m', 'cm', 100], ['L', 'mL', 1000], ['ft', 'inches', 12], ['yd', 'ft', 3], ['lb', 'oz', 16], ['day', 'h', 24], ['week', 'days', 7], ['min', 's', 60], ['cm', 'mm', 10]];
+/** Which kind of Real-life question makes each pattern label, so a drill on a pattern can draw only the kinds that can produce it. */
+export const LIFE_KIND = { 'friendly tip': 'tip', 'awkward tip': 'tip', 'total with tip': 'tiptot', 'sale price': 'sale', 'discount amount': 'off', 'percent off': 'pcoff', 'original price': 'orig', 'successive discounts': 'twice', 'unit conversion': 'unit', temperature: 'temp', 'clock time': 'time', 'scale a recipe': 'recipe', ratio: 'ratio', speed: 'rate', 'unit price': 'rate', 'split the bill': 'split', 'split with tip': 'splittip', 'split with GST': 'splittip', 'add tax': 'tax', 'add GST': 'gst', 'GST amount': 'gst', 'GST in the price': 'ungst', distance: 'dist', 'travel time': 'ttime', 'fuel used': 'fuel', 'fuel cost': 'fcost', 'duration sum': 'dur', 'hourly pay': 'wage', 'days between': 'days', 'price per 100': 'per100', 'price gap': 'gap', 'free items': 'free', 'bundle saving': 'bundle', 'simple interest': 'si', 'percent change': 'pchg', 'salary hike': 'hike', 'rule of 72': 'r72', 'months to save': 'msave', 'compound interest': 'ci', 'run rate': 'rr', 'required rate': 'req', 'strike rate': 'sr', 'batting average': 'avg', 'balls in overs': 'balls', 'monthly and yearly': 'myr', 'daily budget': 'dayb', 'budget rule': 'rule', 'shared rent': 'rent', 'take-home': 'take' };
+
 /* ---------------- generators ---------------- */
 const carries = (x, y) => { let c = 0, r = 0; while (x > 0 || y > 0) { const t = (x % 10) + (y % 10) + r; r = t >= 10 ? 1 : 0; c += r; x = Math.floor(x / 10); y = Math.floor(y / 10); } return c; };
 const borrows = (x, y) => { let c = 0, r = 0; while (x > 0 || y > 0) { r = (x % 10) - r < (y % 10) ? 1 : 0; c += r; x = Math.floor(x / 10); y = Math.floor(y / 10); } return c; };
 const lab = (n, w) => (n == 0 ? 'no ' + w : n == 1 ? '1 ' + w : '2+ ' + w + 's').replace('carrys', 'carries');
 
-export function gen(k, d, R = Math.random) {
+/** `want` (optional, Real-life only): a pattern label or list of them. The question is then drawn only from the kinds that can make one, at any level, so a pack drill never falls back to a far harder level to find its pattern. */
+export function gen(k, d, R = Math.random, want) {
   d = clamp(d, 1, MAXLV);
   let q, a, pt = '', tip = '';
   const M = Math.round(10 ** (0.5 + 0.35 * d));
@@ -236,19 +248,23 @@ export function gen(k, d, R = Math.random) {
   } else if (k == 'life') {
     const hi = Math.round(lerp([40, 60, 80, 100, 120, 160, 200, 250, 300, 400, 500, 800], d));
     const pick = (arr) => arr[Math.floor(R() * arr.length)], r2 = (v) => +v.toFixed(2);
-    const kinds = d < 2 ? ['tip', 'sale'] : d < 3 ? ['tip', 'sale', 'unit'] : d < 4 ? ['tip', 'sale', 'unit', 'time'] : d < 6 ? ['sale', 'unit', 'time', 'recipe', 'rate'] : d < 8 ? ['tip', 'sale', 'unit', 'time', 'recipe', 'rate', 'split', 'tax'] : ['tip', 'sale', 'time', 'recipe', 'ratio', 'rate', 'split', 'tax', 'twice', 'unit'];
+    const c$ = CUR.sym;
+    let kinds = d < 2 ? ['tip', 'sale', 'split'] : d < 3 ? ['tip', 'sale', 'unit', 'split', 'off', 'dist', 'per100'] : d < 4 ? ['tip', 'sale', 'unit', 'time', 'split', 'off', 'tiptot', 'gst', 'dist', 'ttime', 'dur', 'per100', 'free', 'hike'] : d < 6 ? ['tip', 'sale', 'unit', 'time', 'recipe', 'rate', 'split', 'off', 'tiptot', 'gst', 'pcoff', 'ungst', 'splittip', 'dist', 'ttime', 'dur', 'fuel', 'wage', 'days', 'per100', 'free', 'hike', 'gap', 'bundle', 'si', 'pchg', 'r72', 'msave'] : d < 8 ? ['tip', 'sale', 'unit', 'time', 'recipe', 'rate', 'split', 'tax', 'off', 'tiptot', 'gst', 'pcoff', 'ungst', 'splittip', 'temp', 'orig', 'dist', 'ttime', 'dur', 'fuel', 'wage', 'days', 'fcost', 'per100', 'free', 'hike', 'gap', 'bundle', 'si', 'pchg', 'r72', 'msave', 'ci'] : ['tip', 'sale', 'time', 'recipe', 'ratio', 'rate', 'split', 'tax', 'twice', 'unit', 'off', 'tiptot', 'gst', 'pcoff', 'ungst', 'splittip', 'temp', 'orig', 'dist', 'ttime', 'dur', 'fuel', 'wage', 'days', 'fcost', 'per100', 'free', 'hike', 'gap', 'bundle', 'si', 'pchg', 'r72', 'msave', 'ci'];
+    const wk = want ? [].concat(want).map((x) => LIFE_KIND[x]).filter(Boolean) : [];
+    if (wk.length) kinds = [...new Set(wk)];
+    else kinds = kinds.concat(d >= 2 ? ['rr', 'balls', 'myr'] : [], d >= 3 ? ['dayb', 'take', 'sr'] : [], d >= 4.5 ? ['avg', 'req', 'rule', 'rent'] : []);   // cricket and budget kinds join as the level rises
     const kd = kinds[Math.floor(R() * kinds.length)];
     if (kd == 'tip') {
-      const p = pick(d < 3 ? [10, 20] : d < 6 ? [10, 15, 20, 25] : [10, 12, 15, 18, 20]), bill = ri(4, Math.max(5, Math.floor(hi / 2)), R) * 2;
-      q = p + '% tip on $' + bill; a = r2((bill * p) / 100); pt = p == 10 || p == 20 ? 'friendly tip' : 'awkward tip';
+      const p = pick(d < 3 && !wk.includes('tip') ? [10, 20] : d < 6 ? [10, 15, 20, 25] : [10, 12, 15, 18, 20]), bill = ri(4, Math.max(5, Math.floor(hi / 2)), R) * 2;
+      q = p + '% tip on ' + c$ + bill; a = r2((bill * p) / 100); pt = p == 10 || p == 20 ? 'friendly tip' : 'awkward tip';
       tip = '10% is the number with the point moved one place left; build the rest from that';
     } else if (kd == 'sale') {
       const p = pick(d < 4 ? [10, 20, 25, 50] : [10, 15, 20, 25, 30, 40, 60, 75]), price = 10 * ri(2, Math.max(3, Math.floor(hi / 5)), R);
-      q = p + '% off $' + price; a = r2(price - (price * p) / 100); pt = 'sale price';
+      q = p + '% off ' + c$ + price; a = r2(price - (price * p) / 100); pt = 'sale price';
       tip = (100 - p) + '% of the price is what you pay';
     } else if (kd == 'unit') {
-      const U = [['km', 'm', 1000], ['h', 'min', 60], ['kg', 'g', 1000], ['m', 'cm', 100], ['L', 'mL', 1000]], [big, small, fct] = pick(U);
-      const x = d < 5 || big == 'h' ? ri(1, 9, R) + (R() < 0.5 ? 0.5 : 0) : ri(11, 99, R) / 10;
+      const [big, small, fct] = pick(d < 2 ? UNITS.slice(0, 5) : UNITS);
+      const x = d < 5 || fct <= 60 ? ri(1, 9, R) + (R() < 0.5 ? 0.5 : 0) : ri(11, 99, R) / 10;
       if (R() < 0.5) { q = x + ' ' + big + ' in ' + small; a = r2(x * fct); } else { q = r2(x * fct) + ' ' + small + ' in ' + big; a = x; }
       pt = 'unit conversion'; tip = '1 ' + big + ' = ' + fct + ' ' + small + '; bigger unit to smaller, multiply; the other way, divide';
     } else if (kd == 'time') {
@@ -273,20 +289,163 @@ export function gen(k, d, R = Math.random) {
         tip = 'Distance ÷ time';
       } else {
         const n = pick([2, 3, 4, 5, 6]), c = 5 * ri(2, Math.max(4, Math.floor(hi / 8)), R);
-        q = n + ' for $' + r2((n * c) / 100) + '. Price of one?'; a = r2(c / 100); pt = 'unit price';
+        q = n + ' for ' + c$ + r2((n * c) / 100) + '. Price of one?'; a = r2(c / 100); pt = 'unit price';
         tip = 'Total ÷ number of items';
       }
     } else if (kd == 'split') {
       const n = pick([2, 4, 5, 10]), total = n * ri(3, Math.max(5, Math.floor(hi / 6)), R) + pick([0, 0, n / 2 == Math.floor(n / 2) ? n / 2 : 0]);
-      q = 'Split $' + total + ' between ' + n; a = r2(total / n); pt = 'split the bill';
+      q = 'Split ' + c$ + total + ' between ' + n; a = r2(total / n); pt = 'split the bill';
       tip = 'Divide the total by the number of people';
     } else if (kd == 'tax') {
       const p = pick([5, 8, 10]), price = 10 * ri(2, Math.max(3, Math.floor(hi / 5)), R);
-      q = '$' + price + ' plus ' + p + '% tax'; a = r2(price + (price * p) / 100); pt = 'add tax';
+      q = c$ + price + ' plus ' + p + '% tax'; a = r2(price + (price * p) / 100); pt = 'add tax';
       tip = 'Find ' + p + '% of the price, then add it on';
+    } else if (kd == 'gst') {
+      const r = pick(d < 5 ? [5, 18] : [5, 18, 40]), unit = r == 5 ? 20 : d < 5 ? 100 : 50, price = unit * ri(2, Math.round(lerp([4, 5, 6, 8, 10, 12, 14, 18, 24, 30, 40, 50], d)), R), amt = r2((price * r) / 100);
+      const how10 = r == 5 ? '5% is half of 10%' : r == 18 ? '18% is 20% minus 2%, or 10% plus 8%' : '40% is four times 10%';
+      if (R() < 0.5) { q = c$ + price + ' plus ' + r + '% GST'; a = r2(price + amt); pt = 'add GST'; tip = 'Find the GST first (' + how10 + '), then add it on'; }
+      else { q = 'GST at ' + r + '% on ' + c$ + price; a = amt; pt = 'GST amount'; tip = 'Start from 10%: ' + how10; }
+    } else if (kd == 'ungst') {
+      const r = pick(d < 6 ? [5, 18] : [5, 18, 40]), kk = ri(2, Math.max(4, Math.round(lerp([4, 5, 6, 7, 8, 10, 12, 15, 20, 25, 30, 40], d))), R), base = (d < 8 ? 100 : r == 5 ? 20 : 50) * kk;
+      q = c$ + r2((base * (100 + r)) / 100) + ' includes ' + r + '% GST. Price before GST?'; a = base; pt = 'GST in the price';
+      tip = 'The total is ' + (100 + r) + '% of the price: divide by ' + (100 + r) + ' for 1%, then multiply by 100';
+    } else if (kd == 'off') {
+      const p = pick(d < 4 ? [10, 20, 25, 50] : [10, 15, 20, 25, 30, 40, 60, 75]), price = 10 * ri(2, Math.max(3, Math.floor(hi / 5)), R);
+      q = p + '% off ' + c$ + price + '. You save?'; a = r2((price * p) / 100); pt = 'discount amount';
+      tip = 'The saving is ' + p + '% of the price: build it from 10%';
+    } else if (kd == 'pcoff') {
+      const p = pick(d < 6 ? [10, 20, 25, 50] : [10, 20, 25, 30, 40, 50, 60, 75]), price = 20 * ri(2, Math.max(4, Math.floor(hi / 10)), R), now = (price * (100 - p)) / 100;
+      q = 'Was ' + c$ + price + ', now ' + c$ + now + '. % off?'; a = p; pt = 'percent off';
+      tip = 'The drop is ' + (price - now) + '. Divide the drop by the old price: a tenth is 10%, a fifth 20%, a quarter 25%';
+    } else if (kd == 'orig') {
+      const p = pick([10, 20, 25, 50]), orig = 20 * ri(2, Math.max(4, Math.floor(hi / 10)), R), paid = (orig * (100 - p)) / 100;
+      q = 'Paid ' + c$ + paid + ' after ' + p + '% off. Original price?'; a = orig; pt = 'original price';
+      tip = 'What you paid is ' + (100 - p) + '% of the original: divide by ' + (100 - p) + ' for 1%, then multiply by 100';
+    } else if (kd == 'tiptot') {
+      const p = pick(d < 6 ? [10, 15, 20] : [10, 12, 15, 18, 20]), bill = ri(4, Math.max(5, Math.floor(hi / 2)), R) * 2;
+      q = 'Bill ' + c$ + bill + ' plus ' + p + '% tip. Total?'; a = r2((bill * (100 + p)) / 100); pt = 'total with tip';
+      tip = 'Find the tip from 10%, then add it to the bill';
+    } else if (kd == 'splittip') {
+      const n = pick([2, 4, 5]), bill = 100 * ri(1, Math.max(2, Math.round(lerp([2, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 16], d))), R);
+      if (R() < 0.5) { const p = pick([10, 20]); q = c$ + bill + ' bill, ' + p + '% tip, ' + n + ' people. Each pays?'; a = r2((bill * (100 + p)) / 100 / n); pt = 'split with tip'; tip = 'Add the tip first, then divide by ' + n; }
+      else { const r = pick([5, 18]); q = c$ + bill + ' plus ' + r + '% GST, ' + n + ' people. Each pays?'; a = r2((bill * (100 + r)) / 100 / n); pt = 'split with GST'; tip = 'Add the GST first, then divide by ' + n; }
+    } else if (kd == 'dist') {
+      const sp = 10 * ri(3, 6 + Math.floor(d / 2), R), t = pick(d < 6 ? [1.5, 2, 2.5, 3, 4] : [1.5, 2, 2.5, 3, 3.5, 4, 5, 6]);
+      q = sp + ' km/h for ' + t + ' h. Distance?'; a = r2(sp * t); pt = 'distance';
+      tip = 'Distance = speed × time: whole hours first, then the half hour is half the speed';
+    } else if (kd == 'ttime') {
+      const sp = 10 * ri(3, 6 + Math.floor(d / 2), R), t = pick(d < 6 ? [1.5, 2, 2.5, 3, 4] : [1.5, 2, 2.5, 3, 3.5, 4, 5, 6]);
+      q = r2(sp * t) + ' km at ' + sp + ' km/h. Hours?'; a = t; pt = 'travel time';
+      tip = 'Time = distance ÷ speed: how many times does the speed fit?';
+    } else if (kd == 'fuel') {
+      const eff = pick(d < 6 ? [10, 12, 15, 20] : [10, 12, 15, 16, 18, 20, 25]), L = ri(2, Math.max(5, Math.floor(hi / 8)), R);
+      q = eff * L + ' km at ' + eff + ' km per litre. Litres?'; a = L; pt = 'fuel used';
+      tip = 'Litres = distance ÷ km per litre';
+    } else if (kd == 'fcost') {
+      const eff = pick([10, 12, 15, 20, 25]), L = ri(2, Math.max(5, Math.floor(hi / 12)), R), price = 5 * ri(10, 24, R);
+      q = eff * L + ' km, ' + eff + ' km per litre, ' + c$ + price + ' per litre. Cost?'; a = L * price; pt = 'fuel cost';
+      tip = 'Litres first (' + eff * L + ' ÷ ' + eff + '), then × the price per litre';
+    } else if (kd == 'dur') {
+      const mm = () => (d < 6 ? pick([15, 30, 45]) : 5 * ri(1, 11, R)), h1 = ri(1, 6, R), h2 = ri(1, 6, R), m1 = mm(), m2 = mm();
+      q = h1 + ' h ' + m1 + ' min + ' + h2 + ' h ' + m2 + ' min. Minutes?'; a = (h1 + h2) * 60 + m1 + m2; pt = 'duration sum';
+      tip = 'Add the hours and the minutes separately, then turn the hours into minutes';
+    } else if (kd == 'wage') {
+      const rate = 5 * ri(10, Math.max(14, Math.round(lerp([14, 16, 20, 24, 30, 36, 44, 52, 60, 70, 80, 90], d))), R), t = ri(2, 8, R) + (R() < 0.5 ? 0.5 : 0);
+      q = c$ + rate + ' an hour for ' + t + ' h. Pay?'; a = r2(rate * t); pt = 'hourly pay';
+      tip = 'Whole hours × the rate, then add half the rate for a half hour';
+    } else if (kd == 'days') {
+      const MN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], ML = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31], mi = ri(2, 10, R), d1 = ri(5, ML[mi], R), d2 = ri(1, 20, R);
+      q = 'Days from ' + d1 + ' ' + MN[mi] + ' to ' + d2 + ' ' + MN[mi + 1]; a = ML[mi] - d1 + d2; pt = 'days between';
+      tip = 'Days left in the first month, then the days into the next one';
+    } else if (kd == 'per100') {
+      const g = pick(['g', 'ml']), qty = pick(d < 6 ? [200, 500, 250, 400] : [200, 250, 400, 500, 750, 1500]), pp = 2 * ri(3, Math.max(8, Math.round(lerp([8, 10, 12, 15, 20, 25, 30, 35, 40, 50, 60, 70], d))), R);
+      q = qty + ' ' + g + ' for ' + c$ + r2((qty / 100) * pp) + '. Price per 100 ' + g + '?'; a = pp; pt = 'price per 100';
+      tip = 'Divide by ' + qty / 100 + ' to get the price of 100';
+    } else if (kd == 'gap') {
+      const N = [2, 4, 5, 10], na = pick(N); let nb = pick(N.filter((x) => x != na));
+      const half = (n) => (n % 2 == 0 && R() < 0.5 ? 0.5 : 0), pb = ri(6, 30, R) + half(nb), pa0 = pb + ri(1, 5, R) + half(na), pa = na % 2 ? Math.ceil(pa0) : pa0;   // an odd count keeps whole-number totals
+      const ta = r2(na * pa), tb = r2(nb * pb);
+      q = na + ' for ' + c$ + ta + ' or ' + nb + ' for ' + c$ + tb + '. Saving per item?'; a = r2(pa - pb); pt = 'price gap';
+      tip = 'Price of one each way (' + ta + ' ÷ ' + na + ', ' + tb + ' ÷ ' + nb + '), then subtract';
+    } else if (kd == 'free') {
+      const b = pick([1, 2, 3]), f = pick([1, 1, 2]), k = ri(2, 4, R), price = 5 * ri(2, Math.max(6, Math.round(hi / 10)), R);
+      q = 'Buy ' + b + ' get ' + f + ' free, ' + c$ + price + ' each. Cost of ' + k * (b + f) + ' items?'; a = k * b * price; pt = 'free items';
+      tip = 'Items come in groups of ' + (b + f) + ', and you pay for ' + b + ' in each group';
+    } else if (kd == 'bundle') {
+      const n = pick([3, 4, 5]), each = 5 * ri(4, Math.max(8, Math.round(hi / 8)), R), save = 5 * ri(1, Math.max(2, Math.floor((each * n) / 10)), R);
+      q = c$ + each + ' each, or ' + n + ' for ' + c$ + (each * n - save) + '. Saving on ' + n + '?'; a = save; pt = 'bundle saving';
+      tip = 'Price for ' + n + ' separately (' + each + ' × ' + n + ') minus the bundle price';
+    } else if (kd == 'si') {
+      const P = 500 * ri(2, Math.max(4, Math.round(lerp([4, 5, 6, 8, 10, 12, 14, 16, 20, 24, 30, 40], d))), R), r = pick(d < 6 ? [5, 10] : [5, 6, 8, 10, 12]), t = ri(2, d < 6 ? 4 : 6, R);
+      q = c$ + P + ' at ' + r + '% a year for ' + t + ' years. Simple interest?'; a = (P * r * t) / 100; pt = 'simple interest';
+      tip = 'One year is ' + r + '% of ' + P + '; then multiply by ' + t + ' years';
+    } else if (kd == 'pchg') {
+      const p = pick(d < 6 ? [10, 20, 25, 50] : [10, 15, 20, 25, 30, 40, 50, 60]), up = R() < 0.5, old = 20 * ri(2, Math.max(4, Math.floor(hi / 10)), R), now = (old * (up ? 100 + p : 100 - p)) / 100;
+      q = (up ? 'Rose' : 'Fell') + ' from ' + c$ + old + ' to ' + c$ + now + '. % ' + (up ? 'rise' : 'fall') + '?'; a = p; pt = 'percent change';
+      tip = 'Change ÷ the starting value: ' + Math.abs(now - old) + ' ÷ ' + old;
+    } else if (kd == 'hike') {
+      const p = pick(d < 6 ? [10, 20, 5] : [5, 8, 10, 12, 15, 20]), S0 = 1000 * ri(10, Math.max(20, Math.round(lerp([20, 25, 30, 35, 40, 50, 60, 70, 80, 90, 100, 120], d))), R);
+      q = c$ + S0 + ' salary, ' + p + '% hike. New salary?'; a = r2((S0 * (100 + p)) / 100); pt = 'salary hike';
+      tip = 'Find the hike from 10% (' + p + '% of ' + S0 + '), then add it on';
+    } else if (kd == 'r72') {
+      const r = pick(d < 6 ? [2, 3, 4, 6, 8, 9, 12] : [2, 3, 4, 6, 8, 9, 12, 18, 24]);
+      q = 'Rule of 72: years to double at ' + r + '%?'; a = 72 / r; pt = 'rule of 72';
+      tip = 'Divide 72 by the rate';
+    } else if (kd == 'msave') {
+      const m = 500 * ri(1, Math.max(4, Math.round(lerp([4, 5, 6, 8, 10, 12, 14, 16, 20, 24, 30, 40], d))), R), n = ri(4, 24, R);
+      q = 'Save ' + c$ + m + ' a month. Months to reach ' + c$ + m * n + '?'; a = n; pt = 'months to save';
+      tip = 'Goal ÷ the monthly amount';
+    } else if (kd == 'ci') {
+      const P = 1000 * ri(2, Math.max(4, Math.round(lerp([4, 5, 6, 8, 10, 12, 14, 16, 20, 24, 30, 40], d))), R), r = pick([5, 10, 20]);
+      q = c$ + P + ' at ' + r + '% a year for 2 years, compounded. Total?'; a = r2((P * (100 + r) * (100 + r)) / 10000); pt = 'compound interest';
+      tip = 'Grow by ' + r + '% once, then grow the new total by ' + r + '% again';
+    } else if (kd == 'rr') {
+      const ov = pick([5, 10, 20, 50]), rr = ri(4, d < 6 ? 10 : 14, R) + (ov % 10 == 0 && d >= 4 && R() < 0.5 ? 0.5 : 0);
+      q = r2(ov * rr) + ' runs in ' + ov + ' overs. Run rate?'; a = rr; pt = 'run rate';
+      tip = 'Runs per over = runs ÷ overs';
+    } else if (kd == 'req') {
+      const T = pick([20, 50]), od = pick(T == 20 ? [5, 8, 10, 12] : [10, 20, 25, 30]), need = ri(6, 11, R), s0 = ri(3, 8, R) * od, tg = s0 + need * (T - od);
+      q = 'Target ' + tg + ' in ' + T + ' overs. ' + s0 + ' after ' + od + '. Runs per over needed?'; a = need; pt = 'required rate';
+      tip = 'Runs still needed (' + (tg - s0) + ') ÷ overs left (' + (T - od) + ')';
+    } else if (kd == 'sr') {
+      const bl = pick([10, 20, 25, 50]), rn = ri(Math.ceil(bl / 4), bl * 2, R);
+      q = rn + ' runs off ' + bl + ' balls. Strike rate?'; a = r2((rn * 100) / bl); pt = 'strike rate';
+      tip = 'Runs per 100 balls: scale the ' + bl + ' balls up to 100';
+    } else if (kd == 'avg') {
+      const inn = pick([4, 5, 8, 10]), av = 5 * ri(4, 14, R);
+      q = av * inn + ' runs in ' + inn + ' innings. Average?'; a = av; pt = 'batting average';
+      tip = 'Average = runs ÷ innings';
+    } else if (kd == 'balls') {
+      const o = ri(1, d < 6 ? 6 : 19, R), b = ri(0, 5, R);
+      q = o + '.' + b + ' overs. Balls bowled?'; a = o * 6 + b; pt = 'balls in overs';
+      tip = 'Each over is 6 balls; the digit after the point is extra balls, not a decimal';
+    } else if (kd == 'myr') {
+      const m = 500 * ri(20, Math.max(30, Math.round(lerp([30, 36, 44, 52, 60, 70, 80, 90, 100, 120, 140, 160], d))), R);
+      if (R() < 0.5) { q = c$ + m + ' a month. Per year?'; a = m * 12; } else { q = c$ + m * 12 + ' a year. Per month?'; a = m; }
+      pt = 'monthly and yearly'; tip = 'A year is 12 months: × 12 is × 10 plus × 2; per month is ÷ 12';
+    } else if (kd == 'dayb') {
+      const days = pick([7, 30]), pd = 50 * ri(4, 20, R);
+      q = c$ + pd * days + ' for ' + days + ' days. Per day?'; a = pd; pt = 'daily budget';
+      tip = 'Divide by ' + days + (days == 30 ? ': divide by 3, then by 10' : '');
+    } else if (kd == 'rule') {
+      const inc = 5000 * ri(6, 24, R), [wh, pc] = pick([['Needs', 50], ['Wants', 30], ['Savings', 20]]);
+      q = c$ + inc + ' income, 50-30-20 rule. ' + wh + '?'; a = r2((inc * pc) / 100); pt = 'budget rule';
+      tip = 'Needs are half, wants three tenths, savings two tenths: find 10% first';
+    } else if (kd == 'rent') {
+      const n = pick([2, 3, 4]), e1 = 1000 * ri(4, 15, R), e2 = 100 * ri(2, 15, R);
+      q = 'Rent ' + c$ + n * e1 + ' and bills ' + c$ + n * e2 + ', ' + n + ' people. Each?'; a = e1 + e2; pt = 'shared rent';
+      tip = 'Divide the rent and the bills by ' + n + ' separately, then add';
+    } else if (kd == 'take') {
+      const p = pick([10, 12, 15, 20, 25, 30]), S0 = 5000 * ri(6, 24, R);
+      q = c$ + S0 + ' salary, ' + p + '% deducted. Take-home?'; a = r2((S0 * (100 - p)) / 100); pt = 'take-home';
+      tip = 'You keep ' + (100 - p) + '%: find the deduction from 10%, then subtract it';
+    } else if (kd == 'temp') {
+      const c = 5 * ri(1, d < 6 ? 8 : 16, R), f = (c * 9) / 5 + 32;
+      if (R() < 0.5) { q = c + '°C in °F'; a = f; } else { q = f + '°F in °C'; a = c; }
+      pt = 'temperature'; tip = '°C to °F: × 9, ÷ 5, then + 32. °F to °C: − 32, × 5, ÷ 9';
     } else {
       const P = [10, 20, 25, 50], p1 = pick(P), p2 = pick(P.filter((x) => x != p1)), price = 100 * ri(1, Math.max(2, Math.floor(hi / 60)), R);
-      q = p1 + '% off, then ' + p2 + '% off $' + price; a = r2((price * (100 - p1) * (100 - p2)) / 10000); pt = 'successive discounts';
+      q = p1 + '% off, then ' + p2 + '% off ' + c$ + price; a = r2((price * (100 - p1) * (100 - p2)) / 10000); pt = 'successive discounts';
       tip = 'Each discount multiplies: ' + (100 - p1) + '% of the price, then ' + (100 - p2) + '% of that';
     }
   } else {
@@ -341,14 +500,50 @@ export function how(p) {
     const v = (q.match(/\d+(?:\.\d+)?/g) || []).map(Number), A = String(a);
     if (p.pt == 'friendly tip' || p.pt == 'awkward tip') return '10% of ' + v[1] + ' = ' + +(v[1] / 10).toFixed(2) + '. ' + v[0] + '% is ' + v[0] / 10 + ' of those: ' + A;
     if (p.pt == 'sale price') return (100 - v[0]) + '% is what you pay: ' + (100 - v[0]) + '% of ' + v[1] + ' = ' + A;
-    if (p.pt == 'unit conversion') { const f = { km: 1000, h: 60, kg: 1000, m: 100, L: 1000 }, big = Object.keys(f).find((u) => new RegExp('(^|\\d )' + u + ' in ').test(q) || new RegExp(' in ' + u + '$').test(q)), fc = f[big]; return q.includes(' in ' + big) ? v[0] + ' ÷ ' + fc + ' = ' + A : v[0] + ' × ' + fc + ' = ' + A; }
+    if (p.pt == 'unit conversion') { const m = /^([\d.]+) (\S+) in (\S+)$/.exec(q), u = m && UNITS.find(([b, sm]) => (b == m[2] && sm == m[3]) || (sm == m[2] && b == m[3])); return u ? (m[2] == u[0] ? m[1] + ' × ' + u[2] + ' = ' + A : m[1] + ' ÷ ' + u[2] + ' = ' + A) : ''; }
     if (p.pt == 'clock time') { const m = q.match(/(\d+):(\d+) to (\d+):(\d+)/); const s = +m[1] * 60 + +m[2]; let e = (+m[3]) * 60 + +m[4]; while (e < s) e += 720; return 'Start ' + m[1] + ':' + m[2] + ', end ' + m[3] + ':' + m[4] + '. Up to the next hour, then the rest: ' + (e - s) + ' minutes' + (String(e - s) == A ? '' : ' = ' + A); }
     if (p.pt == 'scale a recipe') return v[0] + ' ÷ ' + v[1] + ' = ' + v[0] / v[1] + ' for one. × ' + v[2] + ' = ' + A;
     if (p.pt == 'ratio') return 'First part: ' + v[2] + ' ÷ ' + v[0] + ' = ' + v[2] / v[0] + ' per part. Second: ' + v[2] / v[0] + ' × ' + v[1] + ' = ' + A;
     if (p.pt == 'speed') return v[0] + ' ÷ ' + v[1] + ' = ' + A + ' km/h';
-    if (p.pt == 'unit price') return '$' + v[1] + ' ÷ ' + v[0] + ' = $' + A;
+    if (p.pt == 'unit price') return CUR.sym + v[1] + ' ÷ ' + v[0] + ' = ' + CUR.sym + A;
     if (p.pt == 'split the bill') return v[0] + ' ÷ ' + v[1] + ' = ' + A;
     if (p.pt == 'add tax') { const tx = +((v[0] * v[1]) / 100).toFixed(2); return v[1] + '% of ' + v[0] + ' = ' + tx + '. ' + v[0] + ' + ' + tx + ' = ' + A; }
+    if (p.pt == 'add GST') { const g = +((v[0] * v[1]) / 100).toFixed(2); return v[1] + '% of ' + v[0] + ' = ' + g + '. ' + v[0] + ' + ' + g + ' = ' + A; }
+    if (p.pt == 'GST amount') return v[0] + '% of ' + v[1] + ': 10% is ' + +(v[1] / 10).toFixed(2) + ', so ' + v[0] + '% = ' + A;
+    if (p.pt == 'GST in the price') return 'The total is ' + (100 + v[1]) + '% of the price. ' + v[0] + ' ÷ ' + (100 + v[1]) + ' = ' + +(v[0] / (100 + v[1])).toFixed(2) + ' for 1%. × 100 = ' + A;
+    if (p.pt == 'discount amount') return v[0] + '% of ' + v[1] + ': 10% is ' + +(v[1] / 10).toFixed(2) + ', so ' + v[0] + '% = ' + A + ' saved';
+    if (p.pt == 'percent off') return 'The drop is ' + v[0] + ' − ' + v[1] + ' = ' + (v[0] - v[1]) + '. ' + (v[0] - v[1]) + ' ÷ ' + v[0] + ' = ' + A + '%';
+    if (p.pt == 'original price') return 'Paid is ' + (100 - v[1]) + '% of the original. ' + v[0] + ' ÷ ' + (100 - v[1]) + ' = ' + +(v[0] / (100 - v[1])).toFixed(2) + ' for 1%. × 100 = ' + A;
+    if (p.pt == 'total with tip') { const t = +((v[0] * v[1]) / 100).toFixed(2); return v[1] + '% of ' + v[0] + ' = ' + t + '. ' + v[0] + ' + ' + t + ' = ' + A; }
+    if (p.pt == 'split with tip' || p.pt == 'split with GST') { const t = +((v[0] * v[1]) / 100).toFixed(2), n = v[2]; return v[1] + '% of ' + v[0] + ' = ' + t + '. ' + v[0] + ' + ' + t + ' = ' + +(v[0] + t).toFixed(2) + '. ÷ ' + n + ' = ' + A; }
+    if (p.pt == 'distance') return v[0] + ' × ' + v[1] + ' = ' + A + ' km';
+    if (p.pt == 'travel time') return v[0] + ' ÷ ' + v[1] + ' = ' + A + ' h';
+    if (p.pt == 'fuel used') return v[0] + ' ÷ ' + v[1] + ' = ' + A + ' litres';
+    if (p.pt == 'fuel cost') return 'Litres: ' + v[0] + ' ÷ ' + v[1] + ' = ' + v[0] / v[1] + '. Cost: ' + v[0] / v[1] + ' × ' + v[2] + ' = ' + A;
+    if (p.pt == 'duration sum') return 'Hours: ' + v[0] + ' + ' + v[2] + ' = ' + (v[0] + v[2]) + ' h = ' + (v[0] + v[2]) * 60 + ' min. Minutes: ' + v[1] + ' + ' + v[3] + ' = ' + (v[1] + v[3]) + '. Total ' + A;
+    if (p.pt == 'hourly pay') return v[0] + ' × ' + v[1] + ' = ' + A;
+    if (p.pt == 'days between') { const ML = { Mar: 31, Apr: 30, May: 31, Jun: 30, Jul: 31, Aug: 31, Sep: 30, Oct: 31, Nov: 30 }, mo = /from \d+ (\w+)/.exec(q)[1]; return ML[mo] + ' − ' + v[0] + ' = ' + (ML[mo] - v[0]) + ' days left in ' + mo + ', then ' + v[1] + ' more: ' + A; }
+    if (p.pt == 'price per 100') return v[1] + ' ÷ ' + v[0] / 100 + ' = ' + A + ' for 100';
+    if (p.pt == 'price gap') { const [na, ta, nb, tb] = v; return ta + ' ÷ ' + na + ' = ' + +(ta / na).toFixed(2) + ' each; ' + tb + ' ÷ ' + nb + ' = ' + +(tb / nb).toFixed(2) + ' each; difference ' + A; }
+    if (p.pt == 'free items') { const [b, f, pr, tot] = v, g = tot / (b + f); return tot + ' items is ' + g + ' groups of ' + (b + f) + '. You pay for ' + b + ' in each: ' + g * b + ' × ' + pr + ' = ' + A; }
+    if (p.pt == 'bundle saving') return v[0] + ' × ' + v[1] + ' = ' + v[0] * v[1] + ' separately. ' + v[0] * v[1] + ' − ' + v[2] + ' = ' + A;
+    if (p.pt == 'simple interest') return v[1] + '% of ' + v[0] + ' = ' + +((v[0] * v[1]) / 100).toFixed(2) + ' a year. × ' + v[2] + ' years = ' + A;
+    if (p.pt == 'percent change') return 'Change: ' + Math.abs(v[1] - v[0]) + '. ' + Math.abs(v[1] - v[0]) + ' ÷ ' + v[0] + ' = ' + A + '%';
+    if (p.pt == 'salary hike') return v[1] + '% of ' + v[0] + ' = ' + +((v[0] * v[1]) / 100).toFixed(2) + '. ' + v[0] + ' + ' + +((v[0] * v[1]) / 100).toFixed(2) + ' = ' + A;
+    if (p.pt == 'rule of 72') return '72 ÷ ' + v[0] + ' = ' + A + ' years';
+    if (p.pt == 'months to save') return v[1] + ' ÷ ' + v[0] + ' = ' + A + ' months';
+    if (p.pt == 'compound interest') { const y1 = +((v[0] * (100 + v[1])) / 100).toFixed(2); return 'Year 1: ' + v[0] + ' × ' + (100 + v[1]) / 100 + ' = ' + y1 + '. Year 2: ' + y1 + ' × ' + (100 + v[1]) / 100 + ' = ' + A; }
+    if (p.pt == 'run rate') return v[0] + ' ÷ ' + v[1] + ' = ' + A + ' runs an over';
+    if (p.pt == 'required rate') return 'Runs left: ' + v[0] + ' − ' + v[2] + ' = ' + (v[0] - v[2]) + '. Overs left: ' + v[1] + ' − ' + v[3] + ' = ' + (v[1] - v[3]) + '. ' + (v[0] - v[2]) + ' ÷ ' + (v[1] - v[3]) + ' = ' + A;
+    if (p.pt == 'strike rate') return v[0] + ' × (100 ÷ ' + v[1] + ') = ' + v[0] + ' × ' + 100 / v[1] + ' = ' + A;
+    if (p.pt == 'batting average') return v[0] + ' ÷ ' + v[1] + ' = ' + A;
+    if (p.pt == 'balls in overs') { const m = /^(\d+)\.(\d)/.exec(q); return m[1] + ' overs × 6 = ' + m[1] * 6 + ', + ' + m[2] + ' = ' + A + ' balls'; }
+    if (p.pt == 'monthly and yearly') return q.includes('a month') ? v[0] + ' × 12 = ' + A : v[0] + ' ÷ 12 = ' + A;
+    if (p.pt == 'daily budget') return v[0] + ' ÷ ' + v[1] + ' = ' + A;
+    if (p.pt == 'budget rule') { const wh = /\. (\w+)\?$/.exec(q)[1], pc = { Needs: 50, Wants: 30, Savings: 20 }[wh]; return '10% of ' + v[0] + ' = ' + v[0] / 10 + '. ' + wh + ' is ' + pc + '%: ' + pc / 10 + ' × ' + v[0] / 10 + ' = ' + A; }
+    if (p.pt == 'shared rent') return v[0] + ' ÷ ' + v[2] + ' = ' + v[0] / v[2] + ' and ' + v[1] + ' ÷ ' + v[2] + ' = ' + v[1] / v[2] + '. Together ' + A;
+    if (p.pt == 'take-home') { const dd = +((v[0] * v[1]) / 100).toFixed(2); return v[1] + '% of ' + v[0] + ' = ' + dd + '. ' + v[0] + ' − ' + dd + ' = ' + A; }
+    if (p.pt == 'temperature') return q.includes('°C in') ? v[0] + ' × 9 ÷ 5 = ' + (v[0] * 9) / 5 + ', + 32 = ' + A : '(' + v[0] + ' − 32) × 5 ÷ 9 = ' + A;
     if (p.pt == 'successive discounts') return 'Multiply what is left each time: ' + v[2] + ' × ' + (100 - v[0]) / 100 + ' × ' + (100 - v[1]) / 100 + ' = ' + A;
     return '';
   }

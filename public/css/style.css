@@ -416,7 +416,7 @@ div.cust .hint { text-align: left; margin-top: 4px; }
   transition: transform .15s, border-color .15s, background .15s;
 }
 .mode[data-act=daily] { --mc: #ffb454; } .mode[data-act=survival] { --mc: #ff6b81; } .mode[data-act=sprint] { --mc: #ffd23f; }
-.mode[data-act=review] { --mc: #4fd1c5; } .mode[data-act=weakest] { --mc: #b69cff; }
+.mode[data-act=est] { --mc: #5ec2ff; } .mode[data-act=review] { --mc: #4fd1c5; } .mode[data-act=weakest] { --mc: #b69cff; }
 .mode .mi { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; background: linear-gradient(180deg, color-mix(in srgb, var(--mc) 26%, transparent), color-mix(in srgb, var(--mc) 12%, transparent)); box-shadow: inset 0 1px 0 color-mix(in srgb, var(--mc) 30%, transparent); color: color-mix(in srgb, var(--mc) var(--ink-mix), var(--ink-base)); }
 .mode b { display: flex; align-items: center; gap: 8px; width: 100%; font-size: 14.5px; font-weight: 650; letter-spacing: -.01em; line-height: 1.25; }
 .mode .mdesc { color: var(--mu); font-size: var(--t-xs); line-height: 1.4; margin-top: -4px; overflow-wrap: anywhere; }

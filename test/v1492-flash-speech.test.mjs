@@ -12,7 +12,7 @@ test('Flash can speak its numbers: opt-in, synced, feature-detected, cancelled o
   assert.match(f, /say\(spoken\(q, f\.n == 1\)/);
   assert.match(f, /'Not quite\. The total was '/);
   assert.match(rd('js/util.js'), /export const canSpeak/);
-  assert.match(rd('js/state.js'), /'noQLine', 'speak'\]/);   // follows the learner across devices
+  assert.match(rd('js/state.js'), /'noQLine', 'speak'/);   // follows the learner across devices
   assert.match(rd('js/views/settings.js'), /'speak', get\('speak'\)/);
   assert.doesNotMatch(rd('js/views/settings.js'), /INV = new Set\([^)]*'speak'/);   // not an inverted key
   assert.match(rd('js/infotext.js'), /'s\.speak'/);

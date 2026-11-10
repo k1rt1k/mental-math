@@ -19,7 +19,7 @@ npm test                     # includes the same check
 ## Current backend contract
 This section describes the deployed backend as it is today; the release history is in [CHANGELOG.md](CHANGELOG.md).
 - Fixed Netlify Blobs initialization: the documented API is `getStore(storeName)`. Strong consistency remains requested on `getWithMetadata` reads.
-- Added a deployment fingerprint to `GET /api/ai`: `buildVersion: "14.92"` and response header `x-mental-math-ai-version: 14.92`.
+- Added a deployment fingerprint to `GET /api/ai`: `buildVersion: "14.97"` and response header `x-mental-math-ai-version: 14.97`.
 - Exposes the active model allow-list and exact application safety policy in the diagnostic response.
 - Added AI actions `lesson`, `pathrun`, `nextpath` and `week` (guided paths and the week sheet). They use the same allow-list, budget and fallbacks as every other action.
 - Keeps Gemini 3.5 Flash-Lite primary and Gemini 3.1 Flash-Lite as the only backup.
@@ -54,7 +54,7 @@ The JSON must include:
 
 ```json
 {
-  "buildVersion": "14.92",
+  "buildVersion": "14.97",
   "defaultModel": "gemini-3.5-flash-lite",
   "models": ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite"],
   "budgetPolicy": {
@@ -64,10 +64,12 @@ The JSON must include:
 }
 ```
 
-The `budgetPolicy` object also includes the model list. If `buildVersion` is absent or not `14.92`, the new function bundle is not the one currently serving the site; redeploy the full project root to the correct linked Netlify site.
+The `budgetPolicy` object also includes the model list. If `buildVersion` is absent or not `14.97`, the new function bundle is not the one currently serving the site; redeploy the full project root to the correct linked Netlify site.
 
 ## Modes worth knowing about
 - **Flash** (Home): a chain of flashing numbers with a running total. Visual by default; the optional Speak numbers setting (`speak`, synced, also on the Flash setup screen) reads each number, the round, the question and the result aloud with the browser’s built-in `speechSynthesis`. Screen readers are not told the numbers on screen. The answer uses the number pad; Pause and Esc stop a run; each setting keeps its own best (on this device). A run is saved as a session of kind `flash`: it keeps the streak going, counts toward the daily goal at 3 or more rounds right, has no skill ratings and stays out of the pace charts.
+- **Estimate** (Home): a sum appears (multiply, divide, add or percent of; Mixed by default, three sizes) and you type your best guess. It counts when it is within ±5, 10 or 20 % of the exact answer (10 questions, 10 % by default). Feedback shows the exact value, how far off you were and the range that would have counted. Pure logic is in `js/estimate.js`, the screen in `js/views/estimate.js`. Like Flash it is saved as one session of kind `est` (keeps the streak, counts toward the daily goal at 5 or more right, no skill ratings, out of the pace charts), each setting keeps its own best on this device, and the Speak numbers setting reads the questions aloud (with a Repeat button).
+- **Real-life packs** (Learn, third tab): Discounts and deals, Tax and GST, Tips, Unit conversion, Splitting bills, Time and schedules, Travel and fuel, Shopping best-buy, Money and growth, Cricket and sports, and Budget and salary. Each is a themed set of Real-life patterns (`js/packs.js`) with its shortcut rules, a Try one and a Practise this pack run that serves only those patterns at your Real-life level; answers move the one Real-life rating. New patterns: GST add / amount / take-out (current 5, 18 and 40 % slabs), discount amount, percent off, original price, total with tip, split with tip or GST, temperature and more exact imperial units. The currency symbol (`$ £ € ₹`, default from the browser language) is a synced setting.
 - **Your week** (Progress, Overview): the last seven days against the seven before, with copy and image sharing. Computed on the device.
 
 ## Daily leaderboard (opt-in)

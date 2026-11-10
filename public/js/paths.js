@@ -124,7 +124,7 @@ export function stageQuestion(k, st, n, R = Math.random, seen = new Set(), wide 
     const want = pats ? pats[(n + (i > 25 ? i : 0)) % pats.length] : null;
     const base = st.d + (R() - 0.5) * wide;
     const d = i < 25 ? base : i < 50 ? Math.max(base, 8) : 11;
-    const c = gen(k, d, R);
+    const c = gen(k, d, R, want || undefined);   // Real-life draws only the kinds that can make the wanted pattern
     if (pats && (i < 25 ? c.pt != want : !pats.includes(c.pt))) continue;
     if (seen.has(qk(c.q))) continue;
     return c;

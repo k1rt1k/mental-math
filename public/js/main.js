@@ -6,7 +6,7 @@ import { A, go, fromHash, view, rerender } from './nav.js';
 import { applyTheme, themeNow } from './theme.js';
 import { DEMO, enterDemo, leaveDemo } from './demoflag.js';
 import { configure, startSync, onStatus, syncKey, statusText, status } from './sync.js';
-import { IDS, SK } from './engine.js';
+import { IDS, SK, setCurrency, localeCurrency } from './engine.js';
 import { streak } from './stats.js';
 import { clamp } from './util.js';
 import { start, playKey, flush, isPlaying, liveSession } from './views/play.js';
@@ -18,6 +18,7 @@ import { openDue } from './views/paths.js';
 import { dueChecks, nextCheckAt } from './paths.js';
 import './views/notebook.js';
 import './views/flash.js';
+import './views/estimate.js';
 import { settings, wireImport, keysDialog, placement, helpDialog } from './views/settings.js';
 import { resultsKey } from './views/results.js';
 import { setBadge, refreshSoon } from './notify.js';
@@ -87,7 +88,7 @@ const sendQueued = () => { if (boardQueued()) flushBoardQueue().then((n) => { if
 addEventListener('online', () => { netState(); sendQueued(); }); addEventListener('offline', netState); netState(); setTimeout(sendQueued, 2500);
 
 /* ---------- sync wiring ---------- */
-configure({ guard: isPlaying, onChange: () => { applyTheme(); drawNav(); rerender(); } });
+configure({ guard: isPlaying, onChange: () => { applyTheme(); setCurrency(S.cur || localeCurrency(navigator.language)); drawNav(); rerender(); } });
 onStatus(() => {
   const el = $('.syncdot');
   if (el) { el.className = 'syncdot ' + (syncKey() || DEMO ? status.kind : 'off'); const s = el.querySelector('#sy'); if (s) s.textContent = syncKey() || DEMO ? statusText() : 'Set up sync'; el.setAttribute('aria-label', syncKey() ? 'Sync status: ' + statusText() : 'Sync is off. Set up sync'); }
@@ -136,6 +137,7 @@ onSave((ev) => { if (ev == 'error') toast('Storage is full or blocked. Download 
 /* ---------- go ---------- */
 wireImport();
 applyTheme();
+setCurrency(S.cur || localeCurrency(navigator.language));
 drawNav();
 fromHash();
 startSync();

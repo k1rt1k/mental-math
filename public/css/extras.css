@@ -1269,3 +1269,14 @@ h2.sg { display: block; grid-template-columns: none; gap: 0; }
 /* 14.89: the accent colours sit in an even grid (7 x 2, the custom picker last) that shrinks to fit, with room around each so the selected ring is never cut off. */
 .chips.accs { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 12px 10px; padding: 5px; justify-items: center; }
 .sgrp .accs .swatch { width: 100%; max-width: 40px; height: auto; aspect-ratio: 1; }
+
+/* ---------- Estimate (v14.93): same live layout as Flash; the problem is the big text ---------- */
+.fl-tools { display: flex; align-items: center; gap: 8px; }
+.es-lab { font-size: var(--t-sm); }
+.es-prob { max-width: 100%; font: 600 clamp(38px, 11vw, 76px)/1.15 var(--qfont); letter-spacing: -.02em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; text-wrap: balance; color: var(--tx); }
+.fl-top { flex-wrap: wrap; } .fl-pips.p10 i { width: 15px; }
+.fl-tools .btn { white-space: nowrap; }
+
+/* ---------- Real-life packs (v14.94) ---------- */
+.pack .rules { margin: 4px 0 14px; padding-left: 18px; display: grid; gap: 8px; color: var(--tx2, inherit); font-size: var(--t-sm); line-height: 1.45; }
+.pack .rules b { color: var(--tx); font-weight: 600; }

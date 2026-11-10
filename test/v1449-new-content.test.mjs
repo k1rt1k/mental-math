@@ -11,9 +11,8 @@ import { PATHS } from '../public/js/paths.js';
 const NEW = ['neg', 'frac', 'life'];
 const lowest = (n, m) => { const c = gcd(Math.abs(n), m); n /= c; m /= c; return m == 1 ? String(n) : n + '/' + m; };
 
+import { lifeAnswer } from './helpers/life-eval.mjs';
 /* An independent evaluator per kind: it re-reads the question text and never looks at how the generator built it. */
-const FACT = { km: ['m', 1000], h: ['min', 60], kg: ['g', 1000], m: ['cm', 100], L: ['mL', 1000] };
-const mins = (t) => { const [h, m] = t.split(':').map(Number); return (h % 12) * 60 + m; };
 function expected(p) {
   const q = p.q;
   if (p.sk == 'neg') return +Function('"use strict";return (' + q.replaceAll('−', '-').replaceAll('×', '*').replaceAll('÷', '/') + ')')();
@@ -28,19 +27,7 @@ function expected(p) {
     if (m[3] == '×') return lowest(n1 * n2, d1 * d2);
     return lowest(n1 * d2, d1 * n2);
   }
-  let m;
-  if ((m = /^(\d+)% tip on \$(\d+)$/.exec(q))) return +m[1] * +m[2] / 100;
-  if ((m = /^(\d+)% off \$(\d+)$/.exec(q))) return +m[2] * (100 - +m[1]) / 100;
-  if ((m = /^([\d.]+) (\w+) in (\w+)$/.exec(q))) { const x = +m[1], [a, b] = [m[2], m[3]]; return FACT[a] && FACT[a][0] == b ? x * FACT[a][1] : x / FACT[b][1]; }
-  if ((m = /^Minutes from ([\d:]+) to ([\d:]+)$/.exec(q))) return ((mins(m[2]) - mins(m[1])) + 720) % 720;
-  if ((m = /^Recipe: (\d+) g for (\d+)\. For (\d+)\?$/.exec(q))) return +m[1] * +m[3] / +m[2];
-  if ((m = /^Ratio (\d+):(\d+)\. First is (\d+)\. Second\?$/.exec(q))) return +m[3] / +m[1] * +m[2];
-  if ((m = /^([\d.]+) km in ([\d.]+) h\. km\/h\?$/.exec(q))) return +m[1] / +m[2];
-  if ((m = /^(\d+) for \$([\d.]+)\. Price of one\?$/.exec(q))) return +m[2] / +m[1];
-  if ((m = /^Split \$(\d+) between (\d+)$/.exec(q))) return +m[1] / +m[2];
-  if ((m = /^\$(\d+) plus (\d+)% tax$/.exec(q))) return +m[1] * (100 + +m[2]) / 100;
-  if ((m = /^(\d+)% off, then (\d+)% off \$(\d+)$/.exec(q))) return +m[3] * (100 - +m[1]) * (100 - +m[2]) / 10000;
-  throw new Error('unrecognised question: ' + q);
+  return lifeAnswer(q);
 }
 const same = (a, b) => (typeof b == 'string' ? String(a) === b : Math.abs(+a - b) < 1e-9);
 

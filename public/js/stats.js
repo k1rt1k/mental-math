@@ -121,7 +121,7 @@ export const MS = [
 
 /** What the daily goal counts on the given day. One definition for Home, the plan and the recommendation. */
 /** Does this run count toward the daily goal? 2+ minutes of practice, a completed Sprint (20 right) or a Survival run of 90 s+. Short or empty runs never do. */
-export const countsToGoal = (x) => x.ok > 0 && (x.m == 'flash' ? x.ok >= 3 : (x.dur >= 120 || (x.m == 'sprint' && x.ok >= 20) || (x.m == 'survival' && x.dur >= 90)));   // a Flash run is short by nature, so it counts for the goal by rounds right, not by length
+export const countsToGoal = (x) => x.ok > 0 && (x.m == 'flash' ? x.ok >= 3 : x.m == 'est' ? x.ok >= 5 : (x.dur >= 120 || (x.m == 'sprint' && x.ok >= 20) || (x.m == 'survival' && x.dur >= 90)));   // a Flash run is short by nature, so it counts for the goal by rounds right, not by length
 /** Learn-path runs are short (a practice is 8 questions), so they count for the goal by the minute: every 2 minutes of path practice on a day is one goal session. */
 export const PATH_GOAL_S = 120;
 /** Seconds of Learn-path practice on a day, and how that converts to goal sessions. A run with nothing right never counts. */
@@ -131,7 +131,7 @@ export function learnToday(now = Date.now()) {
 }
 export const todayCount = (now = Date.now()) => { const d = ymd(now); return S.sessions.filter((x) => x.m != 'path' && ymd(x.t) == d && countsToGoal(x)).length + learnToday(now).units; };
 /** Flash and Learn-path points are not comparable with timed play, so they stay out of pace charts and records. */
-export const isPace = (s) => s.m != 'flash' && s.m != 'path';
+export const isPace = (s) => s.m != 'flash' && s.m != 'est' && s.m != 'path';
 
 /** When do you play best? Sessions grouped by time of day: [label, sessions, accuracy %, points per minute]. Needs 3+ sessions in a slot to count. */
 export const SLOTS = [['Morning', 5, 12], ['Afternoon', 12, 18], ['Evening', 18, 23], ['Night', 23, 29]];
@@ -162,7 +162,7 @@ export function records() {
 }
 
 export function week(a, b) {
-  const now = Date.now(), x = S.sessions.filter((s) => s.t >= now - b * DAY && s.t < now - a * DAY), px = x.filter((s) => s.m != 'flash').filter((s) => s.m != 'path');   // Flash and Learn-path points are not comparable with the others, so they stay out of pace
+  const now = Date.now(), x = S.sessions.filter((s) => s.t >= now - b * DAY && s.t < now - a * DAY), px = x.filter((s) => s.m != 'flash' && s.m != 'est').filter((s) => s.m != 'path');   // Flash and Learn-path points are not comparable with the others, so they stay out of pace
   const n = x.reduce((q, s) => q + s.n, 0), ok = x.reduce((q, s) => q + s.ok, 0), pc = px.reduce((q, s) => q + (s.pts * 60) / s.dur, 0);
   return { s: x.length, n, acc: n ? (100 * ok) / n : 0, pace: px.length ? pc / px.length : 0 };
 }
@@ -192,7 +192,7 @@ export function coach(e) {
 }
 
 /** Human-readable name for a saved session's mode id (history table, detail dialog, AI context). */
-const MODE_LABEL = { train: 'Train', focus: 'Focus', zeta: 'Custom ranges', daily: 'Daily challenge', survival: 'Survival', review: 'Review', sprint: 'Sprint', flash: 'Flash', path: 'Learn path' };
+const MODE_LABEL = { train: 'Train', focus: 'Focus', zeta: 'Custom ranges', daily: 'Daily challenge', survival: 'Survival', review: 'Review', sprint: 'Sprint', flash: 'Flash', est: 'Estimate', path: 'Learn path' };
 export const modeLabel = (m) => MODE_LABEL[m] || 'Train';
 
 export const shareLine = (r) => {
@@ -200,7 +200,7 @@ export const shareLine = (r) => {
   // skill that actually appears in the saved run before falling back to it.
   const by = r.by && Object.keys(r.by).filter((k) => r.by[k] && r.by[k][0]);
   const focus = r.m == 'focus' && by && by.length == 1 ? by[0] : (S.cfg || {}).only;
-  const nm = r.m == 'review' ? 'Review' : r.m == 'daily' ? 'Daily challenge' : r.m == 'survival' ? 'Survival' : r.m == 'sprint' ? 'Sprint 20' : r.m == 'flash' ? 'Flash' : r.m == 'path' ? 'Learn path' : r.m == 'zeta' ? 'Custom ranges' : (r.m == 'focus' ? (SK[focus] || { n: 'Focus' }).n : 'Train') + ' ' + r.dur + 's';
+  const nm = r.m == 'review' ? 'Review' : r.m == 'daily' ? 'Daily challenge' : r.m == 'survival' ? 'Survival' : r.m == 'sprint' ? 'Sprint 20' : r.m == 'flash' ? 'Flash' : r.m == 'est' ? 'Estimate' : r.m == 'path' ? 'Learn path' : r.m == 'zeta' ? 'Custom ranges' : (r.m == 'focus' ? (SK[focus] || { n: 'Focus' }).n : 'Train') + ' ' + r.dur + 's';
   return `Mental Math ${ymd(r.t)} · ${nm} · ${r.ok} correct · ${Math.round((100 * r.ok) / Math.max(1, r.n))}% · ${r.pts} pts · ${r.tm}s avg · ${streak()}-day streak`;
 };
 export { SH };

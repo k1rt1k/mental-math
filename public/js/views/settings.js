@@ -1,5 +1,5 @@
 import { S, save, replaceState, mergeStates, asCurrent, stampWipe, fresh, avgLv, migrate, devicePrefs } from '../state.js';
-import { IDS, SK } from '../engine.js';
+import { IDS, SK, CUR, CURRENCIES, setCurrency, localeCurrency } from '../engine.js';
 import { esc, ymd, clamp, ago, canSpeak } from '../util.js';
 import { A, register, go, view } from '../nav.js';
 import { dialog, confirmDlg, typedConfirmDlg, promptDlg, choiceDlg, toast, download, icon, hic, eic } from '../ui.js';
@@ -91,7 +91,8 @@ function settings() {
       ${row('3-2-1 countdown', 'A short countdown before each session.', 'noCd', get('noCd'))}
       ${row('Sound', 'Soft tones for right and wrong answers.', 'mute', !S.mute)}
       ${row('Vibration', 'Haptic buzz on wrong answers and keypad taps.', 'noHap', get('noHap'))}
-      ${canSpeak() ? row('Speak Flash numbers', 'Read each number aloud in Flash mode, then the result. For blind, low-vision or by-ear learners.', 'speak', get('speak')) : ''}
+      ${canSpeak() ? row('Speak numbers aloud', 'Read Flash numbers and Estimate questions aloud, then the result. For blind, low-vision or by-ear learners.', 'speak', get('speak')) : ''}
+      <div class="row"><div><b>Currency</b><div class="mu">The symbol in Real-life questions (tips, discounts, GST).</div></div>${seg('cur', S.cur || CUR.sym, CURRENCIES.map((c) => [c, c]))}</div>
       ${row('Auto-pause', 'Pause when you switch to another window or tab.', 'noBlur', get('noBlur'))}
       <div class="set"><div><div class="t">Daily goal${ib('s.goal')}</div><div class="d">Sessions of 2+ minutes that keep your streak alive.</div></div><div class="stepper"><button class="btn sm" data-act="goal" data-v="-1" aria-label="Fewer sessions" ${goal <= 1 ? 'disabled' : ''}>−</button><b class="num" aria-live="polite">${goal}</b><button class="btn sm" data-act="goal" data-v="1" aria-label="More sessions" ${goal >= 5 ? 'disabled' : ''}>+</button></div></div>
       <div class="set"><div><div class="t">Ratings${ib('s.ratings')}</div><div class="d">Average ${Math.round(avgLv() * 100)}. Ratings adapt on their own; reset them if the level feels off.</div></div><div class="btns"><button class="btn sm" data-act="calib">Set all…</button><button class="btn sm" data-act="placement">Choose level</button></div></div>
@@ -167,6 +168,7 @@ document.addEventListener('change', (e) => { if (e.target.id == 'acc-custom' && 
 A.ts = (d) => { S.ts = d.v; save(); applyTheme(); again(); };
 A.splashPlay = () => { if (!playSplash()) toast('Turn off Reduce motion to see the intro.'); };
 A.afont = (d) => { S.afont = d.v == 'default' ? undefined : d.v; if (S.afont === undefined) delete S.afont; save(); applyTheme(); again(); };
+A.cur = (d) => { S.cur = CURRENCIES.includes(d.v) ? d.v : undefined; if (S.cur === undefined) delete S.cur; setCurrency(S.cur || localeCurrency(navigator.language)); save(); again(); };
 A.font = (d) => { S.font = d.v; save(); applyTheme(); again(); };
 A.padFlip = (d) => { S.padFlip = d.v == 'calc'; save(); again(); };
 A.pad = (d) => { S.pad = d.v == 'auto' ? null : d.v == 'on'; save(); applyTheme(); again(); };

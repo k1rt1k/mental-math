@@ -2,6 +2,56 @@
 
 Newest first. What is true of the app today is in [README.md](README.md). The release number is the `VERSION` file.
 
+## 14.97
+
+Two more Real-life packs. Front end only.
+
+- **Cricket and sports:** run rate, the runs per over still needed, strike rate, batting average, and balls in overs (3.4 overs is 22 balls, not 3.4 of anything).
+- **Budget and salary:** monthly to yearly pay and back, a daily budget, the 50-30-20 rule, shared rent and bills, and take-home pay after a deduction.
+- Ten new patterns with worked methods and five shortcuts, checked against the independent evaluator at every level. The cricket and budget kinds join general Real-life practice from level 2 to 4.5 upward.
+- **Fix:** with so many Real-life kinds, a path stage could drift off its own patterns. Stages now ask the generator for their patterns directly (as pack drills do), so a stage only serves what it teaches.
+
+## 14.96
+
+Two more Real-life packs. Front end only.
+
+- **Shopping best-buy:** price per 100 g or ml, price gap per item between two offers, buy-some-get-some-free, and what a bundle saves (plus the existing unit price).
+- **Money and growth:** salary hike, percent rise or fall, simple interest, compound interest over two years, the rule of 72, and months to reach a savings goal.
+- Ten new patterns with worked methods and five new shortcuts, checked against the independent evaluator at every level.
+- Pack-only shortcuts are now flagged (`pack: 1`) and taught in Learn, Real-life packs; they no longer have to be crowded into the Real-life path stages, which keep their original size (the path link test exempts them).
+
+## 14.95
+
+Two more Real-life packs, so everyday maths covers more of a normal day. Front end only.
+
+- **Time and schedules:** clock gaps (existing), duration sums ("1 h 45 min + 2 h 30 min. Minutes?"), days between two dates, and hourly pay for whole and half hours.
+- **Travel and fuel:** speed (existing), distance, travel time, litres used, and what the fuel costs.
+- Seven new Real-life patterns with worked methods and five new shortcuts, all checked against the independent evaluator at every level. Dates avoid February so no leap-year rule is needed.
+- The Real-life path teaches the new shortcuts in stages 2 and 3.
+
+## 14.94
+
+Real-life packs: everyday sums as themed practice, built into the existing Real-life skill. Front end only; no backend change.
+
+- **Five packs** on a new Learn tab, "Real-life packs": Discounts and deals, Tax and GST, Tips, Unit conversion, Splitting bills. Each shows its shortcut rules, a **Try one** (nothing recorded) and **Practise this pack**, a normal session limited to the pack's patterns at your Real-life level. Answers move the single Real-life rating, and each pattern keeps its own accuracy and speed.
+- **New question patterns** in Real-life (all exact, at most two decimals, each with a worked method): add GST, GST amount, GST in the price (take it back out), discount amount, percent off, original price, total with tip, split with tip, split with GST, temperature (°C and °F), and seven more unit pairs (feet and inches, yards, pounds and ounces, days, weeks, minutes and seconds, cm and mm). GST uses the current Indian slabs (5, 18 and 40 %).
+- **Currency setting** (Settings, Sessions): `$ £ € ₹`. It follows the browser language until you choose (India gets rupees), syncs with your other settings, and is used in every amount.
+- **Pattern drills find their pattern.** `gen` takes an optional wanted pattern for Real-life, so a pack never falls back to a far harder level to find one. Existing levels keep their mix, with the new patterns added from level 2 up; the Real-life path gains the new shortcuts in stage 3 and the temperature trick in stage 2.
+- **Fixed:** the Shortcut library's "Try one" threw a ReferenceError because `learn.js` did not import `gen`, `how`, `symFor`, `ansMatch` or `dialog`. It works again, and test coverage guards the imports.
+- Tests: `test/v1494-reallife-packs.test.mjs`; the Real-life evaluator moved to `test/helpers/life-eval.mjs` and understands every currency and pattern.
+
+## 14.93
+
+New mode: Estimate ("within 10%"). Front end only; no backend change.
+
+- **Estimate.** The app only ever tested exact answers. Now a sum appears (multiplication, division, addition of 3-4 numbers, or "% of") and you type a best guess; it counts when it is within ±5, ±10 or ±20 % of the exact answer. Setup picks the type (Mixed or one kind), size (Easy 2 × 2 digits, Medium 3 × 2, Hard 3 × 3 and matching sizes for the other kinds) and tolerance. Ten questions per run.
+- **Feedback teaches.** After each answer: the exact value (one decimal when it is not whole), how far off you were ("4% too high") and the whole-number range that would have counted.
+- **Scoring.** Points per right answer rise with size and with a tighter tolerance (`estPts`). Each setting keeps its own best, on this device, like Flash.
+- **Fits in like Flash.** One session of kind `est`: keeps the streak, counts toward the daily goal at 5+ right, has no skill ratings and stays out of pace charts, records and the Progress mode filter. It shows in history, share text and the This week card. Home has a fifth tile (the grid becomes 3 + 2 with no hole).
+- **Speech.** The Speak numbers setting from 14.92 now also reads each question ("48 times 37") and the answer, with a Repeat button. Its label is now "Speak numbers aloud".
+- Every exact answer is 20 or more, so a whole-number guess always has room within 5 %. Shared pieces (`seg`, number pad, sound, speech) are exported from `flash.js`.
+- Tests: `test/v1493-estimate.test.mjs`.
+
 ## 14.92
 
 Spoken numbers for Flash, so it works for blind, low-vision and by-ear learners. Front end only; no backend change.

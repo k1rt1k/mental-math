@@ -59,12 +59,14 @@ function home() {
   // Each mode card says where you stand: your best so far, and the rating of the skill Drill weakest will target. (Daily moves into Today's plan after the first session, where it shows done or not.)
   const stat = (cls, ic, t, tip = '') => `<span class="mstat ${cls}" ${tip ? `title="${esc(tip)}"` : ''}>${icon(ic, 'sm')}${esc(t)}</span>`;
   const flashBest = Math.max(0, ...S.sessions.filter((x) => x.m == 'flash').map((x) => x.pts));
+  const estBest = Math.max(0, ...S.sessions.filter((x) => x.m == 'est').map((x) => x.pts));
   const bestSt = (v) => (has && v ? stat('best', 'trophy', 'Best ' + v) : '');
   const modes = [
     `<button class="mode" data-act="daily"><span class="mi">${icon('cal')}</span><b>Daily</b><span class="mdesc">60\u00a0s · same for everyone</span></button>`,
     `<button class="mode" data-act="survival"><span class="mi">${icon('heart')}</span><b>Survival</b>${bestSt(svBest && svBest.pts)}<span class="mdesc">${svBest ? '3 lives · rising difficulty' : '3 lives, rising difficulty'}</span></button>`,
     `<button class="mode" data-act="sprint"><span class="mi">${icon('bolt')}</span><b>Sprint</b>${has && S.best.sprint ? stat('best', 'trophy', 'Best ' + S.best.sprint.t + '\u00a0s') : ''}<span class="mdesc">${S.best.sprint ? '20 questions · fastest time' : '20 questions, fastest time'}</span></button>`,
     `<button class="mode" data-act="flash"><span class="mi">${icon('star')}</span><b>Flash</b>${bestSt(flashBest)}<span class="mdesc">${flashBest ? 'Running total' : 'Numbers flash, you add'}</span></button>`,
+    `<button class="mode" data-act="est"><span class="mi">${icon('approx')}</span><b>Estimate</b>${bestSt(estBest)}<span class="mdesc">${estBest ? 'Get close, fast' : 'Within 10%, no exact answer'}</span></button>`,
   ];
   if (has) { modes.shift(); modes.push(
     `<button class="mode" data-act="weakest"><span class="mi">${icon('target')}</span><b>Drill weakest</b>${stat('todo', 'target', 'Rating ' + Math.round(S.sk[w1].lv * 100))}<span class="mdesc">${esc(SK[w1].n)}</span></button>`); }
@@ -96,7 +98,7 @@ function home() {
       ${has ? `<div class="plan" role="list" aria-label="Today's plan">${plan().map((p) => `<button class="step ${p.done ? 'done' : ''}" role="listitem" data-act="${esc(p.act)}" aria-label="${esc(p.label)}: ${esc(p.detail)}${p.done ? ', done' : ''}"><i aria-hidden="true">${icon(p.done ? 'check' : STEP_IC[p.id] || 'play')}</i><span>${esc(p.label)}<small>${esc(p.detail)}</small></span><em class="go" aria-hidden="true">${icon('chev')}</em></button>`).join('')}</div>` : ''}
     </section>
 
-    <div class="modes m3">${modes.join('')}</div>
+    <div class="modes${modes.length > 4 ? '' : ' m3'}">${modes.join('')}</div>
 
     <div class="hpair">${pathCard()}
     <section class="card tod" aria-label="Trick of the day"><div class="eyebrow">${icon('bulb')}Trick of the day · ${kc(t.sk, SK[t.sk].n)}${ib('home.trick')}</div><div class="todt"><div><button type="button" class="todgo" data-act="openTrick" data-v="${esc(t.sk)}" aria-label="${esc('Open ' + SK[t.sk].n + ' tricks in Learn')}"><b>${esc(t.title)}</b></button><div class="mu">${esc(t.rule)}</div><div class="todx">${esc(t.ex[0])}</div></div><div class="btns"><button class="btn sm" data-act="tryTrick" data-v="${esc(t.id)}">Try one</button><button class="btn sm tonal" data-act="practiceTrick" data-v="${esc(t.id)}">Practise</button></div></div></section></div>

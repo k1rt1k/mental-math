@@ -12,6 +12,7 @@ home.skillsPick
 home.trick
 home.week
 l.intro
+l.packs
 l.par
 l.path
 n.intro

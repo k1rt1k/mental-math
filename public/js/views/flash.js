@@ -28,15 +28,15 @@ const stop = () => { clearTimeout(tm); tm = 0; hush(); };
 const live = (f) => F === f && f.ph == 'run' && view.scr == 'flash';
 const main = () => document.querySelector('#main');
 /** Equal-width segmented control. A label can be [main, small] to show a second line (speed, digits), so every choice is the same shape. */
-const seg = (act, cur, opts) => `<div class="seg eq" role="group">${opts.map(([v, l]) => `<button aria-pressed="${cur == v}" data-act="${esc(act)}" data-v="${esc(v)}">${Array.isArray(l) ? `<span class="sg-m">${esc(l[0])}</span><span class="sg-s">${esc(l[1])}</span>` : esc(l)}</button>`).join('')}</div>`;
+export const seg = (act, cur, opts) => `<div class="seg eq" role="group">${opts.map(([v, l]) => `<button aria-pressed="${cur == v}" data-act="${esc(act)}" data-v="${esc(v)}">${Array.isArray(l) ? `<span class="sg-m">${esc(l[0])}</span><span class="sg-s">${esc(l[1])}</span>` : esc(l)}</button>`).join('')}</div>`;
 /** While a run is on, the page takes the same full-screen "playing" state as a practice session: tab bar and rail step aside so a stray tap cannot abandon the run. */
-const playing = (on) => document.body.classList.toggle('playing', on);
+export const playing = (on) => document.body.classList.toggle('playing', on);
 /** The running total as words people read: operators stay glued to their number, and the answer stands apart. */
 const fmtX = (ch) => { const [lhs, rhs] = expr(ch).split(' = '); return `<span class="fl-eq">${esc(lhs.replace(/([+−]) /g, '$1\u00a0'))}</span><span class="fl-tot">= ${esc(rhs)}</span>`; };
 
 /* ---------- sound and touch: same switches as the other modes (Settings, Sound / Vibration) ---------- */
 let AC = null;
-const blip = (hz, dur, type = 'sine', gain = 0.04) => {
+export const blip = (hz, dur, type = 'sine', gain = 0.04) => {
   if (S.mute) return;
   try {
     AC = AC || new AudioContext(); if (AC.state == 'suspended') AC.resume();
@@ -46,18 +46,18 @@ const blip = (hz, dur, type = 'sine', gain = 0.04) => {
     o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t + dur + 0.02);
   } catch (e) { /* audio blocked */ }
 };
-const buzz = (ms) => { try { if (!S.noHap && navigator.vibrate) navigator.vibrate(ms); } catch (e) { /* no haptics */ } };
+export const buzz = (ms) => { try { if (!S.noHap && navigator.vibrate) navigator.vibrate(ms); } catch (e) { /* no haptics */ } };
 
 /* ---------- spoken numbers (Settings, Flash: Speak numbers). Built-in speechSynthesis, no assets; for blind, low-vision and by-ear learners.
    Speech is its own switch, not tied to Sound: someone who mutes the tones may still need the numbers read out. ---------- */
-const speaking = () => !!S.speak && canSpeak();
+export const speaking = () => !!S.speak && canSpeak();
 /** Faster flashes get faster speech so a number is mostly finished before the next one starts (the next one cuts it off if not). */
 const RATE = { 1500: 1, 1000: 1.15, 700: 1.5, 450: 1.9 };
-const say = (txt, rate = 1) => {
+export const say = (txt, rate = 1) => {
   if (!speaking()) return;
   try { const u = new SpeechSynthesisUtterance(String(txt)); u.lang = 'en'; u.rate = rate; speechSynthesis.cancel(); speechSynthesis.speak(u); } catch (e) { /* speech blocked */ }
 };
-const hush = () => { try { if (canSpeak()) speechSynthesis.cancel(); } catch (e) { /* none */ } };
+export const hush = () => { try { if (canSpeak()) speechSynthesis.cancel(); } catch (e) { /* none */ } };
 /** What is spoken for one flashed number: the first is just the number; later ones say plus or minus, so a subtraction is never missed. */
 export const spoken = (q, first) => (first ? '' : q.sub ? 'minus ' : 'plus ') + q.x;
 
@@ -109,10 +109,10 @@ function round() {
   tm = setTimeout(lead('3', lead('2', lead('1', step))), 500);
 }
 
-const padKeys = () => (S.padFlip ? [7, 8, 9, 4, 5, 6, 1, 2, 3, '', 0, '⌫'] : [1, 2, 3, 4, 5, 6, 7, 8, 9, '', 0, '⌫']);
+export const padKeys = () => (S.padFlip ? [7, 8, 9, 4, 5, 6, 1, 2, 3, '', 0, '⌫'] : [1, 2, 3, 4, 5, 6, 7, 8, 9, '', 0, '⌫']);
 /** The same number pad the practice screen uses (same classes, same flip setting), so the phone keyboard never covers the page. */
-const padHtml = () => '<div class="pad fl-pad" role="group" aria-label="Number pad">' + padKeys().map((k) => k === '' ? '<button type="button" class="fn sym off" tabindex="-1" aria-hidden="true"></button>' : `<button type="button" class="${k === '⌫' ? 'fn' : ''}" data-act="flKey" data-v="${esc(k === '⌫' ? 'Backspace' : k)}" aria-label="${esc(k === '⌫' ? 'Backspace' : k)}">${k === '⌫' ? icon('back') : k}</button>`).join('') + '</div>'
-  + '<div class="padact fl-padact"><button type="button" class="btn primary" data-act="flAns" disabled>Check</button></div>';
+export const padHtml = (keyAct = 'flKey', ansAct = 'flAns') => '<div class="pad fl-pad" role="group" aria-label="Number pad">' + padKeys().map((k) => k === '' ? '<button type="button" class="fn sym off" tabindex="-1" aria-hidden="true"></button>' : `<button type="button" class="${k === '⌫' ? 'fn' : ''}" data-act="${esc(keyAct)}" data-v="${esc(k === '⌫' ? 'Backspace' : k)}" aria-label="${esc(k === '⌫' ? 'Backspace' : k)}">${k === '⌫' ? icon('back') : k}</button>`).join('') + '</div>'
+  + `<div class="padact fl-padact"><button type="button" class="btn primary" data-act="${esc(ansAct)}" disabled>Check</button></div>`;
 const showVal = (f) => {
   const e = document.querySelector('#fla'); if (e) e.innerHTML = esc(f.v) + '<span class="cur"></span>';
   const b = document.querySelector('[data-act=flAns]'); if (b) b.disabled = !f.v;   // Check stays dimmed until something is typed

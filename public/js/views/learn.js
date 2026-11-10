@@ -1,13 +1,15 @@
 import { S, save } from '../state.js';
-import { IDS, SK, COL } from '../engine.js';
+import { IDS, SK, COL, gen, how, symFor, ansMatch } from '../engine.js';
 import { TRICKS } from '../tricks.js';
+import { PACKS, packOf } from '../packs.js';
 import { esc } from '../util.js';
 import { weakestSkills } from '../stats.js';
 import { PATHS, dueChecks } from '../paths.js';
 import { pathsGrid } from './paths.js';
 import { register, A } from '../nav.js';
 import { drill } from './home.js';
-import { icon, mk } from '../ui.js';
+import { start } from './play.js';
+import { icon, mk, dialog } from '../ui.js';
 import { ib } from '../info.js';
 import { showAiSheet } from '../ai.js';
 
@@ -29,10 +31,10 @@ function learn(swap = false) {
     return `${mastered ? `<span class="pill ok2">${icon('check')}Mastered</span> ` : ''}<span class="mu">You: ${o.n} tries · <span class="${acc >= 90 ? 'ok' : acc < 75 ? 'bad' : ''}">${acc}%</span> accurate${sp ? ' · ' + sp.toFixed(2) + '× par time' : ''}${sp ? ib('l.par') : ''}</span>`;
   };
   const nChk = dueChecks().length;
-  const segHtml = () => `<div class="seg learnseg" role="group" aria-label="Learn"><button aria-pressed="${tab == 'paths'}" data-act="learnTab" data-v="paths">Guided paths${nChk ? ` <span class="badge-inline" aria-label="${esc(nChk + (nChk == 1 ? ' retention check ready' : ' retention checks ready'))}">${nChk}</span>` : ''}</button><button aria-pressed="${tab == 'lib'}" data-act="learnTab" data-v="lib">Shortcut library</button></div>`;
-  const aiBtn = () => (S.sessions.length ? (tab == 'paths' ? `<button class="btn sm learnai" data-act="aiNextPath">${icon('sparkle')} Which path next?</button>` : `<button class="btn sm learnai" data-act="aiNextTrick">${icon('sparkle')} Which trick next?</button>`) : '');
-  const lede = () => (tab == 'paths' ? 'Take one skill from the basics to a timed mastery test. Each stage teaches, shows an example, lets you practise, then checks you on your own.' : 'Stand-alone shortcuts. Try one on a sample question, or practise it with real ones.') + (tab == 'paths' ? ib('l.path') : ib('l.intro'));
-  const body = () => tab == 'paths' ? pathsGrid() : `<div class="chips fscroll" style="margin-bottom:16px" role="group" aria-label="Filter by skill"><button class="chip" aria-pressed="${filter == 'all'}" data-act="learnFilter" data-v="all">All</button>${IDS.filter((k) => TRICKS.some((t) => t.sk == k)).map((k) => `<button class="chip" aria-pressed="${filter == k}" data-act="learnFilter" data-v="${esc(k)}"><span class="dot" style="--sc:${COL[k]}"></span>${esc(SK[k].n)}</button>`).join('')}</div>
+  const segHtml = () => `<div class="seg learnseg" role="group" aria-label="Learn"><button aria-pressed="${tab == 'paths'}" data-act="learnTab" data-v="paths">Guided paths${nChk ? ` <span class="badge-inline" aria-label="${esc(nChk + (nChk == 1 ? ' retention check ready' : ' retention checks ready'))}">${nChk}</span>` : ''}</button><button aria-pressed="${tab == 'lib'}" data-act="learnTab" data-v="lib">Shortcut library</button><button aria-pressed="${tab == 'packs'}" data-act="learnTab" data-v="packs">Real-life packs</button></div>`;
+  const aiBtn = () => (S.sessions.length && tab != 'packs' ? (tab == 'paths' ? `<button class="btn sm learnai" data-act="aiNextPath">${icon('sparkle')} Which path next?</button>` : `<button class="btn sm learnai" data-act="aiNextTrick">${icon('sparkle')} Which trick next?</button>`) : '');
+  const lede = () => (tab == 'paths' ? 'Take one skill from the basics to a timed mastery test. Each stage teaches, shows an example, lets you practise, then checks you on your own.' : tab == 'packs' ? 'Everyday sums in themed packs: discounts, tax and GST, tips, units and splitting bills. Each pack mixes its question types and counts toward your Real-life rating.' : 'Stand-alone shortcuts. Try one on a sample question, or practise it with real ones.') + (tab == 'paths' ? ib('l.path') : tab == 'packs' ? ib('l.packs') : ib('l.intro'));
+  const body = () => tab == 'paths' ? pathsGrid() : tab == 'packs' ? packsGrid() : `<div class="chips fscroll" style="margin-bottom:16px" role="group" aria-label="Filter by skill"><button class="chip" aria-pressed="${filter == 'all'}" data-act="learnFilter" data-v="all">All</button>${IDS.filter((k) => TRICKS.some((t) => t.sk == k)).map((k) => `<button class="chip" aria-pressed="${filter == k}" data-act="learnFilter" data-v="${esc(k)}"><span class="dot" style="--sc:${COL[k]}"></span>${esc(SK[k].n)}</button>`).join('')}</div>
   <div class="tricks">${list.map((t) => `<article class="card trick" style="--sc:${COL[t.sk]}">
     <div class="kc">${esc(SK[t.sk].n)}${S.sessions.length && sugg.has(t.id) ? ' <span class="pill sg2">Suggested for you</span>' : ''}</div><h3>${esc(t.title)}</h3>
     <p>${esc(t.rule)}</p>
@@ -45,7 +47,7 @@ function learn(swap = false) {
       return;
     }
     // Switching tabs or filters: keep the header, the control and the scroll position, and only swap what is underneath.
-    m.querySelectorAll('.learnseg [data-act=learnTab]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v == (tab == 'lib' ? 'lib' : 'paths'))));
+    m.querySelectorAll('.learnseg [data-act=learnTab]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v == tab)));
     m.querySelector('#learnai').innerHTML = aiBtn();
     m.querySelector('#learnlede').innerHTML = lede();
     bodyEl.innerHTML = body();
@@ -54,13 +56,29 @@ function learn(swap = false) {
   };
   paint();
 }
+/** How you are doing across one pack's patterns, from the same per-pattern counters the shortcut library uses. */
+function packStat(pk) {
+  let n = 0, ok = 0, r = 0;
+  for (const pt of pk.pats) { const o = S.pat[SK.life.n + ' · ' + pt]; if (o) { n += o.n; ok += o.ok; r += o.r; } }
+  if (!n) return '<span class="mu">Not practised yet</span>';
+  const acc = Math.round((100 * ok) / n), sp = ok ? r / ok : 0;
+  return `<span class="mu">You: ${n} tries · <span class="${acc >= 90 ? 'ok' : acc < 75 ? 'bad' : ''}">${acc}%</span> accurate${sp ? ' · ' + sp.toFixed(2) + '× par time' : ''}</span>`;
+}
+function packsGrid() {
+  return `<div class="tricks packs">${PACKS.map((pk) => `<article class="card trick pack" style="--sc:${COL.life}">
+    <div class="kc">${esc(SK.life.n)} pack</div><h3>${esc(pk.title)}</h3><p>${esc(pk.blurb)}</p>
+    <ul class="rules">${pk.tricks.map((id) => TRICKS.find((t) => t.id == id)).filter(Boolean).map((t) => `<li><b>${esc(t.title)}.</b> ${esc(t.rule)}</li>`).join('')}</ul>
+    <div class="trick-foot">${packStat(pk)}<span class="btns"><button class="btn sm" data-act="packTry" data-v="${esc(pk.id)}">Try one</button><button class="btn sm primary" data-act="packGo" data-v="${esc(pk.id)}">Practise this pack</button></span></div></article>`).join('')}</div>`;
+}
+A.packGo = (d) => { const pk = packOf(d.v); if (pk) start(undefined, { only: 'life', pats: pk.pats }); };
+A.packTry = (d) => { const pk = packOf(d.v); if (pk) tryDialog({ title: pk.title, rule: pk.blurb, sk: 'life', pats: pk.pats }); };
 A.aiNextTrick = () => {
   const tricks = TRICKS.slice(0, 30).map((t) => { const o = t.pt && S.pat[SK[t.sk].n + ' · ' + t.pt]; return { id: t.id, title: t.title, skill: SK[t.sk].n, tries: o ? o.n : 0, accuracyPct: o && o.n ? Math.round((100 * o.ok) / o.n) : null }; });
   const skillRatings = Object.fromEntries(IDS.map((k) => [SK[k].n, Math.round(S.sk[k].lv * 100)]));
   showAiSheet({ title: 'Which trick should you learn next?', action: 'nexttrick', context: { tricks, skillRatings }, extra: (res) => TRICKS.filter((t) => String(res.text || '').includes(t.title)).slice(0, 2).map((t) => ({ label: `Practise: ${t.title}`, run: () => drill(t.sk, t.pt) })) });
 };
 A.learnFilter = (d) => { filter = d.v; learn(false); };
-A.learnTab = (d) => { const next = d.v == 'lib' ? 'lib' : 'paths'; if (next == tab) return; tab = next; learn(true); };
+A.learnTab = (d) => { const next = d.v == 'lib' ? 'lib' : d.v == 'packs' ? 'packs' : 'paths'; if (next == tab) return; tab = next; learn(true); };
 A.aiTrick = (d) => {
   const t = TRICKS.find((x) => x.id == d.v); if (!t) return;
   const o = t.pt && S.pat[SK[t.sk].n + ' · ' + t.pt];
@@ -72,13 +90,12 @@ A.practiceTrick = (d) => { const t = TRICKS.find((x) => x.id == d.v); if (t) dri
 function sample(t) {
   const base = Math.max(5, Math.round(S.sk[t.sk].lv));
   let p;
-  for (let i = 0; i < 90; i++) { p = gen(t.sk, i < 30 ? base : i < 60 ? 8 : 11); if (!t.pt || p.pt == t.pt) break; }
+  for (let i = 0; i < 90; i++) { p = gen(t.sk, i < 30 ? base : i < 60 ? 8 : 11, Math.random, t.pats || t.pt); if (t.pats ? t.pats.includes(p.pt) : !t.pt || p.pt == t.pt) break; }
   return p;
 }
 /** A throw-away try-out: nothing is recorded, so it is safe to experiment and look at the method. */
-A.tryTrick = async (d) => {
-  const t = TRICKS.find((x) => x.id == d.v);
-  if (!t) return;
+A.tryTrick = (d) => { const t = TRICKS.find((x) => x.id == d.v); if (t) return tryDialog(t); };
+async function tryDialog(t) {
   let p = sample(t), solved = false;
   await dialog({
     title: t.title,
@@ -104,6 +121,6 @@ A.tryTrick = async (d) => {
       show();
     },
   });
-};
+}
 register('learn', learn);
 export { learn };

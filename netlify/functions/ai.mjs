@@ -22,7 +22,7 @@ import {
 import { authenticate, lockedText } from '../lib/gate.mjs';
 import { isDemoRequest, takeDemoCall, demoLimitText } from '../lib/demo-gate.mjs';
 
-const AI_BUILD_VERSION = '14.92';
+const AI_BUILD_VERSION = '14.97';
 
 const J = (o, status = 200) =>
   Response.json(o, {

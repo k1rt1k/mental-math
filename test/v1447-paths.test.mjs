@@ -93,7 +93,7 @@ test('every stage pattern really is produced by the generator, and the original 
 test('every trick is linked from a stage, and each is in a stage of its own skill', () => {
     const linked = new Map();
   for (const k of IDS) PATHS[k].stages.forEach((s) => (s.tr || []).forEach((id) => linked.set(id, k)));
-  for (const t of TRICKS) assert.equal(linked.get(t.id), t.sk, `trick ${t.id} is linked from its own skill's path`);
+  for (const t of TRICKS.filter((x) => !x.pack)) assert.equal(linked.get(t.id), t.sk, `trick ${t.id} is linked from its own skill's path`);
 });
 
 test('progress: stages unlock in order, retention checks wait for the mastery test and then for the clock', () => {

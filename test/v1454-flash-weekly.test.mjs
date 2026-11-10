@@ -36,7 +36,7 @@ test('Flash is wired: route, home tile, saved as a session, and kept out of pace
   assert.match(rd('js/views/home.js'), /data-act="flash"/);
   assert.match(rd('js/main.js'), /import '\.\/views\/flash\.js'/);
   assert.match(rd('js/views/progress.js'), /s\.m != 'flash'/);
-  assert.match(rd('js/stats.js'), /px = x\.filter\(\(s\) => s\.m != 'flash'\)/);
+  assert.match(rd('js/stats.js'), /px = x\.filter\(\(s\) => s\.m != 'flash' && s\.m != 'est'\)/);
   for (const f of ['js/chain.js', 'js/weekly.js', 'js/weekdata.js', 'js/views/flash.js']) assert.ok(rd('sw.js').includes(`'${f}'`), f);
 });
 

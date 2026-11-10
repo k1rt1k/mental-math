@@ -8,7 +8,7 @@ test('both switches exist, are stored inverted so the defaults stay on, and sync
   assert.match(r('js/views/settings.js'), /'noTimer', get\('noTimer'\)/);
   assert.match(r('js/views/settings.js'), /'noQLine', get\('noQLine'\)/);
   assert.match(r('js/views/settings.js'), /const INV = new Set\([^)]*'noTimer'[^)]*'noQLine'/);
-  assert.match(r('js/state.js'), /'noTimer', 'noQLine'[,'\s]*(?:'speak')?\]/);
+  assert.match(r('js/state.js'), /'noTimer', 'noQLine'[,'\s]*(?:'speak')?[,'\s]*(?:'cur')?\]/);
   assert.match(r('js/infotext.js'), /'s\.noTimer'/); assert.match(r('js/infotext.js'), /'s\.noQLine'/);
 });
 

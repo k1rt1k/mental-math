@@ -15,8 +15,8 @@ export function weekData(now = Date.now()) {
   const days = new Set(cur.map((s) => ymd(s.t))).size;
   const gains = IDS.map((k) => [k, (S.sk[k].lv - lvAgo(k, 7)) * 100]).sort((a, b) => b[1] - a[1]);
   const dly = Object.entries(S.daily || {}).filter(([d]) => d >= ymd(now - 6 * DAY) && d <= ymd(now)).map(([d, v]) => [d, v]).sort((a, b) => b[1] - a[1])[0];
-  const fl = cur.filter((s) => s.m == 'flash');
-  return { empty: !cur.length, ...c, prev: p, days, streak: streak(), gain: gains[0] && gains[0][1] >= 1 ? { id: gains[0][0], by: Math.round(gains[0][1]) } : null, daily: dly ? { day: dly[0], pts: dly[1] } : null, flash: fl.length ? { runs: fl.length, best: Math.max(...fl.map((s) => s.pts)) } : null };
+  const fl = cur.filter((s) => s.m == 'flash'), es = cur.filter((s) => s.m == 'est');
+  return { empty: !cur.length, ...c, prev: p, days, streak: streak(), gain: gains[0] && gains[0][1] >= 1 ? { id: gains[0][0], by: Math.round(gains[0][1]) } : null, daily: dly ? { day: dly[0], pts: dly[1] } : null, flash: fl.length ? { runs: fl.length, best: Math.max(...fl.map((s) => s.pts)) } : null, est: es.length ? { runs: es.length, best: Math.max(...es.map((s) => s.pts)) } : null };
 }
 /** What the AI is told about the week, in the shape the `week` action expects: the same numbers the This week sheet shows. Pure; `now` is a parameter so tests can fix the date. */
 export function weekAiContext(now = Date.now()) {
@@ -50,6 +50,7 @@ export function weekLines(w) {
   if (w.gain) L.push(`Biggest gain: ${SK[w.gain.id].n} +${w.gain.by}`);
   if (w.daily) L.push(`Best Daily: ${w.daily.pts} pts`);
   if (w.flash) L.push(`Flash: ${w.flash.runs} run${w.flash.runs == 1 ? '' : 's'}, best ${w.flash.best} pts`);
+  if (w.est) L.push(`Estimate: ${w.est.runs} run${w.est.runs == 1 ? '' : 's'}, best ${w.est.best} pts`);
   return L;
 }
 export const weekText = (w) => (w.empty ? '' : 'My week in Mental Math\n' + weekLines(w).join('\n'));
