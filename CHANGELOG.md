@@ -2,6 +2,26 @@
 
 Newest first. What is true of the app today is in [README.md](README.md). The release number is the `VERSION` file.
 
+## 14.92
+
+Spoken numbers for Flash, so it works for blind, low-vision and by-ear learners. Front end only; no backend change.
+
+- **Speak numbers.** A new switch on the Flash setup screen (and in Settings, Sessions, "Speak Flash numbers") reads each flashed number aloud with the browser's built-in `speechSynthesis`: no new assets, nothing downloaded. The first number is said bare, later ones as "plus 7" or "minus 3". It also says the round, asks "What is the total?", and speaks the result ("Not quite. The total was 17") and the final score.
+- **Off by default, synced.** It is a normal synced preference (`speak`), independent of Sound: someone who mutes the tones can still hear the numbers. While speaking, the per-number tick is skipped so it does not talk over the voice.
+- **Speed.** Speech rate rises with the flash speed (Calm 1x up to Blitz 1.9x). A number is cut off by the next one rather than queueing, and Setup warns when speed and digits are likely too tight for speech.
+- **Safe to leave.** Pause, Quit, Esc and leaving the screen cancel speech at once. The control is hidden in browsers without speech support. A silent utterance is queued inside the Start tap so iOS Safari allows speech afterwards.
+- Tests: `test/v1492-flash-speech.test.mjs`; `info-keys.txt` gains `s.speak`.
+
+## 14.91
+
+Sample mode (`?demo=1`) now uses real Gemini. Backend change: `netlify/functions/ai.mjs` and a new `netlify/lib/demo-gate.mjs`; redeploy the whole project.
+
+- **Gemini in sample mode.** The AI Coach, explanations, lessons, paths and the week sheet all call Gemini for sample visitors instead of the built-in local guide. They send no sync password; the request carries `x-mental-math-demo: 1`, and only the made-up learner's summary is sent, never real saved data.
+- **Its own allowance.** Sample mode gets 25 Gemini calls per address per Pacific day and 100 across all visitors (`DEMO_LIMIT` in `demo-gate.mjs`), counted only when Gemini is really called (cached answers are free). Calls still count against the shared 300 budget, so the learners' share is protected by the 100 cap. Over the allowance, or if the counter store is unreachable, the visitor sees the local guide with a plain message; it never fails open.
+- **A wrong key is not sample mode.** The demo path is used only when no sync key is sent at all.
+- **Unchanged on purpose.** Sample progress still lives in the tab only, and sync is still simulated, because real syncing would overwrite the visitor's saved data.
+- Tests: `test/v1491-demo-gemini.test.mjs`; `v1477-demo.test.mjs` now expects the server call.
+
 ## 14.90
 
 Flash screen layout rebuilt, and a play-screen bar fixed. Front end only; no backend change.

@@ -21,12 +21,21 @@ test('the sample learner is complete, current and survives the normal loader', (
   assert.deepEqual(JSON.parse(JSON.stringify(buildDemo(fresh(), now))).goal, 2);
 });
 
-test('sample mode never writes saved data or calls the sync server', () => {
+test('sample mode never writes saved data or calls the sync server (Gemini is the one thing it may call, under its own allowance)', () => {
   assert.match(src('js/state.js'), /export function persist\(\) \{\s*\n\s*if \(DEMO\) return true;/);
   const sync = src('js/sync.js');
   for (const fn of ['startSync()', 'push()', 'pull(afterConflict = false)']) assert.match(sync, new RegExp('function ' + fn.replace(/[()]/g, '\\$&') + ' \\{\\s*\\n\\s*if \\(DEMO\\) return;'), fn);
-  assert.match(src('js/ai.js'), /if \(DEMO\) return \{ ok: true, fallback: true, source: 'local'/);   // the AI uses the local guide, not /api/ai
+  const ai = src('js/ai.js');   // the AI asks the server for Gemini under the sample-mode allowance, with no sync key
+  assert.match(ai, /if \(!personalSyncKey && !DEMO\) \{/);
+  assert.match(ai, /DEMO \? \{ 'Content-Type': 'application\/json', 'x-mental-math-demo': '1' \}/);
+  assert.doesNotMatch(ai, /if \(DEMO\) return \{ ok: true, fallback: true/);
   assert.match(src('js/demoflag.js'), /sessionStorage/);
+});
+
+test('the sample story applies the miss clustering its comment promises', () => {
+  const demo = src('js/demo.js');
+  assert.match(demo, /prevMissed \? 0\.18 : 0/, 'a day after a miss is less likely to be active');
+  assert.doesNotMatch(demo, /&& false/, 'no dead clustering expression');
 });
 
 test('first visit: the welcome appears straight away, only to someone with nothing yet, and the tour is the lead action', () => {

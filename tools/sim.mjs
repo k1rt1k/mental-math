@@ -54,7 +54,7 @@ function playSession(persona, rand, wall, cfg) {
   return { questions, out };
 }
 
-/** Average ranks, so Spearman works with ties (the uniform personas have ten equal latent levels). */
+/** Average ranks, so Spearman works with ties (the uniform personas have equal latent levels). */
 function ranks(xs) {
   const order = xs.map((x, i) => [x, i]).sort((a, b) => a[0] - b[0]);
   const r = new Array(xs.length);

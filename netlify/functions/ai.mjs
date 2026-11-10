@@ -20,8 +20,9 @@ import {
   FREE_MODELS,
 } from '../lib/ailogic.mjs';
 import { authenticate, lockedText } from '../lib/gate.mjs';
+import { isDemoRequest, takeDemoCall, demoLimitText } from '../lib/demo-gate.mjs';
 
-const AI_BUILD_VERSION = '14.90';
+const AI_BUILD_VERSION = '14.92';
 
 const J = (o, status = 200) =>
   Response.json(o, {
@@ -66,14 +67,21 @@ export default async (req) => {
   // Gemini access is for the two intended learners, authenticated by the same
   // personal sync password that selects their isolated cloud progress store.
   // The browser never chooses or submits a trusted user/profile identifier.
-  const gate = await authenticate(req);
-  if (gate.denied === 'locked') {
-    return Response.json({ error: lockedText(gate.retryAfter), locked: true }, { status: 429, headers: { 'cache-control': 'no-store', 'retry-after': String(gate.retryAfter) } });
+  // Sample mode (?demo=1) has no password: it sends x-mental-math-demo instead and gets a small separate allowance (lib/demo-gate.mjs).
+  const demo = isDemoRequest(req);
+  let owner;
+  if (demo) {
+    owner = { id: 'demo' };
+  } else {
+    const gate = await authenticate(req);
+    if (gate.denied === 'locked') {
+      return Response.json({ error: lockedText(gate.retryAfter), locked: true }, { status: 429, headers: { 'cache-control': 'no-store', 'retry-after': String(gate.retryAfter) } });
+    }
+    if (gate.denied) {
+      return J({ error: 'A valid personal sync password is required. Set it in this device’s Settings.', authRequired: true }, 401);
+    }
+    owner = gate.who;
   }
-  if (gate.denied) {
-    return J({ error: 'A valid personal sync password is required. Set it in this device’s Settings.', authRequired: true }, 401);
-  }
-  const owner = gate.who;
 
   let body;
   try {
@@ -145,6 +153,18 @@ export default async (req) => {
       user: owner.id,
       message: 'Running in offline / local fallback mode. Add GEMINI_API_KEY in Netlify to connect live Gemini AI.',
     });
+  }
+
+  // Sample mode pays from its own allowance, charged only when Gemini is really about to be called (cache hits and the no-key fallback are free). Out of allowance (or store down) means the local guide, never an unmetered call.
+  if (demo) {
+    const verdict = await takeDemoCall(req);
+    if (!verdict.ok) {
+      return J({
+        ok: true, source: 'local', fallback: true, demoLimited: true,
+        text: generateLocalFallback({ action, summary: cleanSummary(summary), question: safeQuestion, message, context: cleanContext(context) }),
+        message: demoLimitText(verdict.why), user: owner.id,
+      });
+    }
   }
 
   let prompt, system;

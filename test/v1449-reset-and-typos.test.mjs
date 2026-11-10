@@ -2,6 +2,7 @@
 import test, { mock, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { PREF_KEYS } from '../public/js/state.js';
 
 /* ---------- in-memory Netlify Blobs, as in sync.test.mjs ---------- */
 const blobs = new Map(), revs = new Map();
@@ -232,5 +233,5 @@ test('wiring: keys, buttons, settings, synced prefs', () => {
   assert.match(p, /aria-label="Submit answer"/);
   assert.match(rd('views/settings.js'), /'ent', get\('ent'\)/);
   assert.match(rd('views/settings.js'), /'noGrace', get\('noGrace'\)/);
-  assert.match(rd('state.js'), /'ent', 'noGrace'\]/);
+  for (const k of ['ent', 'noGrace']) assert.ok(PREF_KEYS.includes(k), `${k} is a synced pref`);
 });

@@ -155,6 +155,19 @@ test('nextUp prefers a due retention check, then the path in progress, then the 
   assert.equal(n.k, 'add'); assert.equal(n.kind, 'retain'); assert.equal(n.ret, 0);
 });
 
+test('nextUp falls back to another path when the weakest/default path is already assessed', () => {
+  replaceState(fresh());
+  for (let i = 0; i < 5; i++) recordCheck('mul', i, i == 4 ? 'test' : 'check', { pass: true, correct: 5, n: 5 });
+  assert.equal(progress('mul').assessed, true);
+  const n = nextUp('mul');
+  assert.ok(n, 'another path is still available');
+  assert.notEqual(n.k, 'mul');
+  assert.equal(n.kind, 'start');
+  // Once every path is assessed there is nothing left to suggest.
+  for (const k of IDS) if (k != 'mul') for (let i = 0; i < 5; i++) recordCheck(k, i, i == 4 ? 'test' : 'check', { pass: true, correct: 5, n: 5 });
+  assert.equal(nextUp('mul'), null);
+});
+
 test('state: path progress is sanitised on load and merges to the furthest progress, order-independently', () => {
   const junk = migrate({ paths: { mul: { st: [{ ph: 99, pass: 'x', sc: 7 }, null, 5], ret: 'no' }, nope: { st: [] }, add: 'bad' } });
   assert.deepEqual(Object.keys(junk.paths), ['mul']);

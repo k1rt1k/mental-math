@@ -133,7 +133,7 @@ function coachView() {
   if (aiQuota.isExhausted && aiQuota.resetAt && Date.now() >= aiQuota.resetAt) { aiQuota.isExhausted = false; aiQuota.resetAt = 0; }
   const quotaPill = aiQuota.isExhausted
     ? `<span class="pill bad" title="Resets at midnight Pacific time">${icon('lock')} AI paused · resets Pacific midnight</span>`
-    : DEMO ? `<span class="pill ok" id="ai-pill" title="Sample mode">${icon('sparkle')} Sample mode · local guide</span>` : `<span class="pill ok" id="ai-pill" title="Google AI Studio free tier; this is the shared daily allowance for the app">${icon('sparkle')} Gemini · ${aiBudgetLeft() == null ? 'free tier' : aiBudgetLeft() + ' left today'}</span>`;
+    : DEMO ? `<span class="pill ok" id="ai-pill" title="Sample mode has its own small daily Gemini allowance">${icon('sparkle')} Gemini · sample mode</span>` : `<span class="pill ok" id="ai-pill" title="Google AI Studio free tier; this is the shared daily allowance for the app">${icon('sparkle')} Gemini · ${aiBudgetLeft() == null ? 'free tier' : aiBudgetLeft() + ' left today'}</span>`;
 
   const tabs = [['coach', 'chart', 'Analysis'], ['recommend', 'target', 'Recommend'], ['plan', 'cal', 'Plans'], ['tutor', 'bulb', 'Tutor']];
 

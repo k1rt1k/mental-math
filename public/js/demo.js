@@ -39,7 +39,7 @@ export function buildDemo(b, now = Date.now()) {
     if (d == STREAK) active = false;
     else if (d < STREAK) active = true;
     else if (GAP.includes(d)) active = false;
-    else active = chance((wkend ? 0.5 : 0.76) - (prevMissed ? 0 : 0) - (lastActive != null && lastActive - d == 1 && false ? 0 : 0));
+    else active = chance((wkend ? 0.5 : 0.76) - (prevMissed ? 0.18 : 0));
     if (!active) continue;
     const gapDays = lastActive == null ? 0 : lastActive - d;   // days since the last session (lastActive is counted in days-ago, so it runs downwards)
     const f = (DAYS - d) / DAYS;

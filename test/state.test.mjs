@@ -24,6 +24,11 @@ test('migrate drops corrupt sessions but keeps good ones', () => {
   assert.deepEqual(s.sessions.map((x) => x.t), [1, 2]);
 });
 
+test('migrate restores chronological session order from an imported backup', () => {
+  const s = migrate({ sessions: [sess(30), sess(10), sess(20)] });
+  assert.deepEqual(s.sessions.map((x) => x.t), [10, 20, 30]);
+});
+
 test('merge unions sessions and never loses any', () => {
   const a = mk({ u: 5, sessions: [sess(1), sess(2)] }), b = mk({ u: 9, sessions: [sess(2), sess(3)] });
   const m = mergeStates(a, b);

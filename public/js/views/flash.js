@@ -2,7 +2,7 @@
 // there are no skills or ratings here, only a finished run saved as one session (m: 'flash').
 import { S, save } from '../state.js';
 import { IDS } from '../engine.js';
-import { esc, clamp } from '../util.js';
+import { esc, clamp, canSpeak } from '../util.js';
 import { A, register, go, view } from '../nav.js';
 import { icon, toast } from '../ui.js';
 import { padOn } from '../theme.js';
@@ -24,7 +24,7 @@ const bestOf = (cfg) => +bestAll()[bestKey(cfg)] || 0;
 const bestSet = (cfg, pts) => { try { const b = bestAll(); b[bestKey(cfg)] = pts; localStorage[BK] = JSON.stringify(b); } catch (e) { /* private mode */ } };
 
 let F = null, tm = 0;   // the run in progress (F.ph: run | ask | fb | pause); the pending timer
-const stop = () => { clearTimeout(tm); tm = 0; };
+const stop = () => { clearTimeout(tm); tm = 0; hush(); };
 const live = (f) => F === f && f.ph == 'run' && view.scr == 'flash';
 const main = () => document.querySelector('#main');
 /** Equal-width segmented control. A label can be [main, small] to show a second line (speed, digits), so every choice is the same shape. */
@@ -48,6 +48,19 @@ const blip = (hz, dur, type = 'sine', gain = 0.04) => {
 };
 const buzz = (ms) => { try { if (!S.noHap && navigator.vibrate) navigator.vibrate(ms); } catch (e) { /* no haptics */ } };
 
+/* ---------- spoken numbers (Settings, Flash: Speak numbers). Built-in speechSynthesis, no assets; for blind, low-vision and by-ear learners.
+   Speech is its own switch, not tied to Sound: someone who mutes the tones may still need the numbers read out. ---------- */
+const speaking = () => !!S.speak && canSpeak();
+/** Faster flashes get faster speech so a number is mostly finished before the next one starts (the next one cuts it off if not). */
+const RATE = { 1500: 1, 1000: 1.15, 700: 1.5, 450: 1.9 };
+const say = (txt, rate = 1) => {
+  if (!speaking()) return;
+  try { const u = new SpeechSynthesisUtterance(String(txt)); u.lang = 'en'; u.rate = rate; speechSynthesis.cancel(); speechSynthesis.speak(u); } catch (e) { /* speech blocked */ }
+};
+const hush = () => { try { if (canSpeak()) speechSynthesis.cancel(); } catch (e) { /* none */ } };
+/** What is spoken for one flashed number: the first is just the number; later ones say plus or minus, so a subtraction is never missed. */
+export const spoken = (q, first) => (first ? '' : q.sub ? 'minus ' : 'plus ') + q.x;
+
 function setup() {
   stop(); F = null; playing(false); const c = cfgLoad(), best = bestOf(c);
   document.title = 'Flash · Mental Math';
@@ -57,15 +70,18 @@ function setup() {
     <div class="field"><div class="mu">Speed</div>${seg('flS', c.s, SPEEDS.map(([v, l]) => [v, [l, v / 1000 + ' s']]))}</div>
     <div class="field"><div class="mu">Digits</div>${seg('flD', c.d, [[1, ['1 digit', '1–9']], [2, ['2 digits', '10–99']], [3, ['3 digits', '100–999']]])}</div>
     <div class="field"><div class="mu">Subtract</div>${seg('flN', c.neg, [[0, 'Add only'], [1, 'Add and subtract']])}</div>
+    ${canSpeak() ? `<div class="field"><div class="mu">Speak numbers</div>${seg('flV', S.speak ? 1 : 0, [[0, 'Off'], [1, 'On']])}${S.speak && (c.s <= 700 || (c.d == 3 && c.s <= 1000)) ? '<p class="mu fl-note">Spoken numbers need time to be said. If they get cut off, choose a slower speed or fewer digits.</p>' : ''}</div>` : ''}
     <div class="fl-best"><span>Best at this setting</span>${best ? `<b>${best} pts</b>` : '<span class="fl-none">No run yet</span>'}</div>
     <div class="fl-btns fl-start"><button class="btn primary" data-act="flGo">${icon('play')} Start<kbd>Enter</kbd></button><button class="btn ghost" data-go="home">Home<kbd>Esc</kbd></button></div>
-    <p class="mu fl-note">The numbers are drawn on screen only, so this mode is not announced by screen readers.</p></div>`;
+    <p class="mu fl-note">${speaking() ? 'Each number is read aloud as it flashes, then the result is spoken after you answer.' : 'The numbers are drawn on screen only, so screen readers do not announce them. ' + (canSpeak() ? 'Turn on Speak numbers to hear them.' : 'This browser cannot read them aloud.')}</p></div>`;
 }
 const setC = (k) => (d) => { const c = cfgLoad(); c[k] = +d.v; cfgSave(c); setup(); };
+A.flV = (d) => { S.speak = +d.v == 1; save(); if (!S.speak) hush(); else say('Numbers will be spoken'); setup(); };
 A.flC = setC('c'); A.flS = setC('s'); A.flD = setC('d'); A.flN = setC('neg');
 A.flash = () => go('flash');
 A.flGo = () => {
   blip(1, 0.001, 'sine', 0.0001);   // wakes the audio context inside this tap (iOS/Safari)
+  if (speaking()) try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } catch (e) { /* none */ }   // same for speech: it must be started from a tap
   const cfg = cfgLoad(); F = { cfg, i: 0, ok: 0, t0: Date.now(), log: [], v: '', ph: 'run' }; round();
 };
 
@@ -77,6 +93,7 @@ function round() {
   const f = F; f.ph = 'run'; f.ch = makeChain(f.cfg); f.n = 0; f.v = '';
   playing(true); scrollTo({ top: 0, left: 0, behavior: 'instant' });
   main().innerHTML = `<div class="flw live" role="status">${top(f, true)}<div class="fl-body"><div class="fl-n rdy" id="fln" aria-hidden="true">Ready</div></div><div class="fl-foot"><div class="fl-dots" id="fld" aria-hidden="true">${'<i></i>'.repeat(f.cfg.c)}</div></div></div>`;
+  say('Round ' + (f.i + 1), 1.1);
   const gap = Math.min(160, Math.round(f.cfg.s * 0.25)), el = () => document.querySelector('#fln');
   const step = () => {
     if (!live(f)) return;
@@ -85,7 +102,7 @@ function round() {
     const q = f.ch.items[f.n], e = el(); if (!e) return;
     e.textContent = (f.n ? (q.sub ? '−' : '+') : '') + q.x; e.className = 'fl-n on'; f.n++;
     document.querySelectorAll('#fld i').forEach((d, k) => d.classList.toggle('on', k < f.n));   // how many numbers have flashed
-    blip(440 + f.n * 28, 0.05, 'sine', 0.03);   // a soft tick per number, rising as the chain grows
+    if (speaking()) say(spoken(q, f.n == 1), RATE[f.cfg.s] || 1); else blip(440 + f.n * 28, 0.05, 'sine', 0.03);   // a soft tick per number, rising as the chain grows; spoken numbers replace it (it would talk over the voice)
     tm = setTimeout(() => { if (!live(f)) return; const e2 = el(); if (e2) { e2.textContent = ''; e2.className = 'fl-n'; } tm = setTimeout(step, gap); }, f.cfg.s);
   };
   const lead = (txt, next) => () => { if (!live(f)) return; const e = el(); if (e) { e.textContent = txt; e.className = 'fl-n cd'; } blip(330, 0.04, 'sine', 0.025); tm = setTimeout(next, 600); };
@@ -103,6 +120,7 @@ const showVal = (f) => {
 
 function ask(f) {
   f.ph = 'ask'; f.v = ''; const pad = padOn();
+  say('What is the total?');
   if (pad) main().innerHTML = `<div class="flw live ask">${top(f, false)}<div class="fl-body"><div class="fl-q" id="flq">What is the total?</div><div class="fl-val" id="fla" role="textbox" aria-readonly="true" aria-labelledby="flq"><span class="cur"></span></div></div><div class="fl-foot">${padHtml()}</div></div>`;
   else {   // keypad switched off in Settings: a plain number box, kept to digits
     main().innerHTML = `<div class="flw live ask">${top(f, false)}<div class="fl-body"><label class="fl-q" for="fla">What is the total?</label><input class="inp fl-a" id="fla" inputmode="numeric" pattern="[0-9]*" autocomplete="off" aria-label="Running total"></div><div class="fl-foot"><div class="fl-btns"><button class="btn primary" data-act="flAns" disabled>Check<kbd>Enter</kbd></button></div></div></div>`;
@@ -122,6 +140,7 @@ A.flAns = () => {
   if (!raw) return;   // nothing typed: stay on the question
   const got = parseInt(raw, 10), ok = got === f.ch.total; if (ok) f.ok++;
   f.log.push(ok); f.ph = 'fb';
+  say(ok ? 'Right' : 'Not quite. The total was ' + f.ch.total);
   if (ok) { blip(740, 0.09, 'sine', 0.05); setTimeout(() => blip(988, 0.12, 'sine', 0.05), 90); } else { blip(170, 0.16, 'square', 0.035); buzz(40); }
   main().innerHTML = `<div class="flw live fb" role="status">${top(f, false)}<div class="fl-body"><div class="fl-r ${ok ? 'ok' : 'bad'}">${ok ? 'Right' : 'Not quite'}</div>
     <div class="fl-x">${fmtX(f.ch)}</div>${ok ? '' : `<div class="mu">You typed ${esc(got)}</div>`}</div>
@@ -152,6 +171,7 @@ function done(f) {
     save();
   }
   f.ph = 'done'; playing(false);
+  say(`${f.ok} out of ${ROUNDS} right. ${pts} points.`);
   main().innerHTML = `<div class="flw res"><div class="fl-body"><div class="mu fl-cfg">Flash · ${cfg.c} numbers · ${cfg.d} digit${cfg.d > 1 ? 's' : ''} · ${cfg.s / 1000} s${cfg.neg ? ' · add and subtract' : ''}</div>
     <div class="fl-r ${f.ok >= 4 ? 'ok' : ''}">${f.ok} / ${ROUNDS}</div><div class="mu">${f.log.map((x) => `<span class="fdot ${x ? 'on' : ''}"></span>`).join('')}</div>
     <div class="fl-x">${pts} pts${isBest ? ' · new best for this setting' : prev ? ' · best here ' + Math.max(prev, pts) : ''}</div>

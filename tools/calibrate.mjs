@@ -1,6 +1,7 @@
 // Calibration report: `node tools/calibrate.mjs [sessions] [seed]`.
 // Prints the four-persona simulation and exits non-zero if a calibration guardrail breaks.
 import { report, PERSONAS } from './sim.mjs';
+import { IDS } from '../public/js/engine.js';
 
 const sessions = Math.max(6, Math.round(+(process.argv[2] || 24)));
 const seed = Math.round(+(process.argv[3] || 7));
@@ -12,7 +13,7 @@ const num = (x, n = 2) => (+x).toFixed(n);
 const head = ['persona', 'acc', 'late acc', 'avg lv', 'jump', 'cold', 'rough', 'skills', 'min', 'patterns', 'top pattern', 'top', 'MAE', 'rank'];
 const table = rows.map((r) => [
   r.persona, pct(r.avgAccuracy), pct(r.lateAccuracy), num(r.finalAvgDifficulty), num(r.maxDifficultyJump, 1),
-  String(r.worstColdStreak), String(r.roughSessions), `${r.skillsSeen}/10`, String(r.minSkill), String(r.patterns),
+  String(r.worstColdStreak), String(r.roughSessions), `${r.skillsSeen}/${IDS.length}`, String(r.minSkill), String(r.patterns),
   r.topPattern || '–', pct(r.topShare), num(r.mae, 2), r.rankCorrelation ? num(r.rankCorrelation, 2) : 'n/a',
 ]);
 const widths = head.map((h, i) => Math.max(h.length, ...table.map((r) => r[i].length)));
@@ -25,7 +26,7 @@ console.log(`\n${sessions} sessions per persona, seed ${seed}.`);
 const fails = [];
 rows.forEach((r) => {
   const tag = r.persona;
-  if (r.skillsSeen !== 10) fails.push(`${tag}: only ${r.skillsSeen}/10 skills were served`);
+  if (r.skillsSeen !== IDS.length) fails.push(`${tag}: only ${r.skillsSeen}/${IDS.length} skills were served`);
   if (r.minSkill < 4) fails.push(`${tag}: a skill got only ${r.minSkill} questions`);
   if (r.maxDifficultyJump > 2) fails.push(`${tag}: difficulty jumped ${num(r.maxDifficultyJump, 1)} levels in a session`);
   if (r.worstColdStreak > 8) fails.push(`${tag}: cold streak of ${r.worstColdStreak} questions`);

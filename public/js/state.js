@@ -155,7 +155,7 @@ export const fresh = () => {
  * theme set on the laptop and keypad set on the phone both survive. Goal, the saved session setup and the saved
  * setups sync the same way.
  */
-export const PREF_KEYS = ['pad', 'theme', 'skin', 'acc', 'accHex', 'font', 'afont', 'noSplash', 'zen', 'mute', 'noBlur', 'noCd', 'noHap', 'ts', 'hc', 'cb', 'bigA', 'pace', 'padFlip', 'rm', 'ent', 'noGrace', 'noTimer', 'noQLine'];
+export const PREF_KEYS = ['pad', 'theme', 'skin', 'acc', 'accHex', 'font', 'afont', 'noSplash', 'zen', 'mute', 'noBlur', 'noCd', 'noHap', 'ts', 'hc', 'cb', 'bigA', 'pace', 'padFlip', 'rm', 'ent', 'noGrace', 'noTimer', 'noQLine', 'speak'];
 export const SYNCED_PREFS = [...PREF_KEYS, 'goal', 'cfg', 'presets'];
 /** Genuinely tied to one browser: the push subscription behind reminders, which panels are open, and snoozed banners. */
 export const DEVICE_LOCAL = ['rem', 'skOpen', 'bkSnooze', 'padHint', 'tipPar'];
@@ -238,7 +238,8 @@ export function migrate(o) {
         row.lv = lv;
       } else delete row.lv;
       return row;
-    });
+    })
+    .sort((a, b) => a.t - b.t);   // charts, trends and `slice(-n)` all assume oldest-to-newest
   out.ctr = readCtr(s); rollup(out);   // pat / facts / errs are derived from the per-device counters
   ['weak', 'mastered', 'best', 'daily', 'gone'].forEach((k) => { if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {}; });
   // notebook rows must name a real skill, or the Notebook screen would throw on them

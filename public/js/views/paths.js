@@ -227,7 +227,8 @@ function right() {
   const s = run.s, p = s.cur, res = s.record(true);
   s.checkpoint(); locked = true;
   fb(`<span class="ok">${mk(true)}${res.tm.toFixed(1)} s</span>${p.hinted ? ' <span class="mu">with a hint</span>' : ''}`);
-  setTimeout(() => run && advance(), run.mode == 'practise' ? 650 : 380);
+  // Tie the timer to this run: leaving and starting another within the delay must not advance the new run.
+  setTimeout(() => { if (run && run.s === s) advance(); }, run.mode == 'practise' ? 650 : 380);
 }
 function wrong() {
   const s = run.s, p = s.cur;

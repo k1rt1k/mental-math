@@ -238,7 +238,8 @@ export function getSavedPlanAt() {
 export function getChatHistory() {
   try {
     const raw = localStorage[AI_PREFIX + 'chat'];
-    return raw ? JSON.parse(raw) : [];
+    const history = raw ? JSON.parse(raw) : [];
+    return Array.isArray(history) ? history : [];
   } catch { return []; }
 }
 export function saveChatHistory(history) {
@@ -378,8 +379,8 @@ export async function callAi({ action = 'coach', question = null, message = '', 
     }
   }
 
-  if (DEMO) return { ok: true, fallback: true, source: 'local', demo: true, text: generateClientOfflineFallback(action, summary, requestQuestion, message, context), message: 'Sample mode: this is the built-in local guide. With your own sync password, Gemini writes these.' };
-  if (!personalSyncKey) {
+  // Sample mode has no password: it asks the server for Gemini under a small separate allowance (x-mental-math-demo). Only the made-up learner's summary is sent.
+  if (!personalSyncKey && !DEMO) {
     return {
       ok: true, fallback: true, source: 'local', authRequired: true,
       text: `### Local guide · Gemini not connected\n\nSet this device’s personal sync password in Settings to use the Gemini Coach.\n\n${generateClientOfflineFallback(action, summary, requestQuestion, message, context)}`,
@@ -419,7 +420,7 @@ export async function callAi({ action = 'coach', question = null, message = '', 
   try {
     const res = await fetch('/api/ai', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-sync-key': personalSyncKey },
+      headers: DEMO ? { 'Content-Type': 'application/json', 'x-mental-math-demo': '1' } : { 'Content-Type': 'application/json', 'x-sync-key': personalSyncKey },
       body: JSON.stringify(payload),
       signal: ctl.signal,
     });

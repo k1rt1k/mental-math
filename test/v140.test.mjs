@@ -115,6 +115,14 @@ test('one device has one AI history, analysis, plan and explanation cache', () =
   assert.equal(ai.getCachedExplanation('19 × 7').text, '133');
 });
 
+test('getChatHistory returns an array even when the stored value is corrupt', () => {
+  localStorageStore['mmTrainer.ai.chat'] = JSON.stringify({ not: 'an array' });
+  assert.deepEqual(ai.getChatHistory(), []);
+  localStorageStore['mmTrainer.ai.chat'] = 'not json';
+  assert.deepEqual(ai.getChatHistory(), []);
+  delete localStorageStore['mmTrainer.ai.chat'];
+});
+
 test('only eligible configured Gemini models pass the free-model allow-list', () => {
   assert.ok(Array.isArray(FREE_MODELS) && FREE_MODELS.length > 0);
   assert.equal(validateModel(DEFAULT_MODEL), DEFAULT_MODEL);

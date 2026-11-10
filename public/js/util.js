@@ -37,7 +37,7 @@ export const ago = (t) => {
 };
 
 /** Shown in the footer. Keep in step with the cache name in sw.js (a test enforces this). */
-export const VERSION = '14.90';
+export const VERSION = '14.92';
 /** "due now" / "due in 40 min" / "due in 3 days" for a spaced-review timestamp. */
 export const dueIn = (t, now = Date.now()) => {
   const m = Math.round((t - now) / 6e4);
@@ -46,3 +46,6 @@ export const dueIn = (t, now = Date.now()) => {
   const h = Math.round(m / 60);
   return h < 36 ? 'due in ' + h + ' h' : 'due in ' + Math.round(h / 24) + ' days';
 };
+
+/** True when this browser can read text aloud (built-in speechSynthesis). */
+export const canSpeak = () => { try { return typeof speechSynthesis != 'undefined' && typeof SpeechSynthesisUtterance != 'undefined'; } catch (e) { return false; } };

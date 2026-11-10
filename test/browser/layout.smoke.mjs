@@ -3,6 +3,7 @@
 //   - the page scrolling sideways
 // Not part of `npm test` (it needs a browser). Run it with:   npm run test:browser
 // One-time setup, which does not touch package.json or the lockfile:   npm i --no-save playwright && npx playwright install chromium
+// If only a system Chrome is available, point MM_CHROME at chrome.exe (or the macOS/Linux binary) instead.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
@@ -59,7 +60,7 @@ const audit = () => {
   return problems;
 };
 
-const browser = await chromium.launch();
+const browser = await chromium.launch({ ...(process.env.MM_CHROME ? { executablePath: process.env.MM_CHROME } : {}) });
 test.after(async () => { await browser.close(); server.close(); });
 
 for (const vp of VIEWPORTS) {
@@ -81,8 +82,10 @@ for (const vp of VIEWPORTS) {
         if (await toggle.count()) { await toggle.first().click(); await page.waitForTimeout(700); failures.push(...(await page.evaluate(audit)).map((p) => `[home, Customize open] ${p}`)); }
       }
       if (tab === 'progress') {
-        const n = await page.locator('[data-act=ptab]').count();
-        for (let i = 0; i < n; i++) { const t = page.locator('[data-act=ptab]').nth(i); const name = (await t.textContent() || '').trim(); await t.click(); await page.waitForTimeout(500); failures.push(...(await page.evaluate(audit)).map((p) => `[progress/${name}] ${p}`)); }
+        // Only the four section tabs, not the stat cards that also switch tabs: clicking a card
+        // replaces the overview panel (and its cards), so an index taken before the first click would vanish.
+        const n = await page.locator('.tabs2 [role=tab]').count();
+        for (let i = 0; i < n; i++) { const t = page.locator('.tabs2 [role=tab]').nth(i); const name = (await t.textContent() || '').trim(); await t.click(); await page.waitForTimeout(500); failures.push(...(await page.evaluate(audit)).map((p) => `[progress/${name}] ${p}`)); }
       }
     }
     await ctx.close();

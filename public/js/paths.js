@@ -109,9 +109,12 @@ export function nextUp(weakest) {
     if (p.started && !p.assessed && !best) best = { k, kind: 'continue', p };
   }
   if (best) return best;
-  const k = weakest && PATHS[weakest] ? weakest : 'mul';
+  let k = weakest && PATHS[weakest] ? weakest : 'mul';
+  // The weak/default path may already be assessed (or mastered): suggest another path that still has stages to clear.
+  if (progress(k).assessed) k = IDS.find((x) => !progress(x).assessed);
+  if (!k) return null;
   const p = progress(k);
-  return p.assessed ? null : { k, kind: p.started ? 'continue' : 'start', p };
+  return { k, kind: p.started ? 'continue' : 'start', p };
 }
 
 /** One generated question for a stage. Round-robins the stage's patterns, widening the difficulty if a pattern only exists higher up. */

@@ -280,7 +280,8 @@ function recordGo(i) {
   if (i == 0) { const x = best(S_.filter((s) => s.m == 'train' && s.dur == 120), (s) => s.pts); return x ? ['sessInfo', x.t, 'Open that session'] : null; }
   if (i == 1) { const sv = S.best && S.best.survival, x = sv && S_.find((s) => s.m == 'survival' && s.pts == sv.pts); return x ? ['sessInfo', x.t, 'Open that session'] : null; }
   if (i == 2) { const e = Object.entries(S.daily || {}).sort((a, b) => b[1] - a[1])[0]; return e ? ['daySheet', e[0], 'Open that day'] : null; }
-  if (i == 3) { const sp = S.best && S.best.sprint, x = sp && S_.find((s) => s.m == 'sprint' && s.ok >= 20 && Math.round(s.dur) == Math.round(sp.t)); return x ? ['sessInfo', x.t, 'Open that session'] : null; }
+  // The saved best time (sp.t) is the penalised sprint score stored on the session as `sc`, not its elapsed `dur`.
+  if (i == 3) { const sp = S.best && S.best.sprint, x = sp && S_.find((s) => s.m == 'sprint' && (s.sc != null ? s.sc === sp.t : s.ok >= 20 && Math.round(s.dur) == Math.round(sp.t))); return x ? ['sessInfo', x.t, 'Open that session'] : null; }
   if (i == 4) { const x = best(S_.filter((s) => s.n >= 20), (s) => (s.ft ?? s.ok) / s.n); return x ? ['sessInfo', x.t, 'Open that session'] : null; }
   if (i == 5) return streak() || S_.length ? ['streakCard', '', 'Open your streak'] : null;
   return null;

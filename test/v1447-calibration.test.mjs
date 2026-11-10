@@ -3,6 +3,7 @@
 // whether the rating ends up describing the learner rather than the random walk.
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { IDS } from '../public/js/engine.js';
 import { PERSONAS, simulate, spearman } from '../tools/sim.mjs';
 
@@ -40,6 +41,13 @@ test('after enough practice the ratings describe real ability, including an unev
   const strongAvg = strong.reduce((a, k) => a + byName.Uneven.ratings[k], 0) / strong.length;
   const weakAvg = weak.reduce((a, k) => a + byName.Uneven.ratings[k], 0) / weak.length;
   assert.ok(strongAvg - weakAvg >= 1.5, `the uneven path should separate strong and weak skills (${strongAvg.toFixed(1)} vs ${weakAvg.toFixed(1)})`);
+});
+
+test('the calibration CLI follows the live skill count instead of a stale ten', () => {
+  const src = readFileSync(new URL('../tools/calibrate.mjs', import.meta.url), 'utf8');
+  assert.match(src, /import \{ IDS \}/);
+  assert.match(src, /IDS\.length/);
+  assert.doesNotMatch(src, /skillsSeen\s*(?:!==|===)\s*10|skillsSeen\}\/10/);
 });
 
 test('the rank helper handles ties instead of returning a division by zero', () => {

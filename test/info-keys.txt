@@ -50,5 +50,6 @@ s.recover
 s.remSave
 s.remind
 s.reset
+s.speak
 s.sync
 s.zen

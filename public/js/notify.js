@@ -46,15 +46,18 @@ export async function enable(times) {
   if (perm !== 'granted') return { ok: false, why: 'denied' };
   let key;
   try { const r = await fetch('/api/push'); if (!r.ok) return { ok: false, why: 'server' }; key = (await r.json()).key; } catch (e) { return { ok: false, why: 'offline' }; }
+  let turnedOn = false;
+  const rollback = () => { if (turnedOn) { S.rem = { ...rem(), on: false }; save(); } };
   try {
     const reg = await navigator.serviceWorker.ready;
     const sub = (await reg.pushManager.getSubscription()) || (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(key) }));
     S.rem = { ...rem(), ...(times ? { times } : {}), on: true }; save();
+    turnedOn = true;
     const r = await call('PUT', payload(sub));
-    if (r.status === 401) return { ok: false, why: 'key' };
-    if (!r.ok) return { ok: false, why: 'server' };
+    if (r.status === 401) { rollback(); return { ok: false, why: 'key' }; }
+    if (!r.ok) { rollback(); return { ok: false, why: 'server' }; }
     return { ok: true };
-  } catch (e) { return { ok: false, why: 'error' }; }
+  } catch (e) { rollback(); return { ok: false, why: 'error' }; }
 }
 
 export async function disable() {
